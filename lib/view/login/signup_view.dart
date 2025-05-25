@@ -51,7 +51,16 @@ class SignUpPage extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(onPressed: () {
+<<<<<<< HEAD
                   Navigator.pushNamed(context, '/login');
+=======
+                  Navigator.pushNamed(
+                    context,
+                    '/login',
+                    arguments: {'userType': userType},
+                  );
+
+>>>>>>> 162a41c (implented post)
                 },
                     child: Text('Create Account',
                       style: TextStyle(

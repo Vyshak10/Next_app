@@ -71,6 +71,7 @@ class _UserTypeState extends State<UserType> {
                   const SizedBox(height: 32,),
 
                   RoleOptionCard(
+<<<<<<< HEAD
                       title: 'Established Company',
                       description: 'Looking to hire talent and grow your team',
                       icon: Icons.business_center,
@@ -85,6 +86,22 @@ class _UserTypeState extends State<UserType> {
                     onTap: () {
                         Navigator.pushNamed(context, '/signup',
                             arguments:{'userType':'Established Company'});
+=======
+                    title: 'Established Company',
+                    description: 'Looking to hire talent and grow your team',
+                    icon: Icons.business_center,
+                    iconColor: Colors.deepOrange,
+                    features: const [
+                      'Looking to hire talent and grow your team'
+                          'Browse candidate profiles',
+                      'Manage applications',
+                      'Track progress',
+                    ],
+
+                    onTap: () {
+                      Navigator.pushNamed(context, '/signup',
+                          arguments:{'userType':'Established Company'});
+>>>>>>> 162a41c (implented post)
                     },
                   ),
 
@@ -106,6 +123,7 @@ class _UserTypeState extends State<UserType> {
                   ),
 
                   RoleOptionCard(
+<<<<<<< HEAD
                       title:'Job Seeker',
                       description: 'Looking for job opportunities and connections',
                       icon: Icons.person,
@@ -119,12 +137,28 @@ class _UserTypeState extends State<UserType> {
                     onTap: (){
                         Navigator.pushNamed(context, '/signup',
                             arguments:{'userType':'Job Seeker'});
+=======
+                    title:'Job Seeker',
+                    description: 'Looking for job opportunities and connections',
+                    icon: Icons.person,
+                    iconColor:  const Color(0xFF0066CC),
+                    features: const [
+                      'Discover job opportunities',
+                      'Connect with companies',
+                      'Showcase your skills and experience',
+                    ],
+
+                    onTap: (){
+                      Navigator.pushNamed(context, '/signup',
+                          arguments:{'userType':'Job Seeker'});
+>>>>>>> 162a41c (implented post)
                     },
 
                   ),
 
                   SizedBox(height:10,),
 
+<<<<<<< HEAD
                   Center(
                     child:
                     TextButton(onPressed: () => Navigator.push(context,
@@ -138,6 +172,9 @@ class _UserTypeState extends State<UserType> {
                     ),)
                     ),
                   )
+=======
+
+>>>>>>> 162a41c (implented post)
                 ],
               )
 

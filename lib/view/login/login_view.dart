@@ -12,6 +12,14 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
+<<<<<<< HEAD
+=======
+    final args = ModalRoute.of(context)?.settings.arguments as Map?;
+    final String userType = args?['userType'] ?? 'Unknown';
+
+
+
+>>>>>>> 162a41c (implented post)
     return  Scaffold(
       backgroundColor: Colors.white,
       appBar:AppBar(
@@ -63,17 +71,40 @@ class _LoginViewState extends State<LoginView> {
 
                 SizedBox(
                   width: double.infinity,
+<<<<<<< HEAD
                   child: ElevatedButton(onPressed: () {
                     Navigator.pushNamed(context, '/home');
                   },
                     child: Text('Log in',
+=======
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (userType =='Job Seeker') {
+                        Navigator.pushNamed(context, '/Seeker');
+                      } else if (userType == 'Startup') {
+                        Navigator.pushNamed(context, '/startUp');
+                      } else if (userType == 'Established Company') {
+                        Navigator.pushNamed(context, '/Company');
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Unknown user type')),
+                        );
+                      }
+                    },
+                    child: Text(
+                      'Log in',
+>>>>>>> 162a41c (implented post)
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
+<<<<<<< HEAD
                 ),
+=======
+                )
+>>>>>>> 162a41c (implented post)
             
               ],
             ),
