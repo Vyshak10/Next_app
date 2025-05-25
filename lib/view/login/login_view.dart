@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 
 class LoginView extends StatefulWidget {
@@ -12,103 +10,89 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
-<<<<<<< HEAD
-=======
     final args = ModalRoute.of(context)?.settings.arguments as Map?;
     final String userType = args?['userType'] ?? 'Unknown';
 
-
-
->>>>>>> 162a41c (implented post)
-    return  Scaffold(
+    return Scaffold(
       backgroundColor: Colors.white,
-      appBar:AppBar(
+      appBar: AppBar(
         leading: BackButton(),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
-      ) ,
+      ),
       body: SafeArea(
-          child:SingleChildScrollView(
-            padding: EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-            
-                SizedBox(height: 20,),
-            
-                Text('Welcome Back',
-                  style: TextStyle(
-                      fontSize: 40,
-                  fontWeight: FontWeight.bold),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 20),
+
+              Text(
+                'Welcome Back',
+                style: TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
                 ),
+              ),
 
-
-                Text('Log in to your Account',
-                  style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey
-                  ),
-                  ),
-
-                SizedBox(height: 20,),
-
-                TextField(
-                  decoration: InputDecoration(labelText: 'Email'),
+              Text(
+                'Log in to your Account',
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.grey,
                 ),
+              ),
 
+              SizedBox(height: 20),
 
-                SizedBox(height: 20,),
+              TextField(
+                decoration: InputDecoration(labelText: 'Email'),
+              ),
 
-                TextField(
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    suffixIcon: Icon(Icons.remove_red_eye),
-                  ),
-                  obscureText: true,
-                  ),
+              SizedBox(height: 20),
 
-                SizedBox(height: 50,),
+              TextField(
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  suffixIcon: Icon(Icons.remove_red_eye),
+                ),
+                obscureText: true,
+              ),
 
-                SizedBox(
-                  width: double.infinity,
-<<<<<<< HEAD
-                  child: ElevatedButton(onPressed: () {
-                    Navigator.pushNamed(context, '/home');
+              SizedBox(height: 50),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (userType == 'Job Seeker') {
+                      Navigator.pushNamed(context, '/Seeker');
+                    } else if (userType == 'Startup') {
+                      Navigator.pushNamed(context, '/startUp');
+                    } else if (userType == 'Established Company') {
+                      Navigator.pushNamed(context, '/Company');
+                    } else {
+                      // fallback
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Invalid user type')),
+                      );
+                    }
                   },
-                    child: Text('Log in',
-=======
-                  child: ElevatedButton(
-                    onPressed: () {
-                      if (userType =='Job Seeker') {
-                        Navigator.pushNamed(context, '/Seeker');
-                      } else if (userType == 'Startup') {
-                        Navigator.pushNamed(context, '/startUp');
-                      } else if (userType == 'Established Company') {
-                        Navigator.pushNamed(context, '/Company');
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Unknown user type')),
-                        );
-                      }
-                    },
-                    child: Text(
-                      'Log in',
->>>>>>> 162a41c (implented post)
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
+
+                  child: Text(
+                    'Login',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-<<<<<<< HEAD
                 ),
-=======
-                )
->>>>>>> 162a41c (implented post)
-            
-              ],
-            ),
-          ) ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:next_app/common_widget/role_option_card.dart';
 import 'package:next_app/view/login/login_view.dart';
@@ -71,22 +69,6 @@ class _UserTypeState extends State<UserType> {
                   const SizedBox(height: 32,),
 
                   RoleOptionCard(
-
-                      title: 'Established Company',
-                      description: 'Looking to hire talent and grow your team',
-                      icon: Icons.business_center,
-                      iconColor: Colors.deepOrange,
-                      features: const [
-                        'Looking to hire talent and grow your team'
-                        'Browse candidate profiles',
-                        'Manage applications',
-                        'Track progress',
-                      ],
-
-                    onTap: () {
-                        Navigator.pushNamed(context, '/signup',
-                            arguments:{'userType':'Established Company'});
-
                     title: 'Established Company',
                     description: 'Looking to hire talent and grow your team',
                     icon: Icons.business_center,
@@ -122,21 +104,6 @@ class _UserTypeState extends State<UserType> {
                   ),
 
                   RoleOptionCard(
-
-                      title:'Job Seeker',
-                      description: 'Looking for job opportunities and connections',
-                      icon: Icons.person,
-                      iconColor:  const Color(0xFF0066CC),
-                      features: const [
-                        'Discover job opportunities',
-                        'Connect with companies',
-                        'Showcase your skills and experience',
-                      ],
-
-                    onTap: (){
-                        Navigator.pushNamed(context, '/signup',
-                            arguments:{'userType':'Job Seeker'});
-
                     title:'Job Seeker',
                     description: 'Looking for job opportunities and connections',
                     icon: Icons.person,
@@ -150,29 +117,11 @@ class _UserTypeState extends State<UserType> {
                     onTap: (){
                       Navigator.pushNamed(context, '/signup',
                           arguments:{'userType':'Job Seeker'});
-
                     },
 
                   ),
 
                   SizedBox(height:10,),
-
-
-                  Center(
-                    child:
-                    TextButton(onPressed: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (context) => LoginView()
-                        )
-                    ),child:const Text('Already have a account ? Log in',
-                    style: TextStyle(
-                      fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                      color:  Color(0xFF0066CC)
-                    ),)
-                    ),
-                  )
-
-
 
                 ],
               )
