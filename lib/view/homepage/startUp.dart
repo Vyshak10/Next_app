@@ -32,6 +32,7 @@ class _StartupState extends State<Startup> {
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
+
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
