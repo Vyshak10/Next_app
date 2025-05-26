@@ -1,14 +1,90 @@
 import 'package:flutter/material.dart';
+import 'package:next_app/services/auth_service.dart';
 
-class SignUpPage extends StatelessWidget {
+class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Extract the userType argument from ModalRoute
-    final args = ModalRoute.of(context)?.settings.arguments as Map?;
-    final String userType = args?['userType'] ?? 'Unknown';
+  State<SignUpPage> createState() => _SignUpPageState();
+}
 
+class _SignUpPageState extends State<SignUpPage> {
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController companyNameController = TextEditingController();
+  final TextEditingController industryController = TextEditingController();
+  final TextEditingController startupNameController = TextEditingController();
+  final TextEditingController stageController = TextEditingController();
+  final TextEditingController fullNameController = TextEditingController();
+  final TextEditingController skillsController = TextEditingController();
+
+  String userType = 'Unknown';
+  bool isLoading = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map?;
+    userType = args?['userType'] ?? 'Unknown';
+  }
+
+  void _signUp() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter email and password')),
+      );
+      return;
+    }
+
+    // Basic validation for additional fields
+    if (userType == 'Established Company' && companyNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter company name')),
+      );
+      return;
+    }
+
+    if (userType == 'Startup' && startupNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter startup name')),
+      );
+      return;
+    }
+
+    if (userType == 'Job Seeker' && fullNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter full name')),
+      );
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+    });
+
+    final result = await AuthService().signUp(email, password, userType);
+
+    setState(() {
+      isLoading = false;
+    });
+
+    if (result == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Signup successful! Please login.')),
+      );
+      Navigator.pushReplacementNamed(context, '/login', arguments: {'userType': userType});
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Signup failed: $result')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
@@ -23,62 +99,48 @@ class SignUpPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 30),
-
               const Text(
                 'Create Account',
-                style: TextStyle(
-                  fontSize: 35,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold),
               ),
-
               const SizedBox(height: 8),
-
               Text(
                 'Sign up as a $userType',
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 18, color: Colors.grey),
               ),
-
               const SizedBox(height: 30),
-
               _buildSignupForm(userType),
-
-              SizedBox(height: 30,),
-
+              const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushNamed(
-                      context,
-                      '/login',
-                      arguments: {'userType': userType},
-                    );
-                  },
-                  child: Text(
+                  onPressed: isLoading ? null : _signUp,
+                  child: isLoading
+                      ? const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  )
+                      : const Text(
                     'Create Account',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
-
+              const SizedBox(height: 20),
               Center(
-                child: TextButton(onPressed: (){
-                  Navigator.pushNamed(context, '/login');
-                },
-                    child: Text('Already have an account? Login',
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/login', arguments: {'userType': userType});
+                  },
+                  child: const Text(
+                    'Already have an account? Login',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold
-                    ),)),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple,
+                    ),
+                  ),
+                ),
               )
-
             ],
           ),
         ),
@@ -86,7 +148,6 @@ class SignUpPage extends StatelessWidget {
     );
   }
 
-  // Widget to build form based on user type
   Widget _buildSignupForm(String userType) {
     switch (userType) {
       case 'Established Company':
@@ -100,75 +161,101 @@ class SignUpPage extends StatelessWidget {
     }
   }
 
-  // Form for Established Company
   Widget _establishedCompanyForm() {
     return Column(
-      children: const [
+      children: [
         TextField(
-          decoration: InputDecoration(labelText: 'Company Name'),
+          controller: companyNameController,
+          decoration: const InputDecoration(labelText: 'Company Name'),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         TextField(
-          decoration: InputDecoration(labelText: 'Industry'),
+          controller: industryController,
+          decoration: const InputDecoration(labelText: 'Industry'),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         TextField(
-          decoration: InputDecoration(labelText: 'Email'),
+          controller: emailController,
+          decoration: const InputDecoration(labelText: 'Email'),
+          keyboardType: TextInputType.emailAddress,
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         TextField(
-          decoration: InputDecoration(labelText: 'Password'),
+          controller: passwordController,
+          decoration: const InputDecoration(labelText: 'Password'),
           obscureText: true,
         ),
       ],
     );
   }
 
-  // Form for Startup
   Widget _startupForm() {
     return Column(
-      children: const [
+      children: [
         TextField(
-          decoration: InputDecoration(labelText: 'Startup Name'),
+          controller: startupNameController,
+          decoration: const InputDecoration(labelText: 'Startup Name'),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         TextField(
-          decoration: InputDecoration(labelText: 'Stage of Startup'),
+          controller: stageController,
+          decoration: const InputDecoration(labelText: 'Stage of Startup'),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         TextField(
-          decoration: InputDecoration(labelText: 'Email'),
+          controller: emailController,
+          decoration: const InputDecoration(labelText: 'Email'),
+          keyboardType: TextInputType.emailAddress,
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         TextField(
-          decoration: InputDecoration(labelText: 'Password'),
+          controller: passwordController,
+          decoration: const InputDecoration(labelText: 'Password'),
           obscureText: true,
         ),
       ],
     );
   }
 
-  // Form for Job Seeker
   Widget _jobSeekerForm() {
     return Column(
-      children: const [
+      children: [
         TextField(
-          decoration: InputDecoration(labelText: 'Full Name'),
+          controller: fullNameController,
+          decoration: const InputDecoration(labelText: 'Full Name'),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         TextField(
-          decoration: InputDecoration(labelText: 'Skills'),
+          controller: skillsController,
+          decoration: const InputDecoration(labelText: 'Skills'),
+          maxLines: 2,
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         TextField(
-          decoration: InputDecoration(labelText: 'Email'),
+          controller: emailController,
+          decoration: const InputDecoration(labelText: 'Email'),
+          keyboardType: TextInputType.emailAddress,
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         TextField(
-          decoration: InputDecoration(labelText: 'Password'),
+          controller: passwordController,
+          decoration: const InputDecoration(labelText: 'Password'),
           obscureText: true,
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    companyNameController.dispose();
+    industryController.dispose();
+    startupNameController.dispose();
+    stageController.dispose();
+    fullNameController.dispose();
+    skillsController.dispose();
+    super.dispose();
   }
 }
