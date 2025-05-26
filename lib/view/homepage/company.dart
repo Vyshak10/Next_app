@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:next_app/common_widget/home.dart';
 
