@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:next_app/common_widget/items_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'NotificationsScreen.dart'; // Adjust path if needed
+import 'company_detail_screen.dart'; // Add this import
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -131,6 +132,16 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchStartupData();
   }
 
+  // Navigation function to company detail page
+  void navigateToCompanyDetail(Map<String, dynamic> companyData) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CompanyDetailScreen(companyData: companyData),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -218,18 +229,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 16),
 
-              // Company list
+              // Company list with tap navigation
               ListView.builder(
                 physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
                 itemCount: companyData.length,
                 itemBuilder: (context, index) {
                   final company = companyData[index];
-                  return CompanyCard(
-                    logoUrl: company['logo'],
-                    name: company['name'],
-                    sector: company['sector'],
-                    tags: List<String>.from(company['tags'] ?? []),
+                  return GestureDetector(
+                    onTap: () => navigateToCompanyDetail(company),
+                    child: CompanyCard(
+                      logoUrl: company['logo'],
+                      name: company['name'],
+                      sector: company['sector'],
+                      tags: List<String>.from(company['tags'] ?? []),
+                    ),
                   );
                 },
               ),

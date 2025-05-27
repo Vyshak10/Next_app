@@ -139,7 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration: const InputDecoration(labelText: "Description")),
               TextField(
                   controller: skillCtrl,
-                  decoration: const InputDecoration(labelText: "Skills (comma separated)")),
+                  decoration: const InputDecoration(labelText: "Stage")),
             ],
           ),
         ),
