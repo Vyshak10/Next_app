@@ -25,7 +25,7 @@ class _StartupState extends State<Startup> {
     final userId = user?.id ?? '';
     _screens = [
       const HomeScreen(),
-      const PostScreen(),
+      PostScreen(userId: userId), // Pass userId to PostScreen
       ProfileScreen(userId: userId),
     ];
   }
@@ -52,6 +52,7 @@ class _StartupState extends State<Startup> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         selectedItemColor: Colors.blue,
+        type: BottomNavigationBarType.fixed,
       ),
     );
   }
