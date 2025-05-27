@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:next_app/common_widget/items_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+
+// Import your NotificationsScreen file here
+import 'NotificationsScreen.dart';  // Adjust the path if needed
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -15,7 +19,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Map<String, dynamic>> companyData = [];
   bool isLoading = true;
+  bool notifyEnabled = true;
   String selectedSector = 'All';
+
   final List<String> sectorOptions = [
     'All', 'Finance', 'Education', 'Healthcare', 'AI',
     'Aerospace', 'Design', 'Cybersecurity', 'Travel',
@@ -24,17 +30,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final TextEditingController searchController = TextEditingController();
   Timer? _debounce;
+  RealtimeChannel? notifChannel;
 
   @override
   void initState() {
     super.initState();
     fetchStartupData();
+    fetchNotificationPreference();
+    subscribeToNotifications();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
     searchController.dispose();
+    // Unsubscribe notification realtime channel properly
+    notifChannel?.unsubscribe();
     super.dispose();
   }
 
@@ -42,7 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => isLoading = true);
 
     var query = supabase.from('startups').select();
-
     final searchQuery = searchController.text.trim();
 
     if (searchQuery.isNotEmpty && selectedSector != 'All') {
@@ -63,11 +73,65 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> fetchNotificationPreference() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId != null) {
+      final response = await supabase
+          .from('profiles')
+          .select('notify_enabled')
+          .eq('id', userId)
+          .single();
+      setState(() {
+        notifyEnabled = response['notify_enabled'] ?? true;
+      });
+    }
+  }
+
+  Future<void> toggleNotification() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId != null) {
+      final newValue = !notifyEnabled;
+      await supabase
+          .from('profiles')
+          .update({'notify_enabled': newValue})
+          .eq('id', userId);
+      setState(() {
+        notifyEnabled = newValue;
+      });
+    }
+  }
+
+  void subscribeToNotifications() {
+    notifChannel = supabase.channel('public:notifications_channel');
+
+    notifChannel!.on(
+      RealtimeListenTypes.postgresChanges,
+      ChannelFilter(
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+      ),
+          (payload, [ref]) {
+        final newRecord = payload['new'];
+        if (newRecord != null && notifyEnabled && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${newRecord['title']}: ${newRecord['body']}'),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        }
+      },
+    );
+
+    notifChannel!.subscribe();
+  }
+
   void onSearchChanged(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
     _debounce = Timer(const Duration(milliseconds: 400), () {
-      fetchStartupData(); // debounced
+      fetchStartupData();
     });
   }
 
@@ -88,14 +152,44 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top bar
+              // Top bar with icons
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Image.asset('assets/img/Icon.png', height: 32, width: 32),
-                    const Icon(Icons.notifications),
+
+                    // Notification and toggle buttons grouped
+                    Row(
+                      children: [
+                        // Open notifications list screen button
+                        IconButton(
+                          icon: const Icon(Icons.notifications_active, size: 28),
+                          color: Colors.blue,
+                          tooltip: 'View Notifications',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                            );
+                          },
+                        ),
+
+                        // Enable/disable notification toggle
+                        IconButton(
+                          icon: Icon(
+                            notifyEnabled ? Icons.notifications : Icons.notifications_off,
+                            color: notifyEnabled ? Colors.blue : Colors.grey,
+                            size: 28,
+                          ),
+                          onPressed: toggleNotification,
+                          tooltip: notifyEnabled
+                              ? "Disable Notifications"
+                              : "Enable Notifications",
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -108,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   onChanged: onSearchChanged,
                   decoration: InputDecoration(
                     labelText: 'Search by name or sector',
-                    prefixIcon: Icon(Icons.search),
+                    prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
