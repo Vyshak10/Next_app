@@ -31,6 +31,10 @@ flutter:
     - assets/img/Icon.png
     - assets/img/Favicon.png
     - assets/img/Adaptive-icon.png
+    - assets/img/default_avatar.png
+
+
+
 
 
 

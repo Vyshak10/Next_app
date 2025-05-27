@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../common_widget/home.dart';
 import '../../common_widget/post.dart';
@@ -14,11 +15,20 @@ class Startup extends StatefulWidget {
 class _StartupState extends State<Startup> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    HomeScreen(),
-    PostScreen(),
-    ProfilePage(),
-  ];
+  final user = Supabase.instance.client.auth.currentUser;
+
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    final userId = user?.id ?? '';
+    _screens = [
+      const HomeScreen(),
+      const PostScreen(),
+      ProfileScreen(userId: userId),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -32,7 +42,6 @@ class _StartupState extends State<Startup> {
       body: IndexedStack(
         index: _selectedIndex,
         children: _screens,
-
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
