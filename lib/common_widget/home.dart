@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:next_app/common_widget/items_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-
-// Import your NotificationsScreen file here
-import 'NotificationsScreen.dart';  // Adjust the path if needed
+import 'NotificationsScreen.dart'; // Adjust path if needed
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,6 +14,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
+  late RealtimeChannel notifChannel;
 
   List<Map<String, dynamic>> companyData = [];
   bool isLoading = true;
@@ -30,7 +29,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final TextEditingController searchController = TextEditingController();
   Timer? _debounce;
-  RealtimeChannel? notifChannel;
 
   @override
   void initState() {
@@ -44,8 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _debounce?.cancel();
     searchController.dispose();
-    // Unsubscribe notification realtime channel properly
-    notifChannel?.unsubscribe();
+    notifChannel.unsubscribe();
     super.dispose();
   }
 
@@ -102,29 +99,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void subscribeToNotifications() {
-    notifChannel = supabase.channel('public:notifications_channel');
+    notifChannel = supabase.channel('public:notifications');
 
-    notifChannel!.on(
-      RealtimeListenTypes.postgresChanges,
-      ChannelFilter(
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-      ),
-          (payload, [ref]) {
-        final newRecord = payload['new'];
-        if (newRecord != null && notifyEnabled && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${newRecord['title']}: ${newRecord['body']}'),
-              duration: const Duration(seconds: 4),
-            ),
-          );
+    notifChannel
+        .onPostgresChanges(
+      event: PostgresChangeEvent.insert,
+      schema: 'public',
+      table: 'notifications',
+      callback: (payload) {
+        final newRecord = payload.newRecord;
+        if (newRecord != null) {
+          print("New Notification: ${newRecord['title']} - ${newRecord['body']}");
         }
       },
-    );
-
-    notifChannel!.subscribe();
+    )
+        .subscribe();
   }
 
   void onSearchChanged(String value) {
@@ -152,18 +141,15 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top bar with icons
+              // Top bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Image.asset('assets/img/Icon.png', height: 32, width: 32),
-
-                    // Notification and toggle buttons grouped
                     Row(
                       children: [
-                        // Open notifications list screen button
                         IconButton(
                           icon: const Icon(Icons.notifications_active, size: 28),
                           color: Colors.blue,
@@ -175,8 +161,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           },
                         ),
-
-                        // Enable/disable notification toggle
                         IconButton(
                           icon: Icon(
                             notifyEnabled ? Icons.notifications : Icons.notifications_off,
@@ -184,9 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             size: 28,
                           ),
                           onPressed: toggleNotification,
-                          tooltip: notifyEnabled
-                              ? "Disable Notifications"
-                              : "Enable Notifications",
+                          tooltip: notifyEnabled ? "Disable Notifications" : "Enable Notifications",
                         ),
                       ],
                     ),
@@ -212,7 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 12),
 
-              // Filter Chips
+              // Sector chips
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Wrap(
@@ -236,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 16),
 
-              // Company List
+              // Company list
               ListView.builder(
                 physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
@@ -256,5 +238,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties.add(DiagnosticsProperty<RealtimeChannel>('notifChannel', notifChannel));
   }
 }

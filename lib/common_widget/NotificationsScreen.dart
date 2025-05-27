@@ -29,11 +29,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         .from('notifications')
         .select()
         .order('timestamp', ascending: false)
-        .execute();
+        .limit(20);
 
-    if (response.status >= 200 && response.status < 300 && response.data != null) {
+    if (response != null && response is List) {
       setState(() {
-        notifications = List<Map<String, dynamic>>.from(response.data);
+        notifications = List<Map<String, dynamic>>.from(response);
         isLoading = false;
       });
     } else {
@@ -41,12 +41,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         notifications = [];
         isLoading = false;
       });
-      final errorMessage = 'Failed to load notifications (status: ${response.status})';
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
+        const SnackBar(content: Text('Failed to load notifications')),
       );
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -78,3 +78,4 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 }
+

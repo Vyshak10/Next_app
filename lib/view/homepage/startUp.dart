@@ -17,7 +17,7 @@ class _StartupState extends State<Startup> {
   final List<Widget> _screens = [
     HomeScreen(),
     PostScreen(),
-    ProfileScreen(),
+    ProfilePage(),
   ];
 
   void _onItemTapped(int index) {

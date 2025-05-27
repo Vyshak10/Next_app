@@ -98,19 +98,35 @@ class _SignUpPageState extends State<SignUpPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
+
               const SizedBox(height: 30),
+
+
               const Text(
                 'Create Account',
                 style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold),
               ),
+
+
               const SizedBox(height: 8),
+
+
               Text(
                 'Sign up as a $userType',
                 style: const TextStyle(fontSize: 18, color: Colors.grey),
               ),
+
+
               const SizedBox(height: 30),
+
+
               _buildSignupForm(userType),
+
+
               const SizedBox(height: 30),
+
+
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -125,7 +141,11 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                 ),
               ),
+
+
               const SizedBox(height: 20),
+
+
               Center(
                 child: TextButton(
                   onPressed: () {
@@ -136,7 +156,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.purple,
+                      color: Colors.blue,
                     ),
                   ),
                 ),

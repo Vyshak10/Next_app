@@ -78,6 +78,8 @@ class _LoginViewState extends State<LoginView> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+
+
       appBar: AppBar(
         leading: const BackButton(),
         backgroundColor: Colors.white,
@@ -86,11 +88,15 @@ class _LoginViewState extends State<LoginView> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
+
           padding: const EdgeInsets.all(24),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
               const SizedBox(height: 20),
+
               const Text(
                 'Welcome Back',
                 style: TextStyle(
@@ -98,7 +104,10 @@ class _LoginViewState extends State<LoginView> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+
+
               const SizedBox(height: 8),
+
               Text(
                 'Log in as $userType',
                 style: const TextStyle(
@@ -106,7 +115,10 @@ class _LoginViewState extends State<LoginView> {
                   color: Colors.grey,
                 ),
               ),
+
               const SizedBox(height: 40),
+
+
               TextField(
                 controller: emailController,
                 decoration: const InputDecoration(
@@ -115,7 +127,10 @@ class _LoginViewState extends State<LoginView> {
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
+
               const SizedBox(height: 20),
+
+
               TextField(
                 controller: passwordController,
                 obscureText: !isPasswordVisible,
@@ -136,7 +151,11 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
               ),
+
+
               const SizedBox(height: 50),
+
+
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -154,7 +173,11 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
               ),
+
+
               const SizedBox(height: 20),
+
+
               Center(
                 child: TextButton(
                   onPressed: () {
@@ -165,11 +188,13 @@ class _LoginViewState extends State<LoginView> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Colors.purple,
+                      color: Colors.blue,
                     ),
                   ),
                 ),
               ),
+
+
             ],
           ),
         ),

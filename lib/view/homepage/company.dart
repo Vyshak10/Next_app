@@ -15,7 +15,7 @@ class _CompanyScreenState extends State<CompanyScreen> {
 
   final List<Widget> _screens = [
     HomeScreen(),
-    ProfileScreen(),
+    ProfilePage(),
   ];
 
   void _onItemTapped(int index){
