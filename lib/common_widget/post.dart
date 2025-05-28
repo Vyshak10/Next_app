@@ -48,24 +48,78 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // Load all posts for feed (excluding current user's posts)
+  // Get user profile data from appropriate table
+  Future<Map<String, dynamic>?> _getUserProfile(String userId) async {
+    try {
+      // First check profiles table
+      final profileData = await supabase
+          .from('profiles')
+          .select('name, avatar_url, user_type')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (profileData != null) {
+        // If user_type indicates startup, get additional startup data
+        if (profileData['user_type'] == 'startup') {
+          final startupData = await supabase
+              .from('startups')
+              .select('name as startup_name, logo')
+              .eq('id', userId)
+              .maybeSingle();
+
+          if (startupData != null) {
+            return {
+              'name': startupData['startup_name'] ?? profileData['name'],
+              'avatar_url': startupData['logo'] ?? profileData['avatar_url'],
+              'user_type': 'startup',
+            };
+          }
+        }
+        return profileData;
+      }
+
+      // If not found in profiles, check startups table directly
+      final startupData = await supabase
+          .from('startups')
+          .select('name, logo')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (startupData != null) {
+        return {
+          'name': startupData['name'],
+          'avatar_url': startupData['logo'],
+          'user_type': 'startup',
+        };
+      }
+
+      return null;
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      return null;
+    }
+  }
+
+  // Load all posts for feed with proper user data
   Future<void> _loadFeedPosts() async {
     setState(() => _isLoading = true);
     try {
       final data = await supabase
           .from('posts')
-          .select('''
-            *,
-            profiles:user_id (
-              name,
-              avatar_url
-            )
-          ''')
+          .select('*')
           .neq('user_id', widget.userId)
           .order('created_at', ascending: false);
 
       if (mounted && data != null) {
-        setState(() => _feedPosts = List<Map<String, dynamic>>.from(data));
+        List<Map<String, dynamic>> postsWithProfiles = [];
+
+        for (var post in data) {
+          final userProfile = await _getUserProfile(post['user_id']);
+          post['user_profile'] = userProfile;
+          postsWithProfiles.add(post);
+        }
+
+        setState(() => _feedPosts = postsWithProfiles);
       }
     } catch (e) {
       _showSnackBar('Failed to load feed: $e');
@@ -89,6 +143,62 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
     } catch (e) {
       _showSnackBar('Failed to load your posts: $e');
     }
+  }
+
+  // Toggle like functionality
+  Future<void> _toggleLike(String postId, bool isLiked) async {
+    try {
+      if (isLiked) {
+        // Remove like
+        await supabase
+            .from('likes')
+            .delete()
+            .eq('post_id', postId)
+            .eq('user_id', widget.userId);
+      } else {
+        // Add like
+        await supabase.from('likes').insert({
+          'post_id': postId,
+          'user_id': widget.userId,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+
+      // Refresh feed to update like count
+      _loadFeedPosts();
+    } catch (e) {
+      _showSnackBar('Failed to update like: $e');
+    }
+  }
+
+  // Get like count and check if current user liked
+  Future<Map<String, dynamic>> _getLikeData(String postId) async {
+    try {
+      final likes = await supabase
+          .from('likes')
+          .select('user_id')
+          .eq('post_id', postId);
+
+      final likeCount = likes.length;
+      final isLiked = likes.any((like) => like['user_id'] == widget.userId);
+
+      return {'count': likeCount, 'isLiked': isLiked};
+    } catch (e) {
+      return {'count': 0, 'isLiked': false};
+    }
+  }
+
+  // Show comments bottom sheet
+  void _showCommentsSheet(String postId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CommentsBottomSheet(
+        postId: postId,
+        userId: widget.userId,
+      ),
+    );
   }
 
   // Pick multiple images
@@ -349,81 +459,172 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         itemCount: _feedPosts.length,
         itemBuilder: (context, index) {
           final post = _feedPosts[index];
-          final profile = post['profiles'];
+          final userProfile = post['user_profile'];
           final imageUrls = List<String>.from(post['image_urls'] ?? []);
           final tags = List<String>.from(post['tags'] ?? []);
 
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Post Header
-                ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: profile?['avatar_url'] != null
-                        ? NetworkImage(profile['avatar_url'])
-                        : const AssetImage('assets/default_avatar.png') as ImageProvider,
-                  ),
-                  title: Text(profile?['name'] ?? 'Unknown User'),
-                  subtitle: Text(_formatDate(post['created_at'])),
-                ),
+          return FutureBuilder<Map<String, dynamic>>(
+            future: _getLikeData(post['id'].toString()),
+            builder: (context, snapshot) {
+              final likeData = snapshot.data ?? {'count': 0, 'isLiked': false};
 
-                // Post Images
-                if (imageUrls.isNotEmpty)
-                  SizedBox(
-                    height: 300,
-                    child: PageView.builder(
-                      itemCount: imageUrls.length,
-                      itemBuilder: (context, imgIndex) {
-                        return Image.network(
-                          imageUrls[imgIndex],
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.broken_image, size: 50),
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+                elevation: 0,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Post Header
+                    ListTile(
+                      leading: CircleAvatar(
+                        radius: 20,
+                        backgroundImage: userProfile?['avatar_url'] != null
+                            ? NetworkImage(userProfile['avatar_url'])
+                            : null,
+                        child: userProfile?['avatar_url'] == null
+                            ? Text(
+                          (userProfile?['name'] ?? 'U')[0].toUpperCase(),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        )
+                            : null,
+                      ),
+                      title: Text(
+                        userProfile?['name'] ?? 'Unknown User',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(_formatDate(post['created_at'])),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.more_horiz),
+                        onPressed: () {
+                          // Show more options
+                        },
+                      ),
+                    ),
+
+                    // Post Images
+                    if (imageUrls.isNotEmpty)
+                      Container(
+                        height: 400,
+                        child: PageView.builder(
+                          itemCount: imageUrls.length,
+                          itemBuilder: (context, imgIndex) {
+                            return GestureDetector(
+                              onDoubleTap: () {
+                                _toggleLike(post['id'].toString(), likeData['isLiked']);
+                              },
+                              child: Image.network(
+                                imageUrls[imgIndex],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[300],
+                                    child: const Icon(Icons.broken_image, size: 50),
+                                  );
+                                },
+                              ),
                             );
                           },
-                        );
-                      },
-                    ),
-                  ),
-
-                // Post Content
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post['title'] ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
                       ),
-                      if (post['description'] != null && post['description'].isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(post['description']),
-                        ),
-                      if (tags.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Wrap(
-                            spacing: 4,
-                            runSpacing: 4,
-                            children: tags.map((tag) {
-                              return Chip(
-                                label: Text(tag, style: const TextStyle(fontSize: 12)),
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              );
-                            }).toList(),
+
+                    // Action Buttons (Like, Comment, Share)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => _toggleLike(post['id'].toString(), likeData['isLiked']),
+                            child: Icon(
+                              likeData['isLiked'] ? Icons.favorite : Icons.favorite_border,
+                              color: likeData['isLiked'] ? Colors.red : Colors.black,
+                              size: 28,
+                            ),
                           ),
+                          const SizedBox(width: 16),
+                          GestureDetector(
+                            onTap: () => _showCommentsSheet(post['id'].toString()),
+                            child: const Icon(Icons.chat_bubble_outline, size: 28),
+                          ),
+                          const SizedBox(width: 16),
+                          const Icon(Icons.send_outlined, size: 28),
+                          const Spacer(),
+                          const Icon(Icons.bookmark_border, size: 28),
+                        ],
+                      ),
+                    ),
+
+                    // Like Count
+                    if (likeData['count'] > 0)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          '${likeData['count']} ${likeData['count'] == 1 ? 'like' : 'likes'}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
-                    ],
-                  ),
+                      ),
+
+                    // Post Content
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: TextSpan(
+                              style: const TextStyle(color: Colors.black),
+                              children: [
+                                TextSpan(
+                                  text: '${userProfile?['name'] ?? 'Unknown User'} ',
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                TextSpan(text: post['title'] ?? ''),
+                              ],
+                            ),
+                          ),
+                          if (post['description'] != null && post['description'].isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(post['description']),
+                            ),
+                          if (tags.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: tags.map((tag) {
+                                  return Text(
+                                    '#$tag',
+                                    style: TextStyle(
+                                      color: Colors.blue[700],
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // View Comments
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: GestureDetector(
+                        onTap: () => _showCommentsSheet(post['id'].toString()),
+                        child: const Text(
+                          'View all comments',
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
@@ -505,6 +706,7 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Posts'),
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -526,6 +728,230 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         },
         child: const Icon(Icons.add),
         tooltip: 'Create Post',
+      ),
+    );
+  }
+}
+
+// Comments Bottom Sheet Widget
+class CommentsBottomSheet extends StatefulWidget {
+  final String postId;
+  final String userId;
+
+  const CommentsBottomSheet({
+    super.key,
+    required this.postId,
+    required this.userId,
+  });
+
+  @override
+  State<CommentsBottomSheet> createState() => _CommentsBottomSheetState();
+}
+
+class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
+  final supabase = Supabase.instance.client;
+  final TextEditingController _commentController = TextEditingController();
+  List<Map<String, dynamic>> _comments = [];
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadComments();
+  }
+
+  Future<void> _loadComments() async {
+    setState(() => _isLoading = true);
+    try {
+      // Try to load comments - if table doesn't exist, handle gracefully
+      final data = await supabase
+          .from('comments')
+          .select('*')
+          .eq('post_id', widget.postId)
+          .order('created_at', ascending: false);
+
+      if (mounted && data != null) {
+        List<Map<String, dynamic>> commentsWithProfiles = [];
+
+        for (var comment in data) {
+          final userProfile = await _getUserProfile(comment['user_id']);
+          comment['user_profile'] = userProfile;
+          commentsWithProfiles.add(comment);
+        }
+
+        setState(() => _comments = commentsWithProfiles);
+      }
+    } catch (e) {
+      print('Error loading comments: $e');
+      // If comments table doesn't exist, show empty state
+      setState(() => _comments = []);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  // Get user profile data from appropriate table (same as parent class)
+  Future<Map<String, dynamic>?> _getUserProfile(String userId) async {
+    try {
+      // First check profiles table
+      final profileData = await supabase
+          .from('profiles')
+          .select('name, avatar_url, user_type')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (profileData != null) {
+        // If user_type indicates startup, get additional startup data
+        if (profileData['user_type'] == 'startup') {
+          final startupData = await supabase
+              .from('startups')
+              .select('name as startup_name, logo')
+              .eq('id', userId)
+              .maybeSingle();
+
+          if (startupData != null) {
+            return {
+              'name': startupData['startup_name'] ?? profileData['name'],
+              'avatar_url': startupData['logo'] ?? profileData['avatar_url'],
+              'user_type': 'startup',
+            };
+          }
+        }
+        return profileData;
+      }
+
+      // If not found in profiles, check startups table directly
+      final startupData = await supabase
+          .from('startups')
+          .select('name, logo')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (startupData != null) {
+        return {
+          'name': startupData['name'],
+          'avatar_url': startupData['logo'],
+          'user_type': 'startup',
+        };
+      }
+
+      return null;
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      return null;
+    }
+  }
+
+  Future<void> _addComment() async {
+    if (_commentController.text.trim().isEmpty) return;
+
+    try {
+      await supabase.from('comments').insert({
+        'post_id': widget.postId,
+        'user_id': widget.userId,
+        'body': _commentController.text.trim(),
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      _commentController.clear();
+      _loadComments();
+    } catch (e) {
+      print('Error adding comment: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Title
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              'Comments',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          const Divider(),
+
+          // Comments List
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _comments.isEmpty
+                ? const Center(child: Text('No comments yet'))
+                : ListView.builder(
+              itemCount: _comments.length,
+              itemBuilder: (context, index) {
+                final comment = _comments[index];
+                final profile = comment['user_profile'];
+
+                return ListTile(
+                  leading: CircleAvatar(
+                    radius: 16,
+                    backgroundImage: profile?['avatar_url'] != null
+                        ? NetworkImage(profile['avatar_url'])
+                        : null,
+                    child: profile?['avatar_url'] == null
+                        ? Text((profile?['name'] ?? 'U')[0].toUpperCase())
+                        : null,
+                  ),
+                  title: Text(
+                    profile?['name'] ?? 'Unknown User',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: Text(comment['body'] ?? ''),
+                );
+              },
+            ),
+          ),
+
+          // Comment Input
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: Colors.grey[300]!)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _commentController,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a comment...',
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _addComment,
+                  icon: const Icon(Icons.send, color: Colors.blue),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
