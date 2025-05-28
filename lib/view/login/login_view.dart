@@ -12,8 +12,15 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  bool isPasswordVisible = false;
   bool isLoading = false;
+  String userType = 'Unknown';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map?;
+    userType = args?['userType'] ?? 'Unknown';
+  }
 
   void _login() async {
     final email = emailController.text.trim();
@@ -30,161 +37,112 @@ class _LoginViewState extends State<LoginView> {
       isLoading = true;
     });
 
-    // Updated to use the record return type
-    final (error, userType) = await AuthService().signIn(email, password);
+    final result = await AuthService().login(email, password, userType);
 
     setState(() {
       isLoading = false;
     });
 
-    if (error == null && userType != null) {
-      // Login successful - navigate based on user type
-      String route;
+    if (result == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login successful!')),
+      );
+      // Route to the respective screen based on user type
       switch (userType) {
         case 'Job Seeker':
-          route = '/Seeker';
+          Navigator.pushReplacementNamed(context, '/Seeker');
           break;
         case 'Startup':
-          route = '/startUp';
+          Navigator.pushReplacementNamed(context, '/startUp');
           break;
         case 'Established Company':
-          route = '/Company';
+          Navigator.pushReplacementNamed(context, '/Company');
           break;
         default:
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Unknown user type: $userType')),
           );
-          return;
       }
-
-      // Navigate and remove all previous routes from stack
-      Navigator.pushNamedAndRemoveUntil(
-          context,
-          route,
-              (route) => false,
-          arguments: {'userType': userType}
-      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: ${error ?? "Unknown error"}')),
+        SnackBar(content: Text('Login failed: $result')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final String userType = args?['userType'] ?? 'Unknown';
-
     return Scaffold(
-      backgroundColor: Colors.white,
-
-
       appBar: AppBar(
         leading: const BackButton(),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
-        elevation: 0,
+        elevation: 1,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-
           padding: const EdgeInsets.all(24),
-
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-              const SizedBox(height: 20),
-
+              const SizedBox(height: 30),
               const Text(
-                'Welcome Back',
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                ),
+                'Welcome Back!',
+                style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold),
               ),
-
-
               const SizedBox(height: 8),
-
               Text(
-                'Log in as $userType',
-                style: const TextStyle(
-                  fontSize: 18,
-                  color: Colors.grey,
-                ),
+                'Login as a $userType',
+                style: const TextStyle(fontSize: 18, color: Colors.grey),
               ),
-
-              const SizedBox(height: 40),
-
-
+              const SizedBox(height: 30),
               TextField(
                 controller: emailController,
                 decoration: const InputDecoration(
                   labelText: 'Email',
-                  prefixIcon: Icon(Icons.email_outlined),
+                  hintText: 'Enter your email',
+                  border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
-
-              const SizedBox(height: 20),
-
-
+              const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
-                obscureText: !isPasswordVisible,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Password',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      isPasswordVisible
-                          ? Icons.visibility
-                          : Icons.visibility_off,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        isPasswordVisible = !isPasswordVisible;
-                      });
-                    },
-                  ),
+                  hintText: 'Enter your password',
+                  border: OutlineInputBorder(),
                 ),
+                obscureText: true,
               ),
-
-
-              const SizedBox(height: 50),
-
-
+              const SizedBox(height: 30),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                   child: isLoading
                       ? const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  )
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
                       : const Text(
-                    'Login',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                          'Login',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
-
-
               const SizedBox(height: 20),
-
-
               Center(
                 child: TextButton(
                   onPressed: () {
                     Navigator.pushNamed(context, '/signup', arguments: {'userType': userType});
                   },
                   child: const Text(
-                    'Don\'t have an account? Sign up',
+                    'Don\'t have an account? Sign Up',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -192,9 +150,7 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                 ),
-              ),
-
-
+              )
             ],
           ),
         ),

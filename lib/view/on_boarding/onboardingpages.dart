@@ -1,247 +1,156 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:next_app/common/color_extension.dart';
 import 'package:next_app/view/login/user_type.dart';
 
-class Onboardingpage extends StatefulWidget {
-  const Onboardingpage({super.key});
+class OnboardingPages extends StatefulWidget {
+  const OnboardingPages({super.key});
 
   @override
-  State<Onboardingpage> createState() => _OnboardingpageState();
+  State<OnboardingPages> createState() => _OnboardingPagesState();
 }
 
-class _OnboardingpageState extends State<Onboardingpage> {
-
+class _OnboardingPagesState extends State<OnboardingPages> {
   final PageController _pageController = PageController();
-  int _currentIndex = 0;
+  int _currentPage = 0;
 
-  final List<Map<String,String>> onboardingData = [{
-    'title': 'Find Your Dream Job',
-    'description': 'Discover opportunities that match your skills and career goals.',
-    'icon': 'search',
-  },
-    {
-      'title': 'Connect with Top Companies',
-      'description': 'Build relationships with leading companies and startups in your industry.',
-      'icon': 'users',
-    },
-    {
-      'title': 'Grow Your Team',
-      'description': 'For companies, find exceptional talent to help your business thrive.',
-      'icon': 'briefcase',
-    },
+  final List<_OnboardingData> _pages = [
+    _OnboardingData(
+      icon: Icons.lightbulb_rounded,
+      title: 'Discover Startups',
+      description: 'Explore innovative startups and companies in various sectors.',
+      color: Colors.blue,
+    ),
+    _OnboardingData(
+      icon: Icons.people_alt_rounded,
+      title: 'Connect & Collaborate',
+      description: 'Find co-founders, team members, or job opportunities easily.',
+      color: Colors.deepPurple,
+    ),
+    _OnboardingData(
+      icon: Icons.rocket_launch_rounded,
+      title: 'Grow Your Career',
+      description: 'Join the next big thing and accelerate your professional journey.',
+      color: Colors.orange,
+    ),
   ];
-   //handles next
-   void handlenext(){
-    if( _currentIndex < onboardingData.length - 1){
-      _pageController.nextPage(
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeInOut
+
+  void _nextPage() async {
+    if (_currentPage < _pages.length - 1) {
+      _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
+    } else {
+      final selectedRole = await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const UserType()),
       );
+      if (selectedRole != null) {
+        Navigator.pushReplacementNamed(context, '/signup', arguments: {'userType': selectedRole});
+      }
     }
-    else{
-      handleFinish();
-    }
   }
-  //handles skip
-  void handleSkip(){
-     handleFinish();
-  }
-  //handles route to the userr type page
-  void handleFinish() {
-    Navigator.pushReplacement(context,
-      MaterialPageRoute(builder: (context) => const UserType()),
-    );
-  }
-
-  Widget renderIcon(String icon){
-     IconData selectedIcon;
-     switch(icon){
-       case 'search':
-         selectedIcon = Icons.search;
-         break;
-       case 'users':
-         selectedIcon = Icons.people;
-         break;
-       case 'breifcase':
-         selectedIcon = Icons.work;
-         break;
-       default:
-         selectedIcon = Icons.circle;
-     }
-     return Icon(selectedIcon,size:60,
-       color:Colors.blue,);
-  }
-  Widget buildDots() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(onboardingData.length, (index) {
-        return AnimatedContainer(
-          duration: Duration(milliseconds: 300),
-          margin: EdgeInsets.symmetric(horizontal: 4),
-          width: _currentIndex == index ? 16 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: _currentIndex == index ? Colors.blue : Colors.grey[300],
-            borderRadius: BorderRadius.circular(4),
-          ),
-        );
-      }),
-    );
-  }
-
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: TColor.white,
-      body: SafeArea(
-          child:Column(
-            children: [
-
-              Padding(
-                padding:EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16 ),
-
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TextButton(onPressed: handleSkip,
-                        child: Text('Skip',style: TextStyle(color: Colors.blue),)
-                    ),
-                    Image.asset(
-                      'assets/img/Icon.png',
-                      height: 32,
-                      width: 32,
-                    ),
-                  ],
-                )
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          if (_currentPage < _pages.length - 1)
+            TextButton(
+              onPressed: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const UserType()),
               ),
-
-              Expanded(child: PageView.builder(
-                controller: _pageController,
-                itemCount: onboardingData.length,
-                onPageChanged: (index){
-                  setState(() {
-                    _currentIndex = index;
-                  });
-                },
-                itemBuilder: (context,index){
-                  final item = onboardingData[index];
-                  return Padding(
-                      padding: EdgeInsets.all(24),
+              child: const Text('Skip', style: TextStyle(color: Colors.blue)),
+            ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: _pages.length,
+              onPageChanged: (index) => setState(() => _currentPage = index),
+              itemBuilder: (context, index) {
+                final page = _pages[index];
+                return Card(
+                  margin: const EdgeInsets.all(16),
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-
-                        Container(//container at center
-                          width: size.width *0.7,
-                          height: size.width * 0.7,
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Opacity(opacity: 0.2,
-                              child: Icon(Icons.workspaces_outline,size: 120),
-                              ),
-
-                              Container(//circle inside the container
-                                width: 120,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black26,
-                                      blurRadius: 8,
-                                      offset: Offset(0,4),
-                                    )
-                                  ]
-                                ),
-                                child: Center(
-                                  child: renderIcon(item['icon']!
-                                  ),
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          height: 32,
-                        ),
+                        Icon(page.icon, size: 100, color: page.color),
+                        const SizedBox(height: 24),
                         Text(
-                          item['title']!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 28,
-                            fontWeight:FontWeight.bold,
-                          color: Colors.black
+                          page.title,
+                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: page.color),
                         ),
-                        ),
-                        SizedBox(
-                          height: 15,
-                        ),
+                        const SizedBox(height: 12),
                         Text(
-                            item['description']!,
-                        textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Colors.black,
-                            height: 1.5,
-                          ),
-                          )
+                          page.description,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
                       ],
                     ),
-                  );
-                },
-              )
-              ),
-
-              SizedBox(height: 24,),
-              buildDots(),
-              Padding(
-                  padding: EdgeInsets.all(24),
-                child:
-                SizedBox(
-                width: double.infinity,
-                  child:ElevatedButton.icon(
-                    onPressed: handlenext,
-                    icon: Icon(
-                      _currentIndex == onboardingData.length - 1
-                          ? Icons.check
-                          : Icons.arrow_forward,
-                      color: Colors.white,
-                    ),
-                    label: Text(
-                      _currentIndex == onboardingData.length - 1
-                          ? 'Get Started' : 'Next',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      backgroundColor: Colors.blue,
+                  ),
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: List.generate(
+                    _pages.length,
+                    (index) => Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _currentPage == index ? _pages[index].color : Colors.grey.shade300,
                       ),
                     ),
-                  )
+                  ),
                 ),
-            ],
+                ElevatedButton(
+                  onPressed: _nextPage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _pages[_currentPage].color,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                  child: Text(
+                    _currentPage < _pages.length - 1 ? 'Next' : 'Get Started',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
           ),
+        ],
       ),
     );
+  }
 }
+
+class _OnboardingData {
+  final IconData icon;
+  final String title;
+  final String description;
+  final Color color;
+  const _OnboardingData({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.color,
+  });
 }

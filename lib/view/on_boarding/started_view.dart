@@ -11,44 +11,29 @@ class StartedView extends StatefulWidget {
   State<StartedView> createState() => _StartedViewState();
 }
 
-// We add `SingleTickerProviderStateMixin`
-// so our widget can provide a `Ticker` — a "ticker" is needed to drive the animation controller.
 class _StartedViewState extends State<StartedView> with SingleTickerProviderStateMixin {
-  // _controller will control the animation timing
   late AnimationController _controller;
-
-  // _scaleAnimation will define how the logo scales (grows) using a curve
   late Animation<double> _scaleAnimation;
+  late Animation<double> _opacityAnimation;
 
   @override
   void initState() {
     super.initState();
-
-    // 1. Create animation controller with duration of 2 seconds
     _controller = AnimationController(
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
       vsync: this,
     );
-
-    // 2. Define scale animation with a bounce effect (elasticOut)
     _scaleAnimation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.elasticOut,
+      curve: Curves.easeInOut,
     );
-
-    // 3. Start the animation
+    _opacityAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+    );
     _controller.forward();
-
-    // 4. Navigate to Onboardingpages after 3 seconds
-    Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const Onboardingpage()),
-      );
-    });
   }
 
-  // 5. Dispose of the animation controller when not needed to free up resources
   @override
   void dispose() {
     _controller.dispose();
@@ -58,19 +43,48 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TColor.white,
-      body: Center(
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: Image.asset(
-            'assets/img/Icon.png',
-            width: 300,
-            height: 300,
-          ),
-        ),
-
+      body: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Container(
+            color: Colors.white,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Image.asset('assets/img/Icon.png', height: 150, width: 150),
+                  ),
+                  const SizedBox(height: 20),
+                  FadeTransition(
+                    opacity: _opacityAnimation,
+                    child: const Text(
+                      'N.E.X.T.',
+                      style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.blue),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const OnboardingPages()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                    ),
+                    child: const Text('Get Started', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
-
     );
   }
 }

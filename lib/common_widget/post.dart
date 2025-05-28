@@ -703,31 +703,57 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Posts'),
-        elevation: 0,
-        bottom: TabBar(
+    return WillPopScope(
+      onWillPop: () async {
+        // Fetch user type from profile
+        final supabase = Supabase.instance.client;
+        final userId = widget.userId;
+        String? userType;
+        try {
+          final profile = await supabase
+              .from('profiles')
+              .select('user_type')
+              .eq('id', userId)
+              .maybeSingle();
+          userType = profile?['user_type'];
+        } catch (_) {}
+        if (userType == 'Startup' || userType == 'startup') {
+          Navigator.pushReplacementNamed(context, '/startUp');
+        } else if (userType == 'Established Company' || userType == 'company') {
+          Navigator.pushReplacementNamed(context, '/Company');
+        } else if (userType == 'Job Seeker' || userType == 'seeker') {
+          Navigator.pushReplacementNamed(context, '/Seeker');
+        } else {
+          Navigator.pushReplacementNamed(context, '/');
+        }
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Posts'),
+          elevation: 0,
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(icon: Icon(Icons.feed), text: 'Feed'),
+              Tab(icon: Icon(Icons.add), text: 'Create'),
+            ],
+          ),
+        ),
+        body: TabBarView(
           controller: _tabController,
-          tabs: const [
-            Tab(icon: Icon(Icons.feed), text: 'Feed'),
-            Tab(icon: Icon(Icons.add), text: 'Create'),
+          children: [
+            _buildFeedTab(),
+            _buildCreatePostTab(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildFeedTab(),
-          _buildCreatePostTab(),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _tabController.animateTo(1); // Switch to Create tab
-        },
-        child: const Icon(Icons.add),
-        tooltip: 'Create Post',
+        floatingActionButton: FloatingActionButton(
+          onPressed: () {
+            _tabController.animateTo(1); // Switch to Create tab
+          },
+          child: const Icon(Icons.add),
+          tooltip: 'Create Post',
+        ),
       ),
     );
   }

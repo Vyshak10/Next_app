@@ -20,6 +20,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
   String userType = 'Unknown';
   bool isLoading = false;
+  bool acceptTerms = false;
 
   @override
   void didChangeDependencies() {
@@ -98,54 +99,53 @@ class _SignUpPageState extends State<SignUpPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-
               const SizedBox(height: 30),
-
-
               const Text(
                 'Create Account',
                 style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold),
               ),
-
-
               const SizedBox(height: 8),
-
-
               Text(
                 'Sign up as a $userType',
                 style: const TextStyle(fontSize: 18, color: Colors.grey),
               ),
-
-
               const SizedBox(height: 30),
-
-
               _buildSignupForm(userType),
-
-
               const SizedBox(height: 30),
-
-
+              Row(
+                children: [
+                  Checkbox(
+                    value: acceptTerms,
+                    onChanged: (value) {
+                      setState(() {
+                        acceptTerms = value ?? false;
+                      });
+                    },
+                  ),
+                  const Text('I accept the terms and conditions'),
+                ],
+              ),
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : _signUp,
+                  onPressed: acceptTerms && !isLoading ? _signUp : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
                   child: isLoading
                       ? const CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  )
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
                       : const Text(
-                    'Create Account',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
+                          'Create Account',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
-
-
               const SizedBox(height: 20),
-
-
               Center(
                 child: TextButton(
                   onPressed: () {
@@ -186,23 +186,39 @@ class _SignUpPageState extends State<SignUpPage> {
       children: [
         TextField(
           controller: companyNameController,
-          decoration: const InputDecoration(labelText: 'Company Name'),
+          decoration: const InputDecoration(
+            labelText: 'Company Name',
+            hintText: 'Enter your company name',
+            border: OutlineInputBorder(),
+          ),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: industryController,
-          decoration: const InputDecoration(labelText: 'Industry'),
+          decoration: const InputDecoration(
+            labelText: 'Industry',
+            hintText: 'Enter your industry',
+            border: OutlineInputBorder(),
+          ),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: emailController,
-          decoration: const InputDecoration(labelText: 'Email'),
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            hintText: 'Enter your email',
+            border: OutlineInputBorder(),
+          ),
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
         TextField(
           controller: passwordController,
-          decoration: const InputDecoration(labelText: 'Password'),
+          decoration: const InputDecoration(
+            labelText: 'Password',
+            hintText: 'Enter your password',
+            border: OutlineInputBorder(),
+          ),
           obscureText: true,
         ),
       ],
@@ -214,23 +230,39 @@ class _SignUpPageState extends State<SignUpPage> {
       children: [
         TextField(
           controller: startupNameController,
-          decoration: const InputDecoration(labelText: 'Startup Name'),
+          decoration: const InputDecoration(
+            labelText: 'Startup Name',
+            hintText: 'Enter your startup name',
+            border: OutlineInputBorder(),
+          ),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: stageController,
-          decoration: const InputDecoration(labelText: 'Stage of Startup'),
+          decoration: const InputDecoration(
+            labelText: 'Stage of Startup',
+            hintText: 'Enter your startup stage',
+            border: OutlineInputBorder(),
+          ),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: emailController,
-          decoration: const InputDecoration(labelText: 'Email'),
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            hintText: 'Enter your email',
+            border: OutlineInputBorder(),
+          ),
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
         TextField(
           controller: passwordController,
-          decoration: const InputDecoration(labelText: 'Password'),
+          decoration: const InputDecoration(
+            labelText: 'Password',
+            hintText: 'Enter your password',
+            border: OutlineInputBorder(),
+          ),
           obscureText: true,
         ),
       ],
@@ -242,24 +274,40 @@ class _SignUpPageState extends State<SignUpPage> {
       children: [
         TextField(
           controller: fullNameController,
-          decoration: const InputDecoration(labelText: 'Full Name'),
+          decoration: const InputDecoration(
+            labelText: 'Full Name',
+            hintText: 'Enter your full name',
+            border: OutlineInputBorder(),
+          ),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: skillsController,
-          decoration: const InputDecoration(labelText: 'Skills'),
+          decoration: const InputDecoration(
+            labelText: 'Skills',
+            hintText: 'Enter your skills',
+            border: OutlineInputBorder(),
+          ),
           maxLines: 2,
         ),
         const SizedBox(height: 16),
         TextField(
           controller: emailController,
-          decoration: const InputDecoration(labelText: 'Email'),
+          decoration: const InputDecoration(
+            labelText: 'Email',
+            hintText: 'Enter your email',
+            border: OutlineInputBorder(),
+          ),
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
         TextField(
           controller: passwordController,
-          decoration: const InputDecoration(labelText: 'Password'),
+          decoration: const InputDecoration(
+            labelText: 'Password',
+            hintText: 'Enter your password',
+            border: OutlineInputBorder(),
+          ),
           obscureText: true,
         ),
       ],

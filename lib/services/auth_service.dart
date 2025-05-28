@@ -13,21 +13,15 @@ class AuthService {
 
       final user = response.user;
       if (user != null) {
-        // Check if profile already exists
-        final existingProfile = await _supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', user.id)
-            .limit(1);
-
-        if (existingProfile.isEmpty) {
-          // Save userType in the 'profiles' table only if it doesn't exist
-          await _supabase.from('profiles').insert({
-            'id': user.id,
-            'user_type': userType,
-          });
-        }
+        // Create profile
+        await _supabase.from('profiles').insert({
+          'id': user.id,
+          'user_type': userType,
+        });
         return null; // success
+      } else if (response.session == null && response.user == null) {
+        // Confirmation required
+        return 'Signup successful! Please check your email to confirm your account before logging in.';
       } else {
         return 'Signup failed. Please try again.';
       }
@@ -79,4 +73,36 @@ class AuthService {
 
   // Get current user
   User? get currentUser => _supabase.auth.currentUser;
+
+  Future<String?> login(String email, String password, String userType) async {
+    try {
+      final response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = response.user;
+      if (user != null) {
+        // Use select().limit(1) instead of .single() to avoid PGRST116 error
+        final profileResponse = await _supabase
+            .from('profiles')
+            .select('user_type')
+            .eq('id', user.id)
+            .limit(1);
+
+        if (profileResponse.isNotEmpty) {
+          final userType = profileResponse[0]['user_type'] as String?;
+          return null; // Successful login
+        } else {
+          return 'Profile not found. Please contact support.'; // Profile doesn't exist
+        }
+      } else {
+        return 'Login failed. Please try again.'; // Failed login
+      }
+    } on AuthException catch (e) {
+      return e.message; // Return the error message from Supabase
+    } catch (e) {
+      return 'Unexpected error: $e'; // Handle unexpected errors
+    }
+  }
 }
