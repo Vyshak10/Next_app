@@ -330,8 +330,9 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
     }
 
     return Container(
-      color: const Color(0xFFF6F8FB), // Light blue/grey background
+      color: const Color(0xFFF6F8FB),
       child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 4),
         itemCount: _feedPosts.length,
         itemBuilder: (context, index) {
           final post = _feedPosts[index];
@@ -340,158 +341,274 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
           final tags = List<String>.from(post['tags'] ?? []);
           final isStartup = userProfile?['user_type'] == 'startup';
 
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-            child: Row(
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Accent bar
-                Container(
-                  width: 6,
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: isStartup ? Colors.orange : Colors.blue,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(18),
-                      bottomLeft: Radius.circular(18),
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Stack(
-                              children: [
-                                CircleAvatar(
-                                  radius: 22,
-                                  backgroundImage: userProfile?['avatar_url'] != null
-                                      ? NetworkImage(userProfile['avatar_url'])
-                                      : null,
-                                  backgroundColor: Colors.blue.shade100,
-                                  child: userProfile?['avatar_url'] == null
-                                      ? Text(
-                                          (userProfile?['name'] ?? 'U')[0].toUpperCase(),
-                                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-                                        )
-                                      : null,
-                                ),
-                                if (isStartup)
-                                  Positioned(
-                                    bottom: 0,
-                                    right: 0,
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.08),
-                                            blurRadius: 2,
-                                          ),
-                                        ],
-                                      ),
-                                      padding: const EdgeInsets.all(2),
-                                      child: const Icon(Icons.rocket_launch_rounded, color: Colors.orange, size: 16),
-                                    ),
-                                  ),
-                              ],
+                // Header with user info
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 4, 8),
+                  child: Row(
+                    children: [
+                      Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isStartup ? Colors.orange : Colors.blue,
+                                width: 1.5,
+                              ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    userProfile?['name'] ?? 'Unknown User',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                                  ),
-                                  Text(
-                                    'Launched ${_formatDate(post['created_at'])}',
-                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                                  ),
-                                ],
+                            child: CircleAvatar(
+                              radius: 20,
+                              backgroundImage: userProfile?['avatar_url'] != null
+                                  ? NetworkImage(userProfile['avatar_url'])
+                                  : null,
+                              backgroundColor: Colors.blue.shade50,
+                              child: userProfile?['avatar_url'] == null
+                                  ? Text(
+                                      (userProfile?['name'] ?? 'U')[0].toUpperCase(),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: isStartup ? Colors.orange : Colors.blue,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                          ),
+                          if (isStartup)
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 2,
+                                    ),
+                                  ],
+                                ),
+                                padding: const EdgeInsets.all(3),
+                                child: const Icon(Icons.rocket_launch_rounded, color: Colors.orange, size: 14),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              userProfile?['name'] ?? 'Unknown User',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              _formatDate(post['created_at']),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 10),
-                        if (imageUrls.isNotEmpty)
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.network(
-                              imageUrls.first,
-                              height: 160,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: Colors.grey[300],
-                                  height: 160,
-                                  child: const Icon(Icons.broken_image, size: 50),
-                                );
-                              },
-                            ),
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () {
+                            // TODO: Implement post options menu
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(Icons.more_horiz_rounded, size: 20, color: Colors.grey[700]),
                           ),
-                        if (imageUrls.isNotEmpty) const SizedBox(height: 10),
-                        Text(
-                          post['title'] ?? '',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
                         ),
-                        if (post['description'] != null && post['description'].isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(post['description']),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Post content
+                if (imageUrls.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      imageUrls.first,
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 180,
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.broken_image, size: 40),
+                        );
+                      },
+                    ),
+                  ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post['title'] ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (post['description'] != null && post['description'].isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            post['description'],
+                            style: TextStyle(
+                              color: Colors.grey[800],
+                              fontSize: 14,
+                              height: 1.3,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        if (tags.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Wrap(
-                              spacing: 4,
-                              runSpacing: 4,
-                              children: tags.map((tag) {
-                                return Text(
+                        ),
+                      if (tags.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: tags.map((tag) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
                                   '#$tag',
                                   style: TextStyle(
                                     color: Colors.blue[700],
                                     fontSize: 12,
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                );
-                              }).toList(),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // Action buttons
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.shade200),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _AnimatedRocketLike(
+                        key: ValueKey('like_${post['id']}'),
+                        isLiked: post['isLiked'] ?? false,
+                        onTap: () => _toggleLike(post['id'].toString(), post['isLiked'] ?? false),
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => _showCommentsSheet(post['id'].toString()),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            child: Row(
+                              children: [
+                                Icon(Icons.chat_bubble_outline_rounded, size: 20, color: Colors.grey[700]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Comment',
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            _AnimatedRocketLike(
-                              key: ValueKey('like_${post['id']}'),
-                              isLiked: post['isLiked'] ?? false,
-                              onTap: () => _toggleLike(post['id'].toString(), post['isLiked'] ?? false),
-                            ),
-                            const SizedBox(width: 20),
-                            GestureDetector(
-                              onTap: () => _showCommentsSheet(post['id'].toString()),
-                              child: const Icon(Icons.mode_comment_outlined, size: 28),
-                            ),
-                            const SizedBox(width: 20),
-                            GestureDetector(
-                              onTap: () {
-                                // TODO: Implement share functionality
-                              },
-                              child: const Icon(Icons.ios_share_rounded, size: 28),
-                            ),
-                            const Spacer(),
-                            const Icon(Icons.bookmark_outline, size: 28),
-                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () {
+                            // TODO: Implement share functionality
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                            child: Row(
+                              children: [
+                                Icon(Icons.share_rounded, size: 20, color: Colors.grey[700]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Share',
+                                  style: TextStyle(
+                                    color: Colors.grey[700],
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () {
+                            // TODO: Implement bookmark functionality
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(
+                              Icons.bookmark_border_rounded,
+                              size: 20,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -748,13 +865,17 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         } else {
           Navigator.pushReplacementNamed(context, '/');
         }
-        return false;
+        return false; // Prevent default back behavior
       },
       child: Scaffold(
-        body: SafeArea(
-          top: false,
-          child: _buildFeedTab(),
+        backgroundColor: Colors.grey[50],
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          automaticallyImplyLeading: false,
         ),
+        body: _buildFeedTab(),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             showModalBottomSheet(
@@ -1014,13 +1135,11 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
 class _AnimatedRocketLike extends StatefulWidget {
   final bool isLiked;
   final VoidCallback onTap;
-  final Widget? child;
 
   const _AnimatedRocketLike({
     Key? key,
     required this.isLiked,
     required this.onTap,
-    this.child,
   }) : super(key: key);
 
   @override
@@ -1037,21 +1156,25 @@ class _AnimatedRocketLikeState extends State<_AnimatedRocketLike> with SingleTic
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 300),
       lowerBound: 0.0,
       upperBound: 1.0,
     );
-    _scaleAnim = Tween<double>(begin: 0.8, end: 1.2).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
+    _scaleAnim = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
+    );
     _wasLiked = widget.isLiked;
   }
 
   @override
   void didUpdateWidget(covariant _AnimatedRocketLike oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isLiked && !_wasLiked) {
-      _controller.forward(from: 0.0);
+    if (widget.isLiked != _wasLiked) {
+      if (widget.isLiked) {
+        _controller.forward(from: 0.0);
+      }
+      _wasLiked = widget.isLiked;
     }
-    _wasLiked = widget.isLiked;
   }
 
   @override
@@ -1062,19 +1185,34 @@ class _AnimatedRocketLikeState extends State<_AnimatedRocketLike> with SingleTic
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        widget.onTap();
-        if (!widget.isLiked) {
-          _controller.forward(from: 0.0);
-        }
-      },
-      child: ScaleTransition(
-        scale: _scaleAnim,
-        child: Icon(
-          widget.isLiked ? Icons.rocket_launch_rounded : Icons.rocket_launch_outlined,
-          color: widget.isLiked ? Colors.orange : Colors.black,
-          size: 32,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              ScaleTransition(
+                scale: _scaleAnim,
+                child: Icon(
+                  widget.isLiked ? Icons.rocket_launch_rounded : Icons.rocket_launch_outlined,
+                  color: widget.isLiked ? Colors.orange : Colors.grey[700],
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Like',
+                style: TextStyle(
+                  color: widget.isLiked ? Colors.orange : Colors.grey[700],
+                  fontSize: 13,
+                  fontWeight: widget.isLiked ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

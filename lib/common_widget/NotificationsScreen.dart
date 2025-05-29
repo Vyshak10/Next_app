@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -382,168 +383,403 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Notifications & Calendar'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showScheduleMeetingDialog,
-            tooltip: 'Schedule Meeting',
+          Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.add, color: Colors.blue),
+              onPressed: _showScheduleMeetingDialog,
+            ),
           ),
         ],
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-        child: Column(
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(12.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Notifications',
-                    style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-              ),
-            ),
-            ListView.separated(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              itemCount: notifications.length,
-              separatorBuilder: (_, __) => const Divider(),
-              itemBuilder: (context, index) {
-                final notif = notifications[index];
-                return ListTile(
-                  title: Text(notif['title'] ?? 'No Title'),
-                  subtitle: Text(notif['body'] ?? ''),
-                  trailing: Text(
-                    notif['timestamp'] != null
-                        ? DateTime.parse(notif['timestamp'])
-                        .toLocal()
-                        .toString()
-                        .split('.')[0]
-                        : '',
-                    style: const TextStyle(
-                        fontSize: 12, color: Colors.grey),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            const Padding(
-              padding: EdgeInsets.all(12.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text('Scheduled Meetings',
-                    style: TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold)),
-              ),
-            ),
-            TableCalendar(
-              firstDay: DateTime.utc(2023, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _selectedDay,
-              selectedDayPredicate: (day) => isSameDay(day, _selectedDay),
-              onDaySelected: _onDaySelected,
-              calendarStyle: const CalendarStyle(
-                selectedDecoration: BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
+      body: SafeArea(
+        child: isLoading
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Loading data...',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
-                todayDecoration: BoxDecoration(
-                  color: Colors.orange,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            ...meetings.map((meeting) {
-              final status = meeting['status'] ?? 'pending';
-              final participantName = _getMeetingParticipantName(meeting);
-              final canRespond = _canRespondToMeeting(meeting);
-
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.calendar_today,
-                    color: status == 'accepted'
-                        ? Colors.green
-                        : status == 'declined'
-                        ? Colors.red
-                        : Colors.orange,
-                  ),
-                  title: Text(meeting['title'] ?? 'No Title'),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (meeting['description'] != null && meeting['description'].isNotEmpty)
-                        Text(meeting['description']),
-                      Text(participantName),
-                      Text(
-                        'Status: ${status.toUpperCase()}',
-                        style: TextStyle(
-                          color: status == 'accepted'
-                              ? Colors.green
-                              : status == 'declined'
-                              ? Colors.red
-                              : Colors.orange,
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Calendar Section
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.1),
+                          spreadRadius: 1,
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: TableCalendar(
+                      firstDay: DateTime.utc(2023, 1, 1),
+                      lastDay: DateTime.utc(2030, 12, 31),
+                      focusedDay: _selectedDay,
+                      selectedDayPredicate: (day) {
+                        return isSameDay(_selectedDay, day);
+                      },
+                      onDaySelected: (selectedDay, focusedDay) {
+                        setState(() {
+                          _selectedDay = selectedDay;
+                        });
+                        fetchMeetings(selectedDay);
+                      },
+                      calendarFormat: CalendarFormat.month,
+                      availableCalendarFormats: const { CalendarFormat.month: 'Month' },
+                      headerStyle: HeaderStyle(
+                        formatButtonVisible: false,
+                        titleCentered: true,
+                        leftChevronIcon: Icon(Icons.chevron_left, color: Colors.grey[700]),
+                        rightChevronIcon: Icon(Icons.chevron_right, color: Colors.grey[700]),
+                        titleTextStyle: const TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  ),
-                  trailing: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        meeting['scheduled_time'] != null
-                            ? DateTime.parse(meeting['scheduled_time'])
-                            .toLocal()
-                            .toString()
-                            .split('.')[0]
-                            .substring(11, 16)
-                            : '',
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      if (canRespond)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.check, color: Colors.green, size: 20),
-                              onPressed: () => updateMeetingStatus(meeting['id'], 'accepted'),
-                              tooltip: 'Accept',
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, color: Colors.red, size: 20),
-                              onPressed: () => updateMeetingStatus(meeting['id'], 'declined'),
-                              tooltip: 'Decline',
-                            ),
-                          ],
+                      calendarStyle: CalendarStyle(
+                        todayDecoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.5),
+                          shape: BoxShape.circle,
                         ),
-                    ],
+                        selectedDecoration: const BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                        ),
+                        outsideDaysVisible: false,
+                      ),
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-            if (meetings.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(12.0),
-                child: Text('No meetings scheduled for this day.',
-                    style: TextStyle(color: Colors.grey)),
+
+                  // Scrollable Content Area
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Scheduled Meetings Section Title
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Text(
+                              'Meetings on ${_formatDate(_selectedDay)}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                          ),
+
+                          // Meetings List for selected day
+                          meetings.isEmpty
+                              ? Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today_outlined,
+                                          size: 64,
+                                          color: Colors.grey[400],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'No meetings scheduled',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            color: Colors.grey[600],
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Tap the + button to schedule a new meeting.',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[500],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  physics: NeverScrollableScrollPhysics(), // Disable ListView's own scrolling
+                                  shrinkWrap: true, // Make ListView take minimum space
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                  itemCount: meetings.length,
+                                  itemBuilder: (context, index) {
+                                    final meeting = meetings[index];
+                                    final isCurrentUserInitiator = meeting['initiator_id'] == supabase.auth.currentUser?.id;
+                                    final otherParticipant = isCurrentUserInitiator
+                                        ? meeting['invitee']
+                                        : meeting['initiator'];
+
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.grey.withOpacity(0.1),
+                                            spreadRadius: 1,
+                                            blurRadius: 2,
+                                            offset: const Offset(0, 1),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            meeting['title'] ?? 'Meeting',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                          if (meeting['description'] != null && meeting['description'].isNotEmpty) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              meeting['description'] ?? '',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[700],
+                                              ),
+                                            ),
+                                          ],
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Icon(Icons.calendar_today_outlined, size: 16, color: Colors.grey[600]),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                _formatDateTime(meeting['scheduled_time']),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 16),
+                                              Icon(Icons.person_outline, size: 16, color: Colors.grey[600]),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                otherParticipant?['name'] ?? 'Unknown',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              Text(
+                                                'Status: ',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.grey[800],
+                                                ),
+                                              ),
+                                              Text(
+                                                meeting['status'].toUpperCase() ?? 'N/A',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: _getMeetingStatusColor(meeting['status']),
+                                                ),
+                                              ),
+                                              if (meeting['status'] == 'pending' && !isCurrentUserInitiator) ...[
+                                                const Spacer(),
+                                                ElevatedButton(
+                                                  onPressed: () => updateMeetingStatus(meeting['id'], 'accepted'),
+                                                  child: const Text('Accept'),
+                                                  style: ElevatedButton.styleFrom(
+                                                    backgroundColor: Colors.green,
+                                                    foregroundColor: Colors.white,
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                OutlinedButton(
+                                                  onPressed: () => updateMeetingStatus(meeting['id'], 'rejected'),
+                                                  child: const Text('Reject'),
+                                                  style: OutlinedButton.styleFrom(
+                                                    foregroundColor: Colors.red,
+                                                    side: const BorderSide(color: Colors.red),
+                                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                          // Notifications Section Title
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                            child: Text(
+                              'Recent Notifications',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[800],
+                              ),
+                            ),
+                          ),
+
+                          // Notifications List
+                           notifications.isEmpty
+                                ? Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.notifications_none_outlined,
+                                            size: 64,
+                                            color: Colors.grey[400],
+                                          ),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'No notifications yet',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              color: Colors.grey[600],
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    physics: NeverScrollableScrollPhysics(), // Disable ListView's own scrolling
+                                    shrinkWrap: true, // Make ListView take minimum space
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                    itemCount: notifications.length,
+                                    itemBuilder: (context, index) {
+                                      final notification = notifications[index];
+                                      return Container(
+                                        margin: const EdgeInsets.only(bottom: 12),
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(12),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.grey.withOpacity(0.1),
+                                              spreadRadius: 1,
+                                              blurRadius: 2,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              notification['title'] ?? 'Notification',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              notification['body'] ?? '',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[700],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              _formatDateTime(notification['timestamp']),
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[500],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showScheduleMeetingDialog,
-        tooltip: 'Schedule Meeting',
-        child: const Icon(Icons.add),
       ),
     );
+  }
+
+  Color _getMeetingStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return Colors.orange;
+      case 'accepted':
+        return Colors.green;
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _formatDateTime(String? dateTimeStr) {
+    if (dateTimeStr == null) return '';
+    final dateTime = DateTime.parse(dateTimeStr);
+    return DateFormat('MMM d, yyyy h:mm a').format(dateTime);
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('MMM d, yyyy').format(date);
   }
 }

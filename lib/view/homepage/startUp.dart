@@ -70,44 +70,65 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
             children: _screens,
           ),
         ),
-        bottomNavigationBar: Theme(
-          data: Theme.of(context).copyWith(
-            splashColor: Colors.blue.withOpacity(0.15),
-            highlightColor: Colors.blue.withOpacity(0.08),
-          ),
-          child: BottomNavigationBar(
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_rounded),
-                activeIcon: Icon(Icons.home_rounded, color: Colors.blue),
-                label: 'Home'
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.add_box_rounded),
-                activeIcon: Icon(Icons.add_box_rounded, color: Colors.blue),
-                label: 'Post'
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.chat_bubble_rounded),
-                activeIcon: Icon(Icons.chat_bubble_rounded, color: Colors.blue),
-                label: 'Messages'
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.account_circle_rounded),
-                activeIcon: Icon(Icons.account_circle_rounded, color: Colors.blue),
-                label: 'Profile'
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -5),
               ),
             ],
-            currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
-            selectedItemColor: Colors.blue,
-            unselectedItemColor: Colors.grey,
-            type: BottomNavigationBarType.fixed,
-            showUnselectedLabels: true,
-            elevation: 8,
-            backgroundColor: Colors.white,
-            enableFeedback: true,
           ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(Icons.home_rounded, 'Home', 0),
+                  _buildNavItem(Icons.add_box_rounded, 'Post', 1),
+                  _buildNavItem(Icons.chat_bubble_rounded, 'Messages', 2),
+                  _buildNavItem(Icons.account_circle_rounded, 'Profile', 3),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    final isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () => _onItemTapped(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.blue : Colors.grey[600],
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.blue : Colors.grey[600],
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );
