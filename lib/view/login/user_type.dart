@@ -56,123 +56,170 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
   }
 
   void _onContinue() async {
-    if (_selectedType == null) return;
+    if (_selectedType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a user type'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(milliseconds: 500));
     setState(() => _isLoading = false);
-    Navigator.pop(context, _selectedType);
+    
+    if (mounted) {
+      Navigator.pop(context, _selectedType);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select Role'),
-        elevation: 0,
         backgroundColor: Colors.white,
-        foregroundColor: Colors.blue,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Select User Type',
+          style: TextStyle(color: Colors.black),
+        ),
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                children: [
-                  Icon(Icons.account_circle_rounded, size: 64, color: Colors.blue.shade700),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Who are you?',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.blue.shade700),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text('Select your role to get started', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                ],
+              const Text(
+                'Choose your role',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Select the type of account you want to create',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
               ),
               const SizedBox(height: 32),
-              ..._options.map((option) {
-                final isSelected = _selectedType == option.title;
-                return ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeInOut,
-                    margin: const EdgeInsets.only(bottom: 20),
-                    decoration: BoxDecoration(
-                      color: isSelected ? option.color.withOpacity(0.13) : Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isSelected ? option.color : Colors.grey.shade300,
-                        width: isSelected ? 3 : 1.2,
-                      ),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: option.color.withOpacity(0.18),
-                                blurRadius: 18,
-                                offset: const Offset(0, 8),
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                    ),
-                    child: ListTile(
-                      onTap: () => setState(() => _selectedType = option.title),
-                      leading: CircleAvatar(
-                        backgroundColor: option.color.withOpacity(0.15),
-                        child: Icon(option.icon, color: option.color, size: 32),
-                        radius: 28,
-                      ),
-                      title: Text(
-                        option.title,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? option.color : Colors.black,
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _options.length,
+                  itemBuilder: (context, index) {
+                    final option = _options[index];
+                    final isSelected = _selectedType == option.title;
+                    
+                    return ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        elevation: isSelected ? 4 : 1,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(
+                            color: isSelected ? option.color : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              _selectedType = option.title;
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: option.color.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    option.icon,
+                                    color: option.color,
+                                    size: 32,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        option.title,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        option.description,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle,
+                                    color: option.color,
+                                    size: 24,
+                                  ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      subtitle: Text(
-                        option.description,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: isSelected ? option.color.withOpacity(0.8) : Colors.grey[700],
-                        ),
-                      ),
-                      trailing: AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: isSelected ? 1.0 : 0.0,
-                        child: isSelected
-                            ? Icon(Icons.check_circle_rounded, color: option.color, size: 28)
-                            : const SizedBox(width: 28),
-                      ),
-                    ),
-                  ),
-                );
-              }),
-              const SizedBox(height: 32),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                height: 48,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _selectedType == null || _isLoading ? null : _onContinue,
+                  onPressed: _isLoading ? null : _onContinue,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    elevation: 2,
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: _isLoading
                       ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
                         )
-                      : const Text('Continue', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      : const Text(
+                          'Continue',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -188,6 +235,7 @@ class _UserTypeOption {
   final String description;
   final IconData icon;
   final Color color;
+
   const _UserTypeOption({
     required this.title,
     required this.description,

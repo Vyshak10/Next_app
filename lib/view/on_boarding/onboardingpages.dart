@@ -42,8 +42,12 @@ class _OnboardingPagesState extends State<OnboardingPages> {
         context,
         MaterialPageRoute(builder: (context) => const UserType()),
       );
-      if (selectedRole != null) {
-        Navigator.pushReplacementNamed(context, '/signup', arguments: {'userType': selectedRole});
+      if (selectedRole != null && mounted) {
+        Navigator.pushReplacementNamed(
+          context, 
+          '/signup',
+          arguments: {'userType': selectedRole}
+        );
       }
     }
   }
@@ -57,10 +61,20 @@ class _OnboardingPagesState extends State<OnboardingPages> {
         actions: [
           if (_currentPage < _pages.length - 1)
             TextButton(
-              onPressed: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const UserType()),
-              ),
+              onPressed: () async {
+                final selectedRole = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const UserType()),
+                );
+                
+                if (selectedRole != null && mounted) {
+                  Navigator.pushReplacementNamed(
+                    context, 
+                    '/signup',
+                    arguments: {'userType': selectedRole}
+                  );
+                }
+              },
               child: const Text('Skip', style: TextStyle(color: Colors.blue)),
             ),
         ],
@@ -74,29 +88,35 @@ class _OnboardingPagesState extends State<OnboardingPages> {
               onPageChanged: (index) => setState(() => _currentPage = index),
               itemBuilder: (context, index) {
                 final page = _pages[index];
-                return Card(
-                  margin: const EdgeInsets.all(16),
-                  elevation: 4,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(page.icon, size: 100, color: page.color),
-                        const SizedBox(height: 24),
-                        Text(
-                          page.title,
-                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: page.color),
+                return Padding(
+                  padding: const EdgeInsets.all(40.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        page.icon,
+                        size: 100,
+                        color: page.color,
+                      ),
+                      const SizedBox(height: 40),
+                      Text(
+                        page.title,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          page.description,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 16, color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        page.description,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey[600],
                         ),
-                      ],
-                    ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 );
               },
