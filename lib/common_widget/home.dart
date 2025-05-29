@@ -31,12 +31,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController searchController = TextEditingController();
   Timer? _debounce;
 
+  String userName = '';
+
   @override
   void initState() {
     super.initState();
     fetchStartupData();
     fetchNotificationPreference();
     subscribeToNotifications();
+    fetchUserName();
   }
 
   @override
@@ -140,6 +143,34 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> fetchUserName() async {
+    final user = supabase.auth.currentUser;
+    if (user != null) {
+      // Try to get name from profile table
+      final response = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single();
+      setState(() {
+        userName = response['full_name'] ?? user.email ?? '';
+      });
+    }
+  }
+
+  String getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return 'Good Morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good Afternoon';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good Evening';
+    } else {
+      return 'Good Night';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,19 +182,30 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Top bar with logo and N.E.X.T text
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Row(
                       children: [
-                        Image.asset('assets/img/Icon.png', height: 32, width: 32),
-                        const SizedBox(width: 10),
+                        Image.asset('assets/img/Icon.png', height: 28, width: 28),
+                        const SizedBox(width: 8),
                         const Text(
                           'N.E.X.T',
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.blue,
                           ),
@@ -187,11 +229,52 @@ class _HomeScreenState extends State<HomeScreen> {
                               ? Icons.notifications_active
                               : Icons.notifications_off,
                           color: notifyEnabled ? Colors.blue : Colors.grey,
-                          size: 28,
+                          size: 24,
                         ),
                       ),
                     ),
                   ],
+                ),
+              ),
+
+              // Greeting and user name
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.08),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        getGreeting(),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        userName.isNotEmpty ? userName : 'User',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
