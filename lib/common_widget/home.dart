@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:next_app/common_widget/items_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'NotificationsScreen.dart'; // Adjust path if needed
-import 'company_detail_screen.dart'; // Add this import
+import 'NotificationsScreen.dart';
+import 'company_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -113,8 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
           print("New Notification: ${newRecord['title']} - ${newRecord['body']}");
         }
       },
-    )
-        .subscribe();
+    ).subscribe();
   }
 
   void onSearchChanged(String value) {
@@ -132,7 +131,6 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchStartupData();
   }
 
-  // Navigation function to company detail page
   void navigateToCompanyDetail(Map<String, dynamic> companyData) {
     Navigator.push(
       context,
@@ -152,36 +150,46 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Top bar
+              // Top bar with logo and N.E.X.T text
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Image.asset('assets/img/Icon.png', height: 32, width: 32),
                     Row(
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.notifications_active, size: 28),
-                          color: Colors.blue,
-                          tooltip: 'View Notifications',
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            notifyEnabled ? Icons.notifications : Icons.notifications_off,
-                            color: notifyEnabled ? Colors.blue : Colors.grey,
-                            size: 28,
+                        Image.asset('assets/img/Icon.png', height: 32, width: 32),
+                        const SizedBox(width: 10),
+                        const Text(
+                          'N.E.X.T',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
                           ),
-                          onPressed: toggleNotification,
-                          tooltip: notifyEnabled ? "Disable Notifications" : "Enable Notifications",
                         ),
                       ],
+                    ),
+                    Tooltip(
+                      message: notifyEnabled
+                          ? "Tap: View Notifications\nLong Press: Disable Notifications"
+                          : "Tap: View Notifications\nLong Press: Enable Notifications",
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                          );
+                        },
+                        onLongPress: toggleNotification,
+                        child: Icon(
+                          notifyEnabled
+                              ? Icons.notifications_active
+                              : Icons.notifications_off,
+                          color: notifyEnabled ? Colors.blue : Colors.grey,
+                          size: 28,
+                        ),
+                      ),
                     ),
                   ],
                 ),
