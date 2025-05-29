@@ -258,223 +258,217 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Profile"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _editProfileDialog,
-          ),
-        ],
-      ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await _loadProfile();
-          await _loadPosts();
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Profile Header
-              Center(
-                child: GestureDetector(
-                  onTap: _uploadAvatar,
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundImage: profile!['avatar_url'] != null &&
-                            profile!['avatar_url'] != ''
-                            ? NetworkImage(profile!['avatar_url'])
-                            : const AssetImage('assets/default_avatar.png')
-                        as ImageProvider,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Colors.blue,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 20,
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await _loadProfile();
+            await _loadPosts();
+          },
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Profile Header
+                Center(
+                  child: GestureDetector(
+                    onTap: _uploadAvatar,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 60,
+                          backgroundImage: profile!['avatar_url'] != null &&
+                              profile!['avatar_url'] != ''
+                              ? NetworkImage(profile!['avatar_url'])
+                              : const AssetImage('assets/default_avatar.png')
+                          as ImageProvider,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Colors.blue,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Profile Info
-              Text(
-                profile!['name'] ?? 'No Name',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                profile!['email'] ?? '',
-                style: const TextStyle(color: Colors.grey, fontSize: 16),
-              ),
+                // Profile Info
+                Text(
+                  profile!['name'] ?? 'No Name',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  profile!['email'] ?? '',
+                  style: const TextStyle(color: Colors.grey, fontSize: 16),
+                ),
 
-              if (profile!['role'] != null && profile!['role'] != '')
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                if (profile!['role'] != null && profile!['role'] != '')
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        profile!['role'],
+                        style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 16),
+
+                if (profile!['description'] != null && profile!['description'] != '')
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      profile!['role'],
-                      style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w500),
+                      profile!['description'],
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              if (profile!['description'] != null && profile!['description'] != '')
+                if (profile!['skills'] != null && profile!['skills'] != '')
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: profile!['skills']
+                        .split(',')
+                        .map<Widget>((skill) => Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        skill.trim(),
+                        style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w500),
+                      ),
+                    ))
+                        .toList(),
+                  ),
+
+                const SizedBox(height: 24),
+
+                // Notification Toggle
                 Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
+                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    profile!['description'],
-                    textAlign: TextAlign.center,
+                  child: SwitchListTile(
+                    title: const Text("Push Notifications"),
+                    subtitle: const Text("Receive updates about new posts and activities"),
+                    value: profile!['notify_enabled'] ?? false,
+                    onChanged: _toggleNotifications,
                   ),
                 ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 24),
 
-              if (profile!['skills'] != null && profile!['skills'] != '')
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: profile!['skills']
-                      .split(',')
-                      .map<Widget>((skill) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
+                // Posts Section
+                Row(
+                  children: [
+                    const Icon(Icons.grid_view, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Posts (${posts.length})',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    child: Text(
-                      skill.trim(),
-                      style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w500),
-                    ),
-                  ))
-                      .toList(),
+                  ],
                 ),
+                const SizedBox(height: 16),
 
-              const SizedBox(height: 24),
-
-              // Notification Toggle
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: SwitchListTile(
-                  title: const Text("Push Notifications"),
-                  subtitle: const Text("Receive updates about new posts and activities"),
-                  value: profile!['notify_enabled'] ?? false,
-                  onChanged: _toggleNotifications,
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Posts Section
-              Row(
-                children: [
-                  const Icon(Icons.grid_view, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Posts (${posts.length})',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                // Posts Grid
+                posts.isEmpty
+                    ? Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Posts Grid
-              posts.isEmpty
-                  ? Container(
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.photo_library, size: 48, color: Colors.grey),
-                      SizedBox(height: 12),
-                      Text(
-                        'No posts yet',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      Text(
-                        'Go to Posts tab to create your first post!',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-                  : GridView.builder(
-                physics: const NeverScrollableScrollPhysics(),
-                shrinkWrap: true,
-                itemCount: posts.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 4,
-                  mainAxisSpacing: 4,
-                ),
-                itemBuilder: (_, index) {
-                  final post = posts[index];
-                  final imageUrls = List<String>.from(post['image_urls'] ?? []);
-
-                  return GestureDetector(
-                    onTap: () => _showPostDetail(post),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        color: Colors.grey[300],
-                      ),
-                      child: imageUrls.isNotEmpty
-                          ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          imageUrls.first,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return const Center(
-                              child: Icon(Icons.broken_image, color: Colors.grey),
-                            );
-                          },
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.photo_library, size: 48, color: Colors.grey),
+                        SizedBox(height: 12),
+                        Text(
+                          'No posts yet',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
                         ),
-                      )
-                          : const Center(
-                        child: Icon(Icons.image, size: 32, color: Colors.grey),
-                      ),
+                        Text(
+                          'Go to Posts tab to create your first post!',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
                     ),
-                  );
-                },
-              ),
-            ],
+                  ),
+                )
+                    : GridView.builder(
+                  physics: const NeverScrollableScrollPhysics(),
+                  shrinkWrap: true,
+                  itemCount: posts.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 4,
+                    mainAxisSpacing: 4,
+                  ),
+                  itemBuilder: (_, index) {
+                    final post = posts[index];
+                    final imageUrls = List<String>.from(post['image_urls'] ?? []);
+
+                    return GestureDetector(
+                      onTap: () => _showPostDetail(post),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey[300],
+                        ),
+                        child: imageUrls.isNotEmpty
+                            ? ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            imageUrls.first,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Center(
+                                child: Icon(Icons.broken_image, color: Colors.grey),
+                              );
+                            },
+                          ),
+                        )
+                            : const Center(
+                          child: Icon(Icons.image, size: 32, color: Colors.grey),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

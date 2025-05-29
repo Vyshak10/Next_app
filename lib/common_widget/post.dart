@@ -147,6 +147,13 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
 
   // Toggle like functionality
   Future<void> _toggleLike(String postId, bool isLiked) async {
+    // Optimistically update UI
+    setState(() {
+      final idx = _feedPosts.indexWhere((p) => p['id'].toString() == postId);
+      if (idx != -1) {
+        _feedPosts[idx]['isLiked'] = !isLiked;
+      }
+    });
     try {
       if (isLiked) {
         // Remove like
@@ -156,14 +163,21 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
             .eq('post_id', postId)
             .eq('user_id', widget.userId);
       } else {
-        // Add like
-        await supabase.from('likes').insert({
-          'post_id': postId,
-          'user_id': widget.userId,
-          'created_at': DateTime.now().toIso8601String(),
-        });
+        // Add like only if it doesn't exist
+        final existing = await supabase
+            .from('likes')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('user_id', widget.userId)
+            .maybeSingle();
+        if (existing == null) {
+          await supabase.from('likes').insert({
+            'post_id': postId,
+            'user_id': widget.userId,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }
       }
-
       // Refresh feed to update like count
       _loadFeedPosts();
     } catch (e) {
@@ -304,18 +318,217 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildFeedTab() {
+    if (_isLoading && _feedPosts.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_feedPosts.isEmpty) {
+      return const Center(
+        child: Text('No posts to show yet!', style: TextStyle(fontSize: 16)),
+      );
+    }
+
+    return Container(
+      color: const Color(0xFFF6F8FB), // Light blue/grey background
+      child: ListView.builder(
+        itemCount: _feedPosts.length,
+        itemBuilder: (context, index) {
+          final post = _feedPosts[index];
+          final userProfile = post['user_profile'];
+          final imageUrls = List<String>.from(post['image_urls'] ?? []);
+          final tags = List<String>.from(post['tags'] ?? []);
+          final isStartup = userProfile?['user_type'] == 'startup';
+
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            elevation: 3,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Accent bar
+                Container(
+                  width: 6,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: isStartup ? Colors.orange : Colors.blue,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(18),
+                      bottomLeft: Radius.circular(18),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundImage: userProfile?['avatar_url'] != null
+                                      ? NetworkImage(userProfile['avatar_url'])
+                                      : null,
+                                  backgroundColor: Colors.blue.shade100,
+                                  child: userProfile?['avatar_url'] == null
+                                      ? Text(
+                                          (userProfile?['name'] ?? 'U')[0].toUpperCase(),
+                                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                                        )
+                                      : null,
+                                ),
+                                if (isStartup)
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.08),
+                                            blurRadius: 2,
+                                          ),
+                                        ],
+                                      ),
+                                      padding: const EdgeInsets.all(2),
+                                      child: const Icon(Icons.rocket_launch_rounded, color: Colors.orange, size: 16),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    userProfile?['name'] ?? 'Unknown User',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                  ),
+                                  Text(
+                                    'Launched ${_formatDate(post['created_at'])}',
+                                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        if (imageUrls.isNotEmpty)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              imageUrls.first,
+                              height: 160,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[300],
+                                  height: 160,
+                                  child: const Icon(Icons.broken_image, size: 50),
+                                );
+                              },
+                            ),
+                          ),
+                        if (imageUrls.isNotEmpty) const SizedBox(height: 10),
+                        Text(
+                          post['title'] ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17),
+                        ),
+                        if (post['description'] != null && post['description'].isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(post['description']),
+                          ),
+                        if (tags.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Wrap(
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: tags.map((tag) {
+                                return Text(
+                                  '#$tag',
+                                  style: TextStyle(
+                                    color: Colors.blue[700],
+                                    fontSize: 12,
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            _AnimatedRocketLike(
+                              key: ValueKey('like_${post['id']}'),
+                              isLiked: post['isLiked'] ?? false,
+                              onTap: () => _toggleLike(post['id'].toString(), post['isLiked'] ?? false),
+                            ),
+                            const SizedBox(width: 20),
+                            GestureDetector(
+                              onTap: () => _showCommentsSheet(post['id'].toString()),
+                              child: const Icon(Icons.mode_comment_outlined, size: 28),
+                            ),
+                            const SizedBox(width: 20),
+                            GestureDetector(
+                              onTap: () {
+                                // TODO: Implement share functionality
+                              },
+                              child: const Icon(Icons.ios_share_rounded, size: 28),
+                            ),
+                            const Spacer(),
+                            const Icon(Icons.bookmark_outline, size: 28),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildCreatePostTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Create New Post',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          Center(
+            child: Column(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  padding: const EdgeInsets.all(18),
+                  child: const Icon(Icons.rocket_launch_rounded, color: Colors.orange, size: 48),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Launch a New Post',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
-
           // Title Field
           TextField(
             controller: _titleController,
@@ -326,7 +539,6 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 16),
-
           // Image Selection
           ElevatedButton.icon(
             onPressed: _pickImages,
@@ -334,7 +546,6 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
             label: const Text('Add Images'),
           ),
           const SizedBox(height: 16),
-
           // Selected Images Preview
           if (_selectedImages.isNotEmpty)
             SizedBox(
@@ -381,9 +592,7 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
                 },
               ),
             ),
-
           const SizedBox(height: 16),
-
           // Description Field
           TextField(
             controller: _descriptionController,
@@ -395,7 +604,6 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 16),
-
           // Tags Field
           TextField(
             controller: _tagController,
@@ -407,7 +615,6 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
             ),
           ),
           const SizedBox(height: 12),
-
           // Tags Display
           if (_tags.isNotEmpty)
             Wrap(
@@ -421,212 +628,27 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
                 );
               }).toList(),
             ),
-
           const SizedBox(height: 24),
-
-          // Create Post Button
+          // Launch Post Button
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton(
+            child: ElevatedButton.icon(
               onPressed: _isLoading ? null : _createPost,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: _isLoading
+              icon: const Icon(Icons.rocket_launch_rounded),
+              label: _isLoading
                   ? const CircularProgressIndicator()
-                  : const Text('Create Post', style: TextStyle(fontSize: 16)),
+                  : const Text('Launch Post', style: TextStyle(fontSize: 16)),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildFeedTab() {
-    if (_isLoading && _feedPosts.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_feedPosts.isEmpty) {
-      return const Center(
-        child: Text('No posts to show yet!', style: TextStyle(fontSize: 16)),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadFeedPosts,
-      child: ListView.builder(
-        itemCount: _feedPosts.length,
-        itemBuilder: (context, index) {
-          final post = _feedPosts[index];
-          final userProfile = post['user_profile'];
-          final imageUrls = List<String>.from(post['image_urls'] ?? []);
-          final tags = List<String>.from(post['tags'] ?? []);
-
-          return FutureBuilder<Map<String, dynamic>>(
-            future: _getLikeData(post['id'].toString()),
-            builder: (context, snapshot) {
-              final likeData = snapshot.data ?? {'count': 0, 'isLiked': false};
-
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-                elevation: 0,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Post Header
-                    ListTile(
-                      leading: CircleAvatar(
-                        radius: 20,
-                        backgroundImage: userProfile?['avatar_url'] != null
-                            ? NetworkImage(userProfile['avatar_url'])
-                            : null,
-                        child: userProfile?['avatar_url'] == null
-                            ? Text(
-                          (userProfile?['name'] ?? 'U')[0].toUpperCase(),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        )
-                            : null,
-                      ),
-                      title: Text(
-                        userProfile?['name'] ?? 'Unknown User',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(_formatDate(post['created_at'])),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.more_horiz),
-                        onPressed: () {
-                          // Show more options
-                        },
-                      ),
-                    ),
-
-                    // Post Images
-                    if (imageUrls.isNotEmpty)
-                      Container(
-                        height: 400,
-                        child: PageView.builder(
-                          itemCount: imageUrls.length,
-                          itemBuilder: (context, imgIndex) {
-                            return GestureDetector(
-                              onDoubleTap: () {
-                                _toggleLike(post['id'].toString(), likeData['isLiked']);
-                              },
-                              child: Image.network(
-                                imageUrls[imgIndex],
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: Colors.grey[300],
-                                    child: const Icon(Icons.broken_image, size: 50),
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-
-                    // Action Buttons (Like, Comment, Share)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => _toggleLike(post['id'].toString(), likeData['isLiked']),
-                            child: Icon(
-                              likeData['isLiked'] ? Icons.favorite : Icons.favorite_border,
-                              color: likeData['isLiked'] ? Colors.red : Colors.black,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          GestureDetector(
-                            onTap: () => _showCommentsSheet(post['id'].toString()),
-                            child: const Icon(Icons.chat_bubble_outline, size: 28),
-                          ),
-                          const SizedBox(width: 16),
-                          const Icon(Icons.send_outlined, size: 28),
-                          const Spacer(),
-                          const Icon(Icons.bookmark_border, size: 28),
-                        ],
-                      ),
-                    ),
-
-                    // Like Count
-                    if (likeData['count'] > 0)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          '${likeData['count']} ${likeData['count'] == 1 ? 'like' : 'likes'}',
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-
-                    // Post Content
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          RichText(
-                            text: TextSpan(
-                              style: const TextStyle(color: Colors.black),
-                              children: [
-                                TextSpan(
-                                  text: '${userProfile?['name'] ?? 'Unknown User'} ',
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                                TextSpan(text: post['title'] ?? ''),
-                              ],
-                            ),
-                          ),
-                          if (post['description'] != null && post['description'].isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(post['description']),
-                            ),
-                          if (tags.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Wrap(
-                                spacing: 4,
-                                runSpacing: 4,
-                                children: tags.map((tag) {
-                                  return Text(
-                                    '#$tag',
-                                    style: TextStyle(
-                                      color: Colors.blue[700],
-                                      fontSize: 12,
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-
-                    // View Comments
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      child: GestureDetector(
-                        onTap: () => _showCommentsSheet(post['id'].toString()),
-                        child: const Text(
-                          'View all comments',
-                          style: TextStyle(color: Colors.grey, fontSize: 14),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              );
-            },
-          );
-        },
       ),
     );
   }
@@ -729,30 +751,36 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         return false;
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Posts'),
-          elevation: 0,
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(icon: Icon(Icons.feed), text: 'Feed'),
-              Tab(icon: Icon(Icons.add), text: 'Create'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            _buildFeedTab(),
-            _buildCreatePostTab(),
-          ],
+        body: SafeArea(
+          top: false,
+          child: _buildFeedTab(),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            _tabController.animateTo(1); // Switch to Create tab
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) => DraggableScrollableSheet(
+                expand: false,
+                initialChildSize: 0.85,
+                minChildSize: 0.5,
+                maxChildSize: 0.95,
+                builder: (context, scrollController) => Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    child: _buildCreatePostTab(),
+                  ),
+                ),
+              ),
+            );
           },
           child: const Icon(Icons.add),
-          tooltip: 'Create Post',
+          tooltip: 'Launch Post',
         ),
       ),
     );
@@ -978,6 +1006,76 @@ class _CommentsBottomSheetState extends State<CommentsBottomSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AnimatedRocketLike extends StatefulWidget {
+  final bool isLiked;
+  final VoidCallback onTap;
+  final Widget? child;
+
+  const _AnimatedRocketLike({
+    Key? key,
+    required this.isLiked,
+    required this.onTap,
+    this.child,
+  }) : super(key: key);
+
+  @override
+  State<_AnimatedRocketLike> createState() => _AnimatedRocketLikeState();
+}
+
+class _AnimatedRocketLikeState extends State<_AnimatedRocketLike> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnim;
+  bool _wasLiked = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+      lowerBound: 0.0,
+      upperBound: 1.0,
+    );
+    _scaleAnim = Tween<double>(begin: 0.8, end: 1.2).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
+    _wasLiked = widget.isLiked;
+  }
+
+  @override
+  void didUpdateWidget(covariant _AnimatedRocketLike oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isLiked && !_wasLiked) {
+      _controller.forward(from: 0.0);
+    }
+    _wasLiked = widget.isLiked;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        widget.onTap();
+        if (!widget.isLiked) {
+          _controller.forward(from: 0.0);
+        }
+      },
+      child: ScaleTransition(
+        scale: _scaleAnim,
+        child: Icon(
+          widget.isLiked ? Icons.rocket_launch_rounded : Icons.rocket_launch_outlined,
+          color: widget.isLiked ? Colors.orange : Colors.black,
+          size: 32,
+        ),
       ),
     );
   }

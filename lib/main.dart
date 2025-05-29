@@ -43,6 +43,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
+      debugShowCheckedModeBanner: false,
       home: const StartedView(),
       routes: AppRoutes.getRoutes(),
     );
