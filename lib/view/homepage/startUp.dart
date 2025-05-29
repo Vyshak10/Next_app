@@ -79,7 +79,7 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.apartment_rounded), label: 'Companies'),
+          BottomNavigationBarItem(icon: Icon(Icons.apartment_rounded), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.edit_note_rounded), label: 'Post'),
           BottomNavigationBarItem(icon: Icon(Icons.account_circle_rounded), label: 'Profile'),
         ],
