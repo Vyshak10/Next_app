@@ -5,11 +5,13 @@ import 'package:next_app/common_widget/items_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'NotificationsScreen.dart';
 import 'company_detail_screen.dart';
+import 'package:next_app/services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.onProfileTap});
-
   final VoidCallback? onProfileTap;
+  final Map<String, dynamic>? userProfile;
+
+  const HomeScreen({super.key, this.onProfileTap, this.userProfile});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -251,6 +253,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    print('HomeScreen build called. userProfile: ${widget.userProfile}');
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
@@ -350,18 +353,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                       widget.onProfileTap?.call(); // Call the callback here
                                     },
                                     child: CircleAvatar(
-                                      radius: 32,
-                                      backgroundColor: Colors.white,
-                                      child: Text(
-                                        userName.isNotEmpty
-                                            ? userName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
-                                            : 'U',
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue.shade600,
-                                        ),
-                                      ),
+                                      radius: 32, // Use home screen radius
+                                      backgroundColor: Colors.white, // Use home screen background
+                                      backgroundImage: widget.userProfile?['avatar_url'] != null && widget.userProfile!['avatar_url'] != ''
+                                          ? NetworkImage(widget.userProfile!['avatar_url'])
+                                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                                      child: null, // No default text child when using backgroundImage fallback
                                     ),
                                   ),
                                   const SizedBox(width: 20),

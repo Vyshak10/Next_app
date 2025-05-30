@@ -94,6 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _showSnackBar('Avatar uploaded successfully!');
       }
     } catch (e) {
+      print('Profile picture upload failed: $e');
       _showSnackBar('Upload failed: $e');
     }
   }

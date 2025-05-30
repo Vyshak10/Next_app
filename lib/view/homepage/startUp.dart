@@ -16,26 +16,66 @@ class Startup extends StatefulWidget {
 class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   final user = Supabase.instance.client.auth.currentUser;
-  late final List<Widget> _screens;
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+
+  Map<String, dynamic>? _userProfile;
+
+  final supabase = Supabase.instance.client;
 
   @override
   void initState() {
     super.initState();
     final userId = user?.id ?? '';
-    _screens = [
-      HomeScreen(onProfileTap: () => _onItemTapped(3)),
-      PostScreen(userId: userId),
-      MessagesScreen(userId: userId),
-      ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
-    ];
+    _loadUserProfile(userId);
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+  }
+
+  Future<void> _loadUserProfile(String userId) async {
+    print('Attempting to load user profile for userId: $userId');
+    try {
+      final profileData = await supabase
+          .from('profiles')
+          .select('name, avatar_url')
+          .eq('id', userId)
+          .maybeSingle();
+
+      print('Fetched profileData: $profileData');
+
+      if (mounted) {
+        print('Widget is mounted, setting state with profileData');
+        setState(() {
+          _userProfile = profileData;
+        });
+      } else {
+        print('Widget is not mounted, skipping setState');
+      }
+    } catch (e) {
+      print('Error loading user profile: $e');
+    }
+  }
+
+  // Helper method to build the current screen based on selected index
+  Widget _buildScreenWidget(int index) {
+    final userId = user?.id ?? '';
+    switch (index) {
+      case 0:
+        return HomeScreen(onProfileTap: () => _onItemTapped(3), userProfile: _userProfile);
+      case 1:
+        return PostScreen(userId: userId);
+      case 2:
+        return MessagesScreen(userId: userId);
+      case 3:
+        return ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0));
+      default:
+        return Center(child: Text('Error: Invalid index $index'));
+    }
   }
 
   @override
@@ -69,7 +109,12 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
           opacity: _fadeAnimation,
           child: IndexedStack(
             index: _selectedIndex,
-            children: _screens,
+            children: [
+              _buildScreenWidget(0),
+              _buildScreenWidget(1),
+              _buildScreenWidget(2),
+              _buildScreenWidget(3),
+            ],
           ),
         ),
         bottomNavigationBar: Container(
