@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../view/settings/settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -280,16 +281,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 100.0,
             floating: true,
             pinned: true,
-            backgroundColor: Colors.white,
-            elevation: 1,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            forceElevated: false,
             actions: [
               IconButton(
                 icon: const Icon(Icons.settings, color: Colors.black87),
                 onPressed: () {
-                  print('Settings icon pressed');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  );
                 },
               ),
             ],
@@ -301,7 +305,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 await _loadPosts();
               },
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.fromLTRB(16.0, 100.0, 16.0, 16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
