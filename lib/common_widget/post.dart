@@ -116,6 +116,10 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         for (var post in data) {
           final userProfile = await _getUserProfile(post['user_id']);
           post['user_profile'] = userProfile;
+          // Fetch like data for the post
+          final likeData = await _getLikeData(post['id'].toString());
+          post['likeCount'] = likeData['count'];
+          post['isLiked'] = likeData['isLiked'];
           postsWithProfiles.add(post);
         }
 
@@ -152,6 +156,12 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
       final idx = _feedPosts.indexWhere((p) => p['id'].toString() == postId);
       if (idx != -1) {
         _feedPosts[idx]['isLiked'] = !isLiked;
+        // Optimistically update like count
+        if (isLiked) {
+          _feedPosts[idx]['likeCount'] = (_feedPosts[idx]['likeCount'] ?? 1) - 1;
+        } else {
+          _feedPosts[idx]['likeCount'] = (_feedPosts[idx]['likeCount'] ?? 0) + 1;
+        }
       }
     });
     try {
@@ -162,6 +172,8 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
             .delete()
             .eq('post_id', postId)
             .eq('user_id', widget.userId);
+        // No need to explicitly update state here, optimistic update handled it
+
       } else {
         // Add like only if it doesn't exist
         final existing = await supabase
@@ -176,11 +188,24 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
             'user_id': widget.userId,
             'created_at': DateTime.now().toIso8601String(),
           });
+           // No need to explicitly update state here, optimistic update handled it
         }
       }
-      // Refresh feed to update like count
-      _loadFeedPosts();
+      // Removed _loadFeedPosts(); - state is updated optimistically now
     } catch (e) {
+      // Revert optimistic update on error
+       setState(() {
+        final idx = _feedPosts.indexWhere((p) => p['id'].toString() == postId);
+        if (idx != -1) {
+           _feedPosts[idx]['isLiked'] = isLiked; // Revert isLiked
+           // Revert like count
+           if (isLiked) {
+             _feedPosts[idx]['likeCount'] = (_feedPosts[idx]['likeCount'] ?? 0) + 1;
+           } else {
+             _feedPosts[idx]['likeCount'] = (_feedPosts[idx]['likeCount'] ?? 1) - 1;
+           }
+        }
+      });
       _showSnackBar('Failed to update like: $e');
     }
   }
