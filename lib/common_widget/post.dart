@@ -147,13 +147,6 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
 
   // Toggle like functionality
   Future<void> _toggleLike(String postId, bool isLiked) async {
-    // Optimistically update UI
-    setState(() {
-      final idx = _feedPosts.indexWhere((p) => p['id'].toString() == postId);
-      if (idx != -1) {
-        _feedPosts[idx]['isLiked'] = !isLiked;
-      }
-    });
     try {
       if (isLiked) {
         // Remove like
@@ -164,13 +157,14 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
             .eq('user_id', widget.userId);
       } else {
         // Add like only if it doesn't exist
-        final existing = await supabase
+        final existingLike = await supabase
             .from('likes')
             .select('id')
             .eq('post_id', postId)
             .eq('user_id', widget.userId)
             .maybeSingle();
-        if (existing == null) {
+
+        if (existingLike == null) {
           await supabase.from('likes').insert({
             'post_id': postId,
             'user_id': widget.userId,
@@ -178,8 +172,24 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
           });
         }
       }
-      // Refresh feed to update like count
-      _loadFeedPosts();
+
+      // Get updated like count and state
+      final likes = await supabase
+          .from('likes')
+          .select('user_id')
+          .eq('post_id', postId);
+
+      final likeCount = likes.length;
+      final newIsLiked = likes.any((like) => like['user_id'] == widget.userId);
+
+      // Update UI
+      setState(() {
+        final idx = _feedPosts.indexWhere((p) => p['id'].toString() == postId);
+        if (idx != -1) {
+          _feedPosts[idx]['isLiked'] = newIsLiked;
+          _feedPosts[idx]['like_count'] = likeCount;
+        }
+      });
     } catch (e) {
       _showSnackBar('Failed to update like: $e');
     }
@@ -284,27 +294,41 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         imageUrls = await _uploadImages();
       }
 
-      await supabase.from('posts').insert({
+      final post = {
         'user_id': widget.userId,
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
         'image_urls': imageUrls,
         'tags': _tags,
         'created_at': DateTime.now().toIso8601String(),
-      });
+      };
 
-      // Clear form
-      _titleController.clear();
-      _descriptionController.clear();
-      _selectedImages.clear();
-      _tags.clear();
+      final response = await supabase.from('posts').insert(post).select().single();
+      
+      if (response != null) {
+        // Add the new post to the beginning of the myPosts and feedPosts lists
+        setState(() {
+          _myPosts.insert(0, response);
+          _feedPosts.insert(0, response);
+        });
 
-      _showSnackBar('Post created successfully!');
+        // Clear form
+        _titleController.clear();
+        _descriptionController.clear();
+        _selectedImages.clear();
+        _tags.clear();
+        _tagController.clear();
 
-      // Reload posts
-      await _loadMyPosts();
-      await _loadFeedPosts();
+        _showSnackBar('Post created successfully!');
 
+        // Reload posts to ensure full synchronization (optional but good practice)
+        _loadMyPosts();
+        
+        // Close the bottom sheet
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      }
     } catch (e) {
       _showSnackBar('Failed to create post: $e');
     } finally {
