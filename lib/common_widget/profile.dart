@@ -6,8 +6,9 @@ import '../view/settings/settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
+  final VoidCallback? onBackTap;
 
-  const ProfileScreen({super.key, required this.userId});
+  const ProfileScreen({super.key, required this.userId, this.onBackTap});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -68,35 +69,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       final file = File(picked.path);
       final fileName = 'avatars/${widget.userId}.png';
-
+      
       // Upload file
-      await supabase.storage.from('avatars').upload(fileName, file,
-          fileOptions: const FileOptions(upsert: true));
+      await supabase.storage.from('avatars').upload(
+        fileName,
+        file,
+        fileOptions: const FileOptions(
+          cacheControl: '3600',
+          upsert: true,
+        ),
+      );
 
       // Get public URL
-      final avatarUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
+      final imageUrl = supabase.storage.from('avatars').getPublicUrl(fileName);
 
       // Update profile table with new avatar URL
       await supabase
           .from('profiles')
-          .update({'avatar_url': avatarUrl})
+          .update({'avatar_url': imageUrl})
           .eq('id', widget.userId);
 
-      await _loadProfile();
-      _showSnackBar('Avatar updated successfully!');
+      if (mounted) {
+        _loadProfile(); // Refresh profile data to show new avatar
+        _showSnackBar('Avatar uploaded successfully!');
+      }
     } catch (e) {
-      _showSnackBar('Failed to upload avatar: $e');
+      _showSnackBar('Upload failed: $e');
     }
   }
 
-  Future<void> _toggleNotifications(bool enabled) async {
+  Future<void> _toggleNotifications(bool newValue) async {
     try {
       await supabase
           .from('profiles')
-          .update({'notify_enabled': enabled}).eq('id', widget.userId);
-      await _loadProfile();
+          .update({'notify_enabled': newValue})
+          .eq('id', widget.userId);
+      
+      if (mounted) {
+        setState(() {
+          profile!['notify_enabled'] = newValue;
+        });
+      }
     } catch (e) {
-      _showSnackBar('Failed to update notifications: $e');
+      _showSnackBar('Failed to update notification preference: $e');
+    }
+  }
+
+  double _calculateProfileCompletion(Map<String, dynamic> profileData) {
+    int completedFields = 0;
+    int totalFields = 7; // Adjust based on how many fields you consider for completion
+
+    if (profileData['full_name'] != null && profileData['full_name'] != '') completedFields++;
+    if (profileData['avatar_url'] != null && profileData['avatar_url'] != '') completedFields++;
+    if (profileData['bio'] != null && profileData['bio'] != '') completedFields++;
+    if (profileData['location'] != null && profileData['location'] != '') completedFields++;
+    if (profileData['website'] != null && profileData['website'] != '') completedFields++;
+    if (profileData['sector'] != null && profileData['sector'] != '') completedFields++;
+    if (profileData['user_type'] != null && profileData['user_type'] != '') completedFields++;
+
+    return completedFields / totalFields;
+  }
+
+  void _showSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
     }
   }
 
@@ -250,27 +288,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  double _calculateProfileCompletion(Map<String, dynamic>? profileData) {
-    if (profileData == null) return 0.0;
-
-    int completedFields = 0;
-    int totalFields = 5;
-
-    if (profileData['name'] is String && (profileData['name'] as String).isNotEmpty) completedFields++; else if (profileData['name'] != null) completedFields++;
-    if (profileData['role'] is String && (profileData['role'] as String).isNotEmpty) completedFields++; else if (profileData['role'] != null) completedFields++;
-    if (profileData['description'] is String && (profileData['description'] as String).isNotEmpty) completedFields++; else if (profileData['description'] != null) completedFields++;
-    if (profileData['skills'] is String && (profileData['skills'] as String).isNotEmpty) completedFields++; else if (profileData['skills'] != null) completedFields++;
-    if (profileData['avatar_url'] is String && (profileData['avatar_url'] as String).isNotEmpty) completedFields++; else if (profileData['avatar_url'] != null) completedFields++;
-
-    return completedFields / totalFields;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (profile == null) {
@@ -281,6 +298,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black87),
+              onPressed: widget.onBackTap, // Call the provided callback
+            ),
             floating: true,
             pinned: true,
             backgroundColor: Colors.transparent,
@@ -288,7 +309,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             forceElevated: false,
             actions: [
               IconButton(
-                icon: const Icon(Icons.settings, color: Colors.black87),
+                icon: const Icon(Icons.settings, color: Colors.black87), // Settings icon
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -334,7 +355,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   : const AssetImage('assets/default_avatar.png')
                                   as ImageProvider,
                             ),
-                            Center(
+                            Positioned(
+                              top: 0,
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
                               child: Text(
                                 '${(profileCompletion * 100).toInt()}%',
                                 style: const TextStyle(
@@ -612,5 +637,114 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildSection(String title, Widget content, {IconData? icon}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (icon != null) ...[
+                Icon(icon, color: Colors.blue),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          content,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactInfoSection() {
+    // Placeholder for Contact Info section
+    return const Text('Contact information details...');
+  }
+
+  Widget _buildAboutSection() {
+    // Placeholder for About section
+    return const Text('About section content...');
+  }
+
+  Widget _buildSkillsSection() {
+    // Placeholder for Skills section
+    return const Text('Skills and expertise list...');
+  }
+
+  Widget _buildExperienceSection() {
+    // Placeholder for Experience section
+    return const Text('Work experience entries...');
+  }
+
+  Widget _buildEducationSection() {
+    // Placeholder for Education section
+    return const Text('Educational background...');
+  }
+
+  Widget _buildPortfolioSection() {
+    // Placeholder for Portfolio section
+    return const Text('Links to portfolio or projects...');
+  }
+
+  Widget _buildInterestsSection() {
+    // Placeholder for Interests section
+    return const Text('List of interests...');
+  }
+
+  Widget _buildSocialLinksSection() {
+    // Placeholder for Social Links section
+    return const Text('Social media links...');
+  }
+
+  Widget _buildNotificationSettings() {
+     return Container(
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.1),
+                            spreadRadius: 1,
+                            blurRadius: 3,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: SwitchListTile(
+                          title: const Text("Push Notifications", style: TextStyle(color: Colors.black87, fontWeight: FontWeight.w500)),
+                          subtitle: const Text("Receive updates about new posts and activities", style: TextStyle(color: Colors.grey)),
+                          value: profile!['notify_enabled'] ?? false,
+                          onChanged: _toggleNotifications,
+                          activeColor: Colors.blueAccent,
+                        ),
+                      ),
+                    );
   }
 }

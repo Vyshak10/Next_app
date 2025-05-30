@@ -25,9 +25,9 @@ class _CompanyScreenState extends State<CompanyScreen> with SingleTickerProvider
     super.initState();
     final userId = user?.id ?? '';
     _screens = [
-      const HomeScreen(),
+      HomeScreen(onProfileTap: () => _onItemTapped(2)),
       MessagesScreen(userId: userId),
-      ProfileScreen(userId: userId),
+      ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
     ];
     _controller = AnimationController(
       vsync: this,
@@ -47,6 +47,7 @@ class _CompanyScreenState extends State<CompanyScreen> with SingleTickerProvider
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      print('CompanyScreen selected index: \$_selectedIndex');
     });
   }
 
@@ -79,17 +80,36 @@ class _CompanyScreenState extends State<CompanyScreen> with SingleTickerProvider
   }
 
   PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 1,
-      centerTitle: true,
-      title: null,
-      automaticallyImplyLeading: false,
-    );
+    switch (_selectedIndex) {
+      case 0:
+        return PreferredSize(
+          preferredSize: Size.fromHeight(0.0),
+          child: Container(),
+        );      
+      case 1:
+        return AppBar(
+          title: const Text('Messages', style: TextStyle(color: Colors.black)),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: null,
+          automaticallyImplyLeading: false,
+        );    
+      case 2:
+        return AppBar(
+          title: const Text('Profile', style: TextStyle(color: Colors.black)),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: null,
+          automaticallyImplyLeading: false,
+        );      
+      default:
+        return AppBar();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    print('CompanyScreen build called with index: \$_selectedIndex');
     return WillPopScope(
       onWillPop: () async {
         if (_selectedIndex != 0) {

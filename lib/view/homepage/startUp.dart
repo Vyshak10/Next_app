@@ -25,10 +25,10 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
     super.initState();
     final userId = user?.id ?? '';
     _screens = [
-      const HomeScreen(),
+      HomeScreen(onProfileTap: () => _onItemTapped(3)),
       PostScreen(userId: userId),
       MessagesScreen(userId: userId),
-      ProfileScreen(userId: userId),
+      ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
     ];
     _controller = AnimationController(
       vsync: this,
@@ -47,11 +47,13 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      print('Startup selected index: \$_selectedIndex');
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    print('Startup build called with index: \$_selectedIndex');
     return WillPopScope(
       onWillPop: () async {
         if (_selectedIndex != 0) {

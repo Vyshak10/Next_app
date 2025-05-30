@@ -21,6 +21,7 @@ class _SignUpPageState extends State<SignUpPage> {
   String userType = 'Unknown';
   bool isLoading = false;
   bool acceptTerms = false;
+  bool _obscurePassword = true;
 
   @override
   void didChangeDependencies() {
@@ -122,7 +123,31 @@ class _SignUpPageState extends State<SignUpPage> {
                       });
                     },
                   ),
-                  const Text('I accept the terms and conditions'),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/terms-and-conditions');
+                      },
+                      child: RichText(
+                        text: TextSpan(
+                          text: 'I accept the ',
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 16,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'terms and conditions',
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -181,6 +206,29 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
+  Widget _buildPasswordField() {
+    return TextField(
+      controller: passwordController,
+      decoration: InputDecoration(
+        labelText: 'Password',
+        hintText: 'Enter your password',
+        border: const OutlineInputBorder(),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: Colors.grey,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
+        ),
+      ),
+      obscureText: _obscurePassword,
+    );
+  }
+
   Widget _establishedCompanyForm() {
     return Column(
       children: [
@@ -212,15 +260,7 @@ class _SignUpPageState extends State<SignUpPage> {
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
-        TextField(
-          controller: passwordController,
-          decoration: const InputDecoration(
-            labelText: 'Password',
-            hintText: 'Enter your password',
-            border: OutlineInputBorder(),
-          ),
-          obscureText: true,
-        ),
+        _buildPasswordField(),
       ],
     );
   }
@@ -256,15 +296,7 @@ class _SignUpPageState extends State<SignUpPage> {
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
-        TextField(
-          controller: passwordController,
-          decoration: const InputDecoration(
-            labelText: 'Password',
-            hintText: 'Enter your password',
-            border: OutlineInputBorder(),
-          ),
-          obscureText: true,
-        ),
+        _buildPasswordField(),
       ],
     );
   }
@@ -301,15 +333,7 @@ class _SignUpPageState extends State<SignUpPage> {
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
-        TextField(
-          controller: passwordController,
-          decoration: const InputDecoration(
-            labelText: 'Password',
-            hintText: 'Enter your password',
-            border: OutlineInputBorder(),
-          ),
-          obscureText: true,
-        ),
+        _buildPasswordField(),
       ],
     );
   }

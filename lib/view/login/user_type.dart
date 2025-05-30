@@ -20,18 +20,60 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
       description: 'Hire talent and grow your team',
       icon: Icons.business_center_rounded,
       color: Colors.deepOrange,
+      benefits: [
+        'Access to a curated pool of talent',
+        'Advanced hiring tools and analytics',
+        'Company profile and branding',
+        'Direct communication with candidates',
+        'Team collaboration features',
+      ],
+      features: [
+        'Post multiple job openings',
+        'Review candidate profiles',
+        'Schedule interviews',
+        'Track hiring metrics',
+        'Manage team access',
+      ],
     ),
     _UserTypeOption(
       title: 'Startup',
       description: 'Build your founding team and grow fast',
       icon: Icons.rocket_launch_rounded,
       color: Color(0xFFE97451),
+      benefits: [
+        'Connect with potential co-founders',
+        'Find early-stage talent',
+        'Access startup resources',
+        'Network with investors',
+        'Share your vision',
+      ],
+      features: [
+        'Create startup profile',
+        'Post team requirements',
+        'Share pitch deck',
+        'Track applications',
+        'Engage with community',
+      ],
     ),
     _UserTypeOption(
       title: 'Job Seeker',
       description: 'Find job opportunities and connections',
       icon: Icons.person_rounded,
       color: Color(0xFF0066CC),
+      benefits: [
+        'Discover exciting opportunities',
+        'Connect with companies directly',
+        'Build professional network',
+        'Showcase your skills',
+        'Get career insights',
+      ],
+      features: [
+        'Create detailed profile',
+        'Apply to jobs',
+        'Track applications',
+        'Receive job alerts',
+        'Network with professionals',
+      ],
     ),
   ];
 
@@ -77,6 +119,10 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.height < 700;
+    final isVerySmallScreen = size.height < 600;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -92,26 +138,29 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(
+            horizontal: size.width * 0.06,
+            vertical: isSmallScreen ? 16 : 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Choose your role',
                 style: TextStyle(
-                  fontSize: 24,
+                  fontSize: isSmallScreen ? 20 : 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: isSmallScreen ? 4 : 8),
               Text(
                 'Select the type of account you want to create',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: isSmallScreen ? 14 : 16,
                   color: Colors.grey[600],
                 ),
               ),
-              const SizedBox(height: 32),
+              SizedBox(height: isSmallScreen ? 20 : 32),
               Expanded(
                 child: ListView.builder(
                   itemCount: _options.length,
@@ -122,7 +171,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                     return ScaleTransition(
                       scale: _scaleAnimation,
                       child: Card(
-                        margin: const EdgeInsets.only(bottom: 16),
+                        margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
                         elevation: isSelected ? 4 : 1,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -139,50 +188,119 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                           },
                           borderRadius: BorderRadius.circular(16),
                           child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
+                            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: option.color.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    option.icon,
-                                    color: option.color,
-                                    size: 32,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        option.title,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+                                      decoration: BoxDecoration(
+                                        color: option.color.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        option.description,
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
+                                      child: Icon(
+                                        option.icon,
+                                        color: option.color,
+                                        size: isSmallScreen ? 24 : 32,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    SizedBox(width: isSmallScreen ? 12 : 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            option.title,
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 16 : 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: isSmallScreen ? 2 : 4),
+                                          Text(
+                                            option.description,
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 12 : 14,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: option.color,
+                                        size: isSmallScreen ? 20 : 24,
+                                      ),
+                                  ],
                                 ),
-                                if (isSelected)
-                                  Icon(
-                                    Icons.check_circle,
-                                    color: option.color,
-                                    size: 24,
+                                if (isSelected) ...[
+                                  SizedBox(height: isSmallScreen ? 12 : 16),
+                                  const Divider(),
+                                  SizedBox(height: isSmallScreen ? 12 : 16),
+                                  Text(
+                                    'Key Benefits',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 14 : 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
+                                  SizedBox(height: isSmallScreen ? 6 : 8),
+                                  ...option.benefits.map((benefit) => Padding(
+                                    padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle_outline,
+                                          color: option.color,
+                                          size: isSmallScreen ? 16 : 20,
+                                        ),
+                                        SizedBox(width: isSmallScreen ? 6 : 8),
+                                        Expanded(
+                                          child: Text(
+                                            benefit,
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 12 : 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                                  SizedBox(height: isSmallScreen ? 12 : 16),
+                                  Text(
+                                    'Available Features',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 14 : 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: isSmallScreen ? 6 : 8),
+                                  ...option.features.map((feature) => Padding(
+                                    padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.star_outline,
+                                          color: option.color,
+                                          size: isSmallScreen ? 16 : 20,
+                                        ),
+                                        SizedBox(width: isSmallScreen ? 6 : 8),
+                                        Expanded(
+                                          child: Text(
+                                            feature,
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 12 : 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                                ],
                               ],
                             ),
                           ),
@@ -192,9 +310,23 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                   },
                 ),
               ),
-              const SizedBox(height: 24),
-              SizedBox(
+              SizedBox(height: isSmallScreen ? 16 : 24),
+              Container(
                 width: double.infinity,
+                padding: EdgeInsets.symmetric(
+                  horizontal: size.width * 0.06,
+                  vertical: isSmallScreen ? 12 : 16,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                ),
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _onContinue,
                   style: ElevatedButton.styleFrom(
@@ -202,7 +334,9 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(
+                      vertical: isSmallScreen ? 12 : 16,
+                    ),
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -213,10 +347,10 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text(
+                      : Text(
                           'Continue',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -235,11 +369,15 @@ class _UserTypeOption {
   final String description;
   final IconData icon;
   final Color color;
+  final List<String> benefits;
+  final List<String> features;
 
   const _UserTypeOption({
     required this.title,
     required this.description,
     required this.icon,
     required this.color,
+    required this.benefits,
+    required this.features,
   });
 }

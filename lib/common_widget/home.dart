@@ -7,7 +7,9 @@ import 'NotificationsScreen.dart';
 import 'company_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.onProfileTap});
+
+  final VoidCallback? onProfileTap;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -342,17 +344,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               ),
                               child: Row(
                                 children: [
-                                  CircleAvatar(
-                                    radius: 32,
-                                    backgroundColor: Colors.white,
-                                    child: Text(
-                                      userName.isNotEmpty
-                                          ? userName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
-                                          : 'U',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.blue.shade600,
+                                  GestureDetector(
+                                    onTap: () {
+                                      print('Avatar tapped!'); // Added print statement
+                                      widget.onProfileTap?.call(); // Call the callback here
+                                    },
+                                    child: CircleAvatar(
+                                      radius: 32,
+                                      backgroundColor: Colors.white,
+                                      child: Text(
+                                        userName.isNotEmpty
+                                            ? userName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+                                            : 'U',
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.blue.shade600,
+                                        ),
                                       ),
                                     ),
                                   ),

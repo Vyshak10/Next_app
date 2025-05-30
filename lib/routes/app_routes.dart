@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:next_app/view/homepage/company.dart';
 import 'package:next_app/view/homepage/seeker.dart';
 import 'package:next_app/view/login/login_view.dart';
+import 'package:next_app/view/legal/terms_and_conditions.dart';
 import '../view/homepage/startUp.dart';
 import '../view/login/signup_view.dart';
 
@@ -11,6 +12,7 @@ class AppRoutes {
   static const String startUp = '/startUp';
   static const String Company = '/Company';
   static const String seeker = '/Seeker';
+  static const String termsAndConditions = '/terms-and-conditions';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -19,6 +21,7 @@ class AppRoutes {
       startUp: (context) => const Startup(),
       Company: (context) => const CompanyScreen(),
       seeker: (context) => const SeekerPage(),
+      termsAndConditions: (context) => const TermsAndConditions(),
     };
   }
 }
