@@ -117,17 +117,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   double _calculateProfileCompletion(Map<String, dynamic> profileData) {
     int completedFields = 0;
-    int totalFields = 7; // Adjust based on how many fields you consider for completion
+    int totalFields = 11; // Updated total fields
 
-    if (profileData['full_name'] != null && profileData['full_name'] != '') completedFields++;
-    if (profileData['avatar_url'] != null && profileData['avatar_url'] != '') completedFields++;
-    if (profileData['bio'] != null && profileData['bio'] != '') completedFields++;
-    if (profileData['location'] != null && profileData['location'] != '') completedFields++;
-    if (profileData['website'] != null && profileData['website'] != '') completedFields++;
-    if (profileData['sector'] != null && profileData['sector'] != '') completedFields++;
-    if (profileData['user_type'] != null && profileData['user_type'] != '') completedFields++;
+    if (_isFieldCompleted(profileData, 'full_name')) completedFields++;
+    if (_isFieldCompleted(profileData, 'avatar_url')) completedFields++;
+    if (_isFieldCompleted(profileData, 'bio')) completedFields++;
+    if (_isFieldCompleted(profileData, 'location')) completedFields++;
+    if (_isFieldCompleted(profileData, 'website')) completedFields++;
+    if (_isFieldCompleted(profileData, 'sector')) completedFields++;
+    if (_isFieldCompleted(profileData, 'user_type')) completedFields++;
+    if (_isFieldCompleted(profileData, 'name')) completedFields++;
+    if (_isFieldCompleted(profileData, 'role')) completedFields++;
+    if (_isFieldCompleted(profileData, 'skills')) completedFields++;
+    if (_isFieldCompleted(profileData, 'description')) completedFields++;
+
+    if (totalFields == 0) return 0.0;
 
     return completedFields / totalFields;
+  }
+
+  bool _isFieldCompleted(Map<String, dynamic> data, String fieldName) {
+    return data[fieldName] != null && data[fieldName].toString().trim().isNotEmpty;
   }
 
   void _showSnackBar(String message) {
@@ -157,6 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   decoration: const InputDecoration(labelText: "Name")),
               const SizedBox(height: 12),
               TextField(
+                  key: ValueKey('roleField'),
                   controller: roleCtrl,
                   decoration: const InputDecoration(labelText: "Role")),
               const SizedBox(height: 12),
@@ -360,17 +371,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               bottom: 0,
                               left: 0,
                               right: 0,
-                              child: Text(
-                                '${(profileCompletion * 100).toInt()}%',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                              child: Center(
+                                child: Text(
+                                  '${(profileCompletion * 100).toInt()}%',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
                                 ),
                               ),
                             ),
                             Positioned(
-                              right: 80,
+                              key: ValueKey('roleField'),
+                              right: 10,
                               bottom: 5,
                               child: GestureDetector(
                                 onTap: _editProfileDialog,
