@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../login/user_type.dart'; // Import the UserType screen
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -225,6 +226,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               try {
                 await supabase.auth.signOut();
                  // TODO: Navigate to login/auth screen after sign out
+                Navigator.pushReplacement( // Use pushReplacement to go to the UserType screen
+                    context,
+                    MaterialPageRoute(builder: (context) => const UserType()), // Navigate to UserType widget
+                  );
                 print('User signed out');
               } catch (e) {
                  print('Error signing out: $e');

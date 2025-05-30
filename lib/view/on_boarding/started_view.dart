@@ -23,9 +23,11 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
       duration: const Duration(seconds: 3),
       vsync: this,
     );
-    _scaleAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
+    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
     );
     _opacityAnimation = CurvedAnimation(
       parent: _controller,
@@ -51,6 +53,7 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   ScaleTransition(
                     scale: _scaleAnimation,
@@ -59,12 +62,37 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
                   const SizedBox(height: 20),
                   FadeTransition(
                     opacity: _opacityAnimation,
-                    child: const Text(
-                      'N.E.X.T.',
-                      style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Colors.blue),
+                    child: Column(
+                      children: [
+                        Text(
+                          'N.E.X.T.',
+                          style: TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueAccent,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        FadeTransition(
+                          opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                            CurvedAnimation(
+                              parent: _controller,
+                              curve: const Interval(0.7, 1.0, curve: Curves.easeIn),
+                            ),
+                          ),
+                          child: Text(
+                            'Your next opportunity awaits.',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.black87,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 60),
                   ElevatedButton(
                     onPressed: () {
                       Navigator.push(
@@ -74,10 +102,12 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                      elevation: 5.0,
                     ),
-                    child: const Text('Get Started', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                    child: const Text('Get Started', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
