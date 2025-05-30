@@ -112,6 +112,7 @@ class _SeekerPageState extends State<SeekerPage> with SingleTickerProviderStateM
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20.0)),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.1),
@@ -143,28 +144,43 @@ class _SeekerPageState extends State<SeekerPage> with SingleTickerProviderStateM
     return GestureDetector(
       onTap: () => _onItemTapped(index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? Colors.blueAccent.withOpacity(0.2) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color: isSelected ? Colors.blue : Colors.grey[600],
-              size: 24,
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 24, end: isSelected ? 28 : 24),
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              builder: (context, size, child) {
+                return Icon(
+                  icon,
+                  color: isSelected ? Colors.blueAccent : Colors.grey[600],
+                  size: size,
+                );
+              },
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.blue : Colors.grey[600],
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
+            AnimatedOpacity(
+              opacity: isSelected ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              child: isSelected ? Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.blueAccent : Colors.grey[600],
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ) : const SizedBox.shrink(),
             ),
           ],
         ),

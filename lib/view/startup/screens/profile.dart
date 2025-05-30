@@ -118,19 +118,35 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
                     child: CircleAvatar(
                       radius: 50,
                       backgroundColor: Colors.blue.withOpacity(0.1),
-                      backgroundImage: startupData?['logo_url'] != null
-                          ? NetworkImage(startupData!['logo_url'])
-                          : null,
-                      child: startupData?['logo_url'] == null
-                          ? Text(
+                      child: startupData?['logo_url'] != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(50),
+                              child: Image.network(
+                                startupData!['logo_url'],
+                                fit: BoxFit.cover,
+                                width: 100,
+                                height: 100,
+                                errorBuilder: (context, error, stackTrace) {
+                                  print('Error loading startup logo: $error');
+                                  return Text(
+                                    startupData?['name']?[0].toUpperCase() ?? 'S',
+                                    style: const TextStyle(
+                                      fontSize: 40,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                          : Text(
                               startupData?['name']?[0].toUpperCase() ?? 'S',
                               style: const TextStyle(
                                 fontSize: 40,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.blue,
                               ),
-                            )
-                          : null,
+                            ),
                     ),
                   ),
                   Positioned(

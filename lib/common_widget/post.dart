@@ -399,19 +399,34 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
                             ),
                             child: CircleAvatar(
                               radius: 20,
-                              backgroundImage: userProfile?['avatar_url'] != null
-                                  ? NetworkImage(userProfile['avatar_url'])
-                                  : null,
-                              backgroundColor: Colors.blue.shade50,
-                              child: userProfile?['avatar_url'] == null
-                                  ? Text(
+                              child: userProfile?['avatar_url'] != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Image.network(
+                                        userProfile!['avatar_url'],
+                                        fit: BoxFit.cover,
+                                        width: 40,
+                                        height: 40,
+                                        errorBuilder: (context, error, stackTrace) {
+                                          print('Error loading avatar: $error');
+                                          return Text(
+                                            (userProfile?['name'] ?? 'U')[0].toUpperCase(),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: isStartup ? Colors.orange : Colors.blue,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    )
+                                  : Text(
                                       (userProfile?['name'] ?? 'U')[0].toUpperCase(),
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: isStartup ? Colors.orange : Colors.blue,
                                       ),
-                                    )
-                                  : null,
+                                    ),
+                              backgroundColor: Colors.blue.shade50,
                             ),
                           ),
                           if (isStartup)

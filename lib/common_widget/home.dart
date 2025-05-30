@@ -13,7 +13,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   final SupabaseClient supabase = Supabase.instance.client;
   late RealtimeChannel notifChannel;
 
@@ -33,6 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String userName = '';
 
+  late AnimationController _gradientAnimationController; // Controller for gradient animation
+  late Animation<AlignmentGeometry> _gradientBeginAnimation; // Animation for gradient begin
+  late Animation<AlignmentGeometry> _gradientEndAnimation; // Animation for gradient end
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +44,23 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchNotificationPreference();
     subscribeToNotifications();
     fetchUserName();
+
+    // Initialize gradient animation controller
+    _gradientAnimationController = AnimationController(
+      duration: const Duration(seconds: 2), // Slightly shorter duration for a quicker pulse
+      vsync: this,
+    )..repeat(reverse: false); // Repeat animation only forward
+
+    // Define animations for gradient begin and end points for a right-to-left pulse
+    _gradientBeginAnimation = Tween<AlignmentGeometry>(
+      begin: Alignment(1.0, 0.0), // Dark side fixed on the right
+      end: Alignment(1.0, 0.0), // Dark side stays on the right
+    ).animate(_gradientAnimationController);
+
+    _gradientEndAnimation = Tween<AlignmentGeometry>(
+      begin: Alignment(-0.5, 0.0), // Start transition slightly right of center
+      end: Alignment(-1.5, 0.0), // Move transition further left
+    ).animate(_gradientAnimationController);
   }
 
   @override
@@ -47,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _debounce?.cancel();
     searchController.dispose();
     notifChannel.unsubscribe();
+    _gradientAnimationController.dispose(); // Dispose the animation controller
     super.dispose();
   }
 
@@ -171,6 +193,57 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  BoxDecoration _getGreetingDecoration({
+    required AlignmentGeometry beginAlignment, // Accept animated begin alignment
+    required AlignmentGeometry endAlignment, // Accept animated end alignment
+  }) {
+    final hour = DateTime.now().hour;
+
+    LinearGradient gradient;
+
+    if (hour >= 5 && hour < 12) {
+      // Morning: smoother orange gradient from right darker to left lighter
+      gradient = LinearGradient(
+        colors: [Colors.orange.shade500!, Colors.orange.shade300!], // Darker to Lighter orange
+        begin: beginAlignment, // Use passed animated begin
+        end: endAlignment, // Use passed animated end
+      );
+    } else if (hour >= 12 && hour < 17) {
+      // Afternoon: smoother yellow to orange gradient from right darker to left lighter
+      gradient = LinearGradient(
+        colors: [Colors.orange.shade400!, Colors.yellow.shade300!], // Darker orange to Lighter yellow
+        begin: beginAlignment, // Use passed animated begin
+        end: endAlignment, // Use passed animated end
+      );
+    } else if (hour >= 17 && hour < 21) {
+      // Evening: smoother blue gradient from right darker to left lighter
+      gradient = LinearGradient(
+        colors: [Colors.blue.shade800, Colors.blue.shade600], // Darker to Lighter blue
+        begin: beginAlignment, // Use passed animated begin
+        end: endAlignment, // Use passed animated end
+      );
+    } else {
+      // Night: smoother night gradient from right darker to left lighter
+      gradient = LinearGradient(
+        colors: [Colors.black87, Colors.blueGrey.shade800], // Darker to Lighter color
+        begin: beginAlignment, // Use passed animated begin
+        end: endAlignment, // Use passed animated end
+      );
+    }
+
+    return BoxDecoration(
+      gradient: gradient,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.blue.withOpacity(0.2),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -254,54 +327,62 @@ class _HomeScreenState extends State<HomeScreen> {
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.all(16),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 800), // Smooth transition duration
-                          padding: const EdgeInsets.all(20),
-                          decoration: _getGreetingDecoration(), // Dynamically set decoration
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 32,
-                                backgroundColor: Colors.white,
-                                child: Text(
-                                  userName.isNotEmpty
-                                      ? userName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
-                                      : 'U',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade600,
-                                  ),
-                                ),
+                        child: AnimatedBuilder( // Use AnimatedBuilder to rebuild on animation updates
+                          animation: _gradientAnimationController,
+                          builder: (context, child) {
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 800), // Smooth transition duration
+                              padding: const EdgeInsets.all(20),
+                              decoration: _getGreetingDecoration( // Pass animated alignments
+                                beginAlignment: _gradientBeginAnimation.value,
+                                endAlignment: _gradientEndAnimation.value,
                               ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 32,
+                                    backgroundColor: Colors.white,
+                                    child: Text(
                                       userName.isNotEmpty
-                                          ? '${getGreeting()}, $userName'
-                                          : getGreeting(),
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      'Discover innovative startups',
+                                          ? userName.trim().split(' ').map((e) => e.isNotEmpty ? e[0] : '').take(2).join().toUpperCase()
+                                          : 'U',
                                       style: TextStyle(
-                                        fontSize: 15,
-                                        color: Colors.white.withOpacity(0.9),
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue.shade600,
                                       ),
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 20),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          userName.isNotEmpty
+                                              ? '${getGreeting()}, $userName'
+                                              : getGreeting(),
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white.withOpacity(0.9),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Discover innovative startups',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            color: Colors.white.withOpacity(0.9),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
                       ),
                     ),
@@ -424,54 +505,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
         ),
       ),
-    );
-  }
-
-  BoxDecoration _getGreetingDecoration() {
-    final hour = DateTime.now().hour;
-
-    LinearGradient gradient;
-
-    if (hour >= 5 && hour < 12) {
-      // Morning: brighter orange
-      gradient = LinearGradient(
-        colors: [Colors.orange.shade400!, Colors.orange.shade600!],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    } else if (hour >= 12 && hour < 17) {
-      // Afternoon: yellow
-      gradient = LinearGradient(
-        colors: [Colors.yellow.shade400!, Colors.yellow.shade600!],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    } else if (hour >= 17 && hour < 21) {
-      // Evening: blue (current)
-      gradient = LinearGradient(
-        colors: [Colors.blue.shade400, Colors.blue.shade600],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    } else {
-      // Night: darker blue
-      gradient = LinearGradient(
-        colors: [Colors.blue.shade800, Colors.blue.shade900],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    }
-    
-    return BoxDecoration(
-      gradient: gradient,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.blue.withOpacity(0.2),
-          blurRadius: 12,
-          offset: const Offset(0, 4),
-        ),
-      ],
     );
   }
 
