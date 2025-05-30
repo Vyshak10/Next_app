@@ -160,7 +160,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CompanyDetailScreen(companyData: companyData),
+        builder: (context) => CompanyDetailScreen(
+          companyData: companyData,
+          userId: supabase.auth.currentUser?.id ?? '',
+        ),
       ),
     );
   }

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'messages.dart'; // Import MessagesScreen
+import '../view/chat/individual_chat_screen.dart'; // Import IndividualChatScreen
 
 class CompanyDetailScreen extends StatelessWidget {
   final Map<String, dynamic> companyData;
+  final String userId;
 
   const CompanyDetailScreen({
     super.key,
     required this.companyData,
+    required this.userId,
   });
 
   @override
@@ -258,7 +262,16 @@ class CompanyDetailScreen extends StatelessWidget {
                     height: 52,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        _showMessageDialog(context);
+                        // Navigate to MessagesScreen with companyId
+                        Navigator.push( // Use push to navigate to the chat screen
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => IndividualChatScreen(
+                              userId: userId, // Pass the current user ID (now a property)
+                              partnerId: companyData['id'].toString(), // Pass the company ID as partnerId
+                            ),
+                          ),
+                        );
                       },
                       icon: const Icon(Icons.message, color: Colors.white),
                       label: const Text(
