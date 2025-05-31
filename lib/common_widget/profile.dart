@@ -202,6 +202,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final roleCtrl = TextEditingController(text: profile?['role']);
     final descCtrl = TextEditingController(text: profile?['description']);
     final skillCtrl = TextEditingController(text: profile?['skills']);
+    
+    // Company Info Controllers
+    final companyNameCtrl = TextEditingController(text: profile?['company_name']);
+    final foundedCtrl = TextEditingController(text: profile?['founded_date']);
+    final companyStageCtrl = TextEditingController(text: profile?['company_stage']);
+    final companySizeCtrl = TextEditingController(text: profile?['company_size']);
+    final companyTypeCtrl = TextEditingController(text: profile?['company_type']);
+    
+    // Team Controllers
+    final teamCtrl = TextEditingController(text: profile?['team_members']);
+    final positionsCtrl = TextEditingController(text: profile?['open_positions']);
+    
+    // Product Controllers
+    final productDescCtrl = TextEditingController(text: profile?['product_description']);
+    final featuresCtrl = TextEditingController(text: profile?['product_features']);
+    final uspCtrl = TextEditingController(text: profile?['product_usp']);
+    final techCtrl = TextEditingController(text: profile?['tech_stack']);
+    final devStageCtrl = TextEditingController(text: profile?['development_stage']);
+    
+    // Contact Controllers
+    final emailCtrl = TextEditingController(text: profile?['business_email']);
+    final locationCtrl = TextEditingController(text: profile?['office_location']);
+    final websiteCtrl = TextEditingController(text: profile?['website']);
+    final linkedinCtrl = TextEditingController(text: profile?['linkedin_url']);
+    final twitterCtrl = TextEditingController(text: profile?['twitter_url']);
+
     bool isDescriptionValid = true;
     bool isCheckingUsername = false;
     bool isUsernameAvailable = true;
@@ -219,6 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Basic Info
                   TextField(
                     controller: nameCtrl,
                     decoration: InputDecoration(
@@ -262,28 +289,180 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextField(
-                      key: ValueKey('roleField'),
-                      controller: roleCtrl,
-                      decoration: const InputDecoration(labelText: "Role")),
+                    controller: roleCtrl,
+                    readOnly: true,
+                    decoration: const InputDecoration(labelText: "Role"),
+                  ),
                   const SizedBox(height: 12),
                   TextField(
-                      controller: descCtrl,
-                      maxLines: 3,
-                      onChanged: (value) {
-                        setState(() {
-                          wordCount = value.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
-                          isDescriptionValid = wordCount >= 120 && wordCount <= 500;
-                        });
-                      },
-                      decoration: InputDecoration(
-                        labelText: "Description",
-                        helperText: "Word count: $wordCount/500 (minimum 120 words)",
-                        errorText: !isDescriptionValid ? "Description must be between 120 and 500 words" : null,
-                      )),
+                    controller: descCtrl,
+                    maxLines: 3,
+                    onChanged: (value) {
+                      setState(() {
+                        wordCount = value.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length;
+                        isDescriptionValid = wordCount >= 120 && wordCount <= 500;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: "Description",
+                      helperText: "Word count: $wordCount/500 (minimum 120 words)",
+                      errorText: !isDescriptionValid ? "Description must be between 120 and 500 words" : null,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   TextField(
-                      controller: skillCtrl,
-                      decoration: const InputDecoration(labelText: "Skills/Stage")),
+                    controller: skillCtrl,
+                    decoration: const InputDecoration(labelText: "Skills/Stage"),
+                  ),
+                  const SizedBox(height: 24), // Add spacing before the next section
+
+                  // Company Info
+                  const Text('Company Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: companyNameCtrl,
+                    decoration: const InputDecoration(labelText: "Company Name"),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: foundedCtrl,
+                    decoration: const InputDecoration(labelText: "Founded Date (YYYY-MM-DD)"),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: companyStageCtrl.text.isEmpty ? null : companyStageCtrl.text,
+                    decoration: const InputDecoration(labelText: "Company Stage"),
+                    items: const [
+                      DropdownMenuItem(value: "Idea", child: Text("Idea")),
+                      DropdownMenuItem(value: "MVP", child: Text("MVP")),
+                      DropdownMenuItem(value: "Early Stage", child: Text("Early Stage")),
+                      DropdownMenuItem(value: "Growth", child: Text("Growth")),
+                      DropdownMenuItem(value: "Scale", child: Text("Scale")),
+                    ],
+                    onChanged: (value) => companyStageCtrl.text = value ?? "",
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: companySizeCtrl,
+                    decoration: const InputDecoration(labelText: "Company Size (Number of Employees)"),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: companyTypeCtrl.text.isEmpty ? null : companyTypeCtrl.text,
+                    decoration: const InputDecoration(labelText: "Company Type"),
+                    items: const [
+                      DropdownMenuItem(value: "B2B", child: Text("B2B")),
+                      DropdownMenuItem(value: "B2C", child: Text("B2C")),
+                      DropdownMenuItem(value: "B2B2C", child: Text("B2B2C")),
+                      DropdownMenuItem(value: "C2C", child: Text("C2C")),
+                    ],
+                    onChanged: (value) => companyTypeCtrl.text = value ?? "",
+                  ),
+                  const SizedBox(height: 24), // Add spacing
+
+                  // Team Info
+                  const Text('Team', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: teamCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: "Team Members (One per line)",
+                      helperText: "Format: Name - Role",
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: positionsCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: "Open Positions (One per line)",
+                      helperText: "Format: Position - Requirements",
+                    ),
+                  ),
+                  const SizedBox(height: 24), // Add spacing
+
+                  // Product Info
+                  const Text('Product/Service', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: productDescCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: "Product Description"),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: featuresCtrl,
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: "Key Features",
+                      helperText: "One feature per line",
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: uspCtrl,
+                    maxLines: 2,
+                    decoration: const InputDecoration(
+                      labelText: "Unique Selling Points",
+                      helperText: "One USP per line",
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: techCtrl,
+                    decoration: const InputDecoration(
+                      labelText: "Technology Stack",
+                      helperText: "Comma-separated list of technologies",
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: devStageCtrl.text.isEmpty ? null : devStageCtrl.text,
+                    decoration: const InputDecoration(labelText: "Development Stage"),
+                    items: const [
+                      DropdownMenuItem(value: "Concept", child: Text("Concept")),
+                      DropdownMenuItem(value: "Prototype", child: Text("Prototype")),
+                      DropdownMenuItem(value: "Beta", child: Text("Beta")),
+                      DropdownMenuItem(value: "MVP", child: Text("MVP")),
+                      DropdownMenuItem(value: "Production", child: Text("Production")),
+                    ],
+                    onChanged: (value) => devStageCtrl.text = value ?? "",
+                  ),
+                  const SizedBox(height: 24), // Add spacing
+
+                  // Contact Info
+                  const Text('Contact Information', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: emailCtrl,
+                    decoration: const InputDecoration(labelText: "Business Email"),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: locationCtrl,
+                    decoration: const InputDecoration(labelText: "Office Location"),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: websiteCtrl,
+                    decoration: const InputDecoration(labelText: "Website"),
+                    keyboardType: TextInputType.url,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: linkedinCtrl,
+                    decoration: const InputDecoration(labelText: "LinkedIn URL"),
+                    keyboardType: TextInputType.url,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: twitterCtrl,
+                    decoration: const InputDecoration(labelText: "Twitter URL"),
+                    keyboardType: TextInputType.url,
+                  ),
                 ],
               ),
             ),
@@ -297,9 +476,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   try {
                     await supabase.from('profiles').update({
                       'name': nameCtrl.text.trim(),
-                      'role': roleCtrl.text.trim(),
+                      'role': roleCtrl.text.trim(), // Role is read-only but included for completeness in update map
                       'description': descCtrl.text.trim(),
                       'skills': skillCtrl.text.trim(),
+                      'company_name': companyNameCtrl.text.trim(),
+                      'founded_date': foundedCtrl.text.trim(),
+                      'company_stage': companyStageCtrl.text.trim(),
+                      'company_size': companySizeCtrl.text.trim(),
+                      'company_type': companyTypeCtrl.text.trim(),
+                      'team_members': teamCtrl.text.trim(),
+                      'open_positions': positionsCtrl.text.trim(),
+                      'product_description': productDescCtrl.text.trim(),
+                      'product_features': featuresCtrl.text.trim(),
+                      'product_usp': uspCtrl.text.trim(),
+                      'tech_stack': techCtrl.text.trim(),
+                      'development_stage': devStageCtrl.text.trim(),
+                      'business_email': emailCtrl.text.trim(),
+                      'office_location': locationCtrl.text.trim(),
+                      'website': websiteCtrl.text.trim(),
+                      'linkedin_url': linkedinCtrl.text.trim(),
+                      'twitter_url': twitterCtrl.text.trim(),
                     }).eq('id', widget.userId);
 
                     Navigator.pop(context);
@@ -725,7 +921,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       const SizedBox(height: 30),
                       GestureDetector(
-                        onTap: _uploadAvatar,
+                        onTap: _editProfileDialog,
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
@@ -765,7 +961,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ],
                                 ),
                                 child: const Icon(
-                                  Icons.camera_alt,
+                                  Icons.edit,
                                   size: 16,
                                   color: Colors.blue,
                                 ),
@@ -1099,7 +1295,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildSection(
                       title: 'Company Information',
                       icon: Icons.business,
-                      onEdit: _editCompanyInfoDialog,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1127,7 +1322,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildSection(
                       title: 'Team',
                       icon: Icons.people_outline,
-                      onEdit: _editTeamDialog,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1196,7 +1390,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildSection(
                       title: 'Product/Service',
                       icon: Icons.rocket_launch_outlined,
-                      onEdit: _editProductInfoDialog,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1278,7 +1471,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildSection(
                       title: 'Contact Information',
                       icon: Icons.contact_mail_outlined,
-                      onEdit: _editContactInfoDialog,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1430,7 +1622,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String title,
     required IconData icon,
     required Widget child,
-    VoidCallback? onEdit,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1467,14 +1658,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ],
                 ),
-                if (onEdit != null)
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, size: 20),
-                    onPressed: onEdit,
-                    color: Colors.blue,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
               ],
             ),
           ),
@@ -1544,321 +1727,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 color: Colors.black87,
               ),
             ),
-        ],
-      ),
-    );
-  }
-
-  void _editCompanyInfoDialog() {
-    final nameCtrl = TextEditingController(text: profile?['company_name']);
-    final foundedCtrl = TextEditingController(text: profile?['founded_date']);
-    final stageCtrl = TextEditingController(text: profile?['company_stage']);
-    final sizeCtrl = TextEditingController(text: profile?['company_size']);
-    final typeCtrl = TextEditingController(text: profile?['company_type']);
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Edit Company Information"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameCtrl,
-                decoration: const InputDecoration(labelText: "Company Name"),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: foundedCtrl,
-                decoration: const InputDecoration(labelText: "Founded Date (YYYY-MM-DD)"),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: stageCtrl.text.isEmpty ? null : stageCtrl.text,
-                decoration: const InputDecoration(labelText: "Company Stage"),
-                items: const [
-                  DropdownMenuItem(value: "Idea", child: Text("Idea")),
-                  DropdownMenuItem(value: "MVP", child: Text("MVP")),
-                  DropdownMenuItem(value: "Early Stage", child: Text("Early Stage")),
-                  DropdownMenuItem(value: "Growth", child: Text("Growth")),
-                  DropdownMenuItem(value: "Scale", child: Text("Scale")),
-                ],
-                onChanged: (value) => stageCtrl.text = value ?? "",
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: sizeCtrl,
-                decoration: const InputDecoration(labelText: "Company Size (Number of Employees)"),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: typeCtrl.text.isEmpty ? null : typeCtrl.text,
-                decoration: const InputDecoration(labelText: "Company Type"),
-                items: const [
-                  DropdownMenuItem(value: "B2B", child: Text("B2B")),
-                  DropdownMenuItem(value: "B2C", child: Text("B2C")),
-                  DropdownMenuItem(value: "B2B2C", child: Text("B2B2C")),
-                  DropdownMenuItem(value: "C2C", child: Text("C2C")),
-                ],
-                onChanged: (value) => typeCtrl.text = value ?? "",
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await supabase.from('profiles').update({
-                  'company_name': nameCtrl.text.trim(),
-                  'founded_date': foundedCtrl.text.trim(),
-                  'company_stage': stageCtrl.text.trim(),
-                  'company_size': sizeCtrl.text.trim(),
-                  'company_type': typeCtrl.text.trim(),
-                }).eq('id', widget.userId);
-
-                Navigator.pop(context);
-                await _loadProfile();
-                _showSnackBar('Company information updated successfully!');
-              } catch (e) {
-                _showSnackBar('Failed to update company information: $e');
-              }
-            },
-            child: const Text("Save"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _editTeamDialog() {
-    final teamCtrl = TextEditingController(text: profile?['team_members']);
-    final positionsCtrl = TextEditingController(text: profile?['open_positions']);
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Edit Team Information"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: teamCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: "Team Members (One per line)",
-                  helperText: "Format: Name - Role",
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: positionsCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: "Open Positions (One per line)",
-                  helperText: "Format: Position - Requirements",
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await supabase.from('profiles').update({
-                  'team_members': teamCtrl.text.trim(),
-                  'open_positions': positionsCtrl.text.trim(),
-                }).eq('id', widget.userId);
-
-                Navigator.pop(context);
-                await _loadProfile();
-                _showSnackBar('Team information updated successfully!');
-              } catch (e) {
-                _showSnackBar('Failed to update team information: $e');
-              }
-            },
-            child: const Text("Save"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _editProductInfoDialog() {
-    final descCtrl = TextEditingController(text: profile?['product_description']);
-    final featuresCtrl = TextEditingController(text: profile?['product_features']);
-    final uspCtrl = TextEditingController(text: profile?['product_usp']);
-    final techCtrl = TextEditingController(text: profile?['tech_stack']);
-    final stageCtrl = TextEditingController(text: profile?['development_stage']);
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Edit Product Information"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: descCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: "Product Description"),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: featuresCtrl,
-                maxLines: 3,
-                decoration: const InputDecoration(
-                  labelText: "Key Features",
-                  helperText: "One feature per line",
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: uspCtrl,
-                maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: "Unique Selling Points",
-                  helperText: "One USP per line",
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: techCtrl,
-                decoration: const InputDecoration(
-                  labelText: "Technology Stack",
-                  helperText: "Comma-separated list of technologies",
-                ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: stageCtrl.text.isEmpty ? null : stageCtrl.text,
-                decoration: const InputDecoration(labelText: "Development Stage"),
-                items: const [
-                  DropdownMenuItem(value: "Concept", child: Text("Concept")),
-                  DropdownMenuItem(value: "Prototype", child: Text("Prototype")),
-                  DropdownMenuItem(value: "Beta", child: Text("Beta")),
-                  DropdownMenuItem(value: "MVP", child: Text("MVP")),
-                  DropdownMenuItem(value: "Production", child: Text("Production")),
-                ],
-                onChanged: (value) => stageCtrl.text = value ?? "",
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await supabase.from('profiles').update({
-                  'product_description': descCtrl.text.trim(),
-                  'product_features': featuresCtrl.text.trim(),
-                  'product_usp': uspCtrl.text.trim(),
-                  'tech_stack': techCtrl.text.trim(),
-                  'development_stage': stageCtrl.text.trim(),
-                }).eq('id', widget.userId);
-
-                Navigator.pop(context);
-                await _loadProfile();
-                _showSnackBar('Product information updated successfully!');
-              } catch (e) {
-                _showSnackBar('Failed to update product information: $e');
-              }
-            },
-            child: const Text("Save"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _editContactInfoDialog() {
-    final emailCtrl = TextEditingController(text: profile?['business_email']);
-    final locationCtrl = TextEditingController(text: profile?['office_location']);
-    final websiteCtrl = TextEditingController(text: profile?['website']);
-    final linkedinCtrl = TextEditingController(text: profile?['linkedin_url']);
-    final twitterCtrl = TextEditingController(text: profile?['twitter_url']);
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Edit Contact Information"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: emailCtrl,
-                decoration: const InputDecoration(labelText: "Business Email"),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: locationCtrl,
-                decoration: const InputDecoration(labelText: "Office Location"),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: websiteCtrl,
-                decoration: const InputDecoration(labelText: "Website"),
-                keyboardType: TextInputType.url,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: linkedinCtrl,
-                decoration: const InputDecoration(labelText: "LinkedIn URL"),
-                keyboardType: TextInputType.url,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: twitterCtrl,
-                decoration: const InputDecoration(labelText: "Twitter URL"),
-                keyboardType: TextInputType.url,
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () async {
-              try {
-                await supabase.from('profiles').update({
-                  'business_email': emailCtrl.text.trim(),
-                  'office_location': locationCtrl.text.trim(),
-                  'website': websiteCtrl.text.trim(),
-                  'linkedin_url': linkedinCtrl.text.trim(),
-                  'twitter_url': twitterCtrl.text.trim(),
-                }).eq('id', widget.userId);
-
-                Navigator.pop(context);
-                await _loadProfile();
-                _showSnackBar('Contact information updated successfully!');
-              } catch (e) {
-                _showSnackBar('Failed to update contact information: $e');
-              }
-            },
-            child: const Text("Save"),
-          ),
         ],
       ),
     );
