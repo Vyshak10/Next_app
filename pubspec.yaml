@@ -12,6 +12,7 @@ dependencies:
 
   like_button: ^2.0.5
   table_calendar: ^3.0.9
+  url_launcher: ^6.2.5
 
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0

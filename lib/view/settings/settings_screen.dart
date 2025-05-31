@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../login/user_type.dart'; // Import the UserType screen
+import 'help_support_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,7 +12,128 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _darkModeEnabled = false; // Example state for dark mode toggle
+  bool _notificationsEnabled = false;
   final supabase = Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationSettings();
+  }
+
+  Future<void> _loadNotificationSettings() async {
+    try {
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) return;
+
+      final data = await supabase
+          .from('profiles')
+          .select('notify_enabled')
+          .eq('id', userId)
+          .single();
+      
+      if (mounted) {
+        setState(() {
+          _notificationsEnabled = data['notify_enabled'] ?? false;
+        });
+      }
+    } catch (e) {
+      print('Error loading notification settings: $e');
+    }
+  }
+
+  Future<void> _toggleNotifications(bool value) async {
+    try {
+      final userId = supabase.auth.currentUser?.id;
+      if (userId == null) return;
+
+      await supabase
+          .from('profiles')
+          .update({'notify_enabled': value})
+          .eq('id', userId);
+
+      setState(() {
+        _notificationsEnabled = value;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value ? 'Notifications enabled' : 'Notifications disabled',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update notification settings: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text(
+          'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      try {
+        final userId = supabase.auth.currentUser?.id;
+        if (userId == null) return;
+
+        // Delete user data from profiles table
+        await supabase
+            .from('profiles')
+            .delete()
+            .eq('id', userId);
+
+        // Delete user's auth account
+        await supabase.auth.admin.deleteUser(userId);
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const UserType()),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete account: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,14 +210,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ],
             ),
-            child: ListTile(
+            child: SwitchListTile(
               title: const Text('Push Notifications'),
-              leading: const Icon(Icons.notifications_none_outlined),
-              trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-              onTap: () {
-                // TODO: Navigate to Push Notifications settings
-                print('Push Notifications tapped');
-              },
+              subtitle: const Text('Receive updates about your profile and connections'),
+              secondary: const Icon(Icons.notifications_none_outlined),
+              value: _notificationsEnabled,
+              onChanged: _toggleNotifications,
             ),
           ),
 
@@ -185,8 +305,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.help_outline),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                   onTap: () {
-                    // TODO: Navigate to Help & Support
-                    print('Help & Support tapped');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const HelpSupportScreen()),
+                    );
                   },
                 ),
                 const Divider(height: 0, indent: 16, endIndent: 16),
@@ -210,12 +332,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
 
+          const SizedBox(height: 24),
+
+          // Danger Zone Section
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Text(
+              'Danger Zone',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.red[700],
+              ),
+            ),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 3,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ListTile(
+              title: const Text('Delete Account'),
+              subtitle: const Text('Permanently delete your account and all data'),
+              leading: const Icon(Icons.delete_forever, color: Colors.red),
+              onTap: _deleteAccount,
+            ),
+          ),
+
           const SizedBox(height: 32),
 
           // Sign Out Button
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent, // Red background for sign out
+              backgroundColor: Colors.redAccent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12.0),
               shape: RoundedRectangleBorder(
@@ -225,15 +382,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () async {
               try {
                 await supabase.auth.signOut();
-                 // TODO: Navigate to login/auth screen after sign out
-                Navigator.pushReplacement( // Use pushReplacement to go to the UserType screen
+                if (mounted) {
+                  Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const UserType()), // Navigate to UserType widget
+                    MaterialPageRoute(builder: (context) => const UserType()),
                   );
-                print('User signed out');
+                }
               } catch (e) {
-                 print('Error signing out: $e');
-                 // TODO: Show error message
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error signing out: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             child: Row(

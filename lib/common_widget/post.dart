@@ -463,7 +463,31 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(20),
                           onTap: () {
-                            // TODO: Implement post options menu
+                            showModalBottomSheet(
+                              context: context,
+                              builder: (context) => Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.flag_outlined, color: Colors.red),
+                                    title: const Text('Report Post'),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      _showReportDialog(post['id'].toString());
+                                    },
+                                  ),
+                                  if (post['user_id'] == widget.userId)
+                                    ListTile(
+                                      leading: const Icon(Icons.delete_outline, color: Colors.red),
+                                      title: const Text('Delete Post'),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        _deletePost(post['id'].toString());
+                                      },
+                                    ),
+                                ],
+                              ),
+                            );
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(8),
@@ -929,6 +953,135 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Future<void> _showReportDialog(String postId) async {
+    final reasonController = TextEditingController();
+    
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Report Post'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Please select a reason for reporting:'),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: 'inappropriate',
+                  child: Text('Inappropriate Content'),
+                ),
+                DropdownMenuItem(
+                  value: 'spam',
+                  child: Text('Spam'),
+                ),
+                DropdownMenuItem(
+                  value: 'harassment',
+                  child: Text('Harassment'),
+                ),
+                DropdownMenuItem(
+                  value: 'other',
+                  child: Text('Other'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == 'other') {
+                  reasonController.text = '';
+                } else {
+                  reasonController.text = value ?? '';
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                labelText: 'Additional Details (Optional)',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (reasonController.text.isNotEmpty) {
+                Navigator.pop(context, {
+                  'reason': reasonController.text,
+                  'postId': postId,
+                });
+              }
+            },
+            child: const Text('Submit Report'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      try {
+        await supabase.from('reports').insert({
+          'post_id': postId,
+          'reporter_id': widget.userId,
+          'reason': result['reason'],
+          'created_at': DateTime.now().toIso8601String(),
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Report submitted successfully. Our team will review it.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to submit report: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _deletePost(String postId) async {
+    try {
+      await supabase.from('posts').delete().eq('id', postId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Post deleted successfully'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      _loadMyPosts();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete post: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
