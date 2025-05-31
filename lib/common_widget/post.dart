@@ -31,12 +31,21 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _myPosts = [];
   bool _isLoading = false;
 
+  // Pagination for Feed
+  int _feedPage = 0;
+  final int _feedPageSize = 10; // Number of posts per page
+  bool _isFeedPaginationLoading = false;
+  bool _hasMoreFeedPosts = true;
+  final ScrollController _feedScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadFeedPosts();
+    _loadFeedPosts(isInitialLoad: true);
     _loadMyPosts();
+
+    _feedScrollController.addListener(_onFeedScroll);
   }
 
   @override
@@ -45,6 +54,7 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
     _titleController.dispose();
     _descriptionController.dispose();
     _tagController.dispose();
+    _feedScrollController.dispose();
     super.dispose();
   }
 
@@ -100,15 +110,36 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
     }
   }
 
-  // Load all posts for feed with proper user data
-  Future<void> _loadFeedPosts() async {
-    setState(() => _isLoading = true);
+  // Load all posts for feed with proper user data (paginated)
+  Future<void> _loadFeedPosts({
+    bool isInitialLoad = false,
+    bool isRefresh = false,
+  }) async {
+    if (_isFeedPaginationLoading || (!_hasMoreFeedPosts && !isRefresh)) return;
+
+    if (isInitialLoad || isRefresh) {
+      setState(() {
+        _isLoading = true;
+        _feedPage = 0; // Start from the first page
+        _feedPosts = []; // Clear existing posts for initial load or refresh
+        _hasMoreFeedPosts = true; // Assume there are more posts initially
+      });
+    } else {
+      setState(() {
+        _isFeedPaginationLoading = true;
+      });
+    }
+
     try {
+      final rangeFrom = _feedPage * _feedPageSize;
+      final rangeTo = rangeFrom + _feedPageSize - 1;
+
       final data = await supabase
           .from('posts')
           .select('*')
           .neq('user_id', widget.userId)
-          .order('created_at', ascending: false);
+          .order('created_at', ascending: false)
+          .range(rangeFrom, rangeTo);
 
       if (mounted && data != null) {
         List<Map<String, dynamic>> postsWithProfiles = [];
@@ -119,13 +150,34 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
           postsWithProfiles.add(post);
         }
 
-        setState(() => _feedPosts = postsWithProfiles);
+        setState(() {
+          _feedPosts.addAll(postsWithProfiles);
+          _feedPage++;
+          _hasMoreFeedPosts = data.length == _feedPageSize; // Check if the fetched data size is equal to the page size
+        });
       }
     } catch (e) {
       _showSnackBar('Failed to load feed: $e');
+      setState(() => _hasMoreFeedPosts = false); // Stop trying to load more on error
     } finally {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _isFeedPaginationLoading = false;
+      });
     }
+  }
+
+  // Scroll listener for pagination
+  void _onFeedScroll() {
+    if (_feedScrollController.position.pixels == _feedScrollController.position.maxScrollExtent) {
+      // Reached the bottom, load more posts
+      _loadFeedPosts();
+    }
+  }
+
+  // Handle pull to refresh
+  Future<void> _handleRefresh() async {
+    await _loadFeedPosts(isRefresh: true);
   }
 
   // Load current user's posts
@@ -187,7 +239,7 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         final idx = _feedPosts.indexWhere((p) => p['id'].toString() == postId);
         if (idx != -1) {
           _feedPosts[idx]['isLiked'] = newIsLiked;
-          _feedPosts[idx]['like_count'] = likeCount;
+          _feedPosts[idx]['like_count'] = likeCount; // Update like count here
         }
       });
     } catch (e) {
@@ -195,7 +247,7 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
     }
   }
 
-  // Get like count and check if current user liked
+  // Get like count and check if current user liked (not used for feed display)
   Future<Map<String, dynamic>> _getLikeData(String postId) async {
     try {
       final likes = await supabase
@@ -309,7 +361,7 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         // Add the new post to the beginning of the myPosts and feedPosts lists
         setState(() {
           _myPosts.insert(0, response);
-          _feedPosts.insert(0, response);
+          // No need to insert into _feedPosts, as feed will be reloaded or paginated later
         });
 
         // Clear form
@@ -321,7 +373,7 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
 
         _showSnackBar('Post created successfully!');
 
-        // Reload posts to ensure full synchronization (optional but good practice)
+        // Reload my posts to ensure consistency
         _loadMyPosts();
         
         // Close the bottom sheet
@@ -347,329 +399,387 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_feedPosts.isEmpty) {
+    if (_feedPosts.isEmpty && !_isLoading) {
       return const Center(
         child: Text('No posts to show yet!', style: TextStyle(fontSize: 16)),
       );
     }
 
-    return Container(
-      color: const Color(0xFFF6F8FB),
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        itemCount: _feedPosts.length,
-        itemBuilder: (context, index) {
-          final post = _feedPosts[index];
-          final userProfile = post['user_profile'];
-          final imageUrls = List<String>.from(post['image_urls'] ?? []);
-          final tags = List<String>.from(post['tags'] ?? []);
-          final isStartup = userProfile?['user_type'] == 'startup';
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      child: Container(
+        color: const Color(0xFFF6F8FB),
+        child: ListView.builder(
+          controller: _feedScrollController,
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          itemCount: _feedPosts.length + (_hasMoreFeedPosts || _isFeedPaginationLoading ? 1 : 0), // Add 1 for loading indicator
+          itemBuilder: (context, index) {
+            if (index == _feedPosts.length) {
+              // This is the loading indicator item
+              if (_isFeedPaginationLoading) {
+                return const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              } else if (!_hasMoreFeedPosts) {
+                // No more posts to load
+                return const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(child: Text('No more posts')),
+                );
+              }
+            }
 
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header with user info
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 4, 8),
-                  child: Row(
-                    children: [
-                      Stack(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: isStartup ? Colors.orange : Colors.blue,
-                                width: 1.5,
+            final post = _feedPosts[index];
+            final userProfile = post['user_profile'];
+            final imageUrls = List<String>.from(post['image_urls'] ?? []);
+            final tags = List<String>.from(post['tags'] ?? []);
+            final isStartup = userProfile?['user_type'] == 'startup';
+
+            // Existing post item UI
+            return Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header with user info
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12), // Standardized padding
+                    child: Row(
+                      children: [
+                        Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isStartup ? Colors.orange : Colors.blue,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: CircleAvatar(
+                                radius: 20,
+                                backgroundImage: userProfile?['avatar_url'] != null
+                                    ? NetworkImage(userProfile['avatar_url'])
+                                    : null,
+                                backgroundColor: Colors.blue.shade50,
+                                child: userProfile?['avatar_url'] == null
+                                    ? Text(
+                                        (userProfile?['name'] ?? 'U')[0].toUpperCase(),
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: isStartup ? Colors.orange : Colors.blue,
+                                        ),
+                                      )
+                                    : null,
                               ),
                             ),
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundImage: userProfile?['avatar_url'] != null
-                                  ? NetworkImage(userProfile['avatar_url'])
-                                  : null,
-                              backgroundColor: Colors.blue.shade50,
-                              child: userProfile?['avatar_url'] == null
-                                  ? Text(
-                                      (userProfile?['name'] ?? 'U')[0].toUpperCase(),
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: isStartup ? Colors.orange : Colors.blue,
+                            if (isStartup)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.1),
+                                        blurRadius: 2,
                                       ),
-                                    )
-                                  : null,
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(3),
+                                  child: const Icon(Icons.rocket_launch_rounded, color: Colors.orange, size: 14),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userProfile?['name'] ?? 'Unknown User',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                _formatDate(post['created_at']),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () {
+                              showModalBottomSheet(
+                                context: context,
+                                builder: (context) => Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ListTile(
+                                      leading: const Icon(Icons.flag_outlined, color: Colors.red),
+                                      title: const Text('Report Post'),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        _showReportDialog(post['id'].toString());
+                                      },
+                                    ),
+                                    if (post['user_id'] == widget.userId)
+                                      ListTile(
+                                        leading: const Icon(Icons.delete_outline, color: Colors.red),
+                                        title: const Text('Delete Post'),
+                                        onTap: () {
+                                          Navigator.pop(context);
+                                          _deletePost(post['id'].toString());
+                                        },
+                                      ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(8), // Keep padding for tap target
+                              child: Icon(Icons.more_horiz_rounded, size: 20, color: Colors.grey[700]),
                             ),
                           ),
-                          if (isStartup)
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Post content
+                  if (imageUrls.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12), // Standardized horizontal padding
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          imageUrls.first,
+                          height: 180,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 180,
+                              color: Colors.grey[200],
+                              child: const Icon(Icons.broken_image, size: 40),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12), // Standardized padding
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          post['title'] ?? '',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (post['description'] != null && post['description'].isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              post['description'],
+                              style: TextStyle(
+                                color: Colors.grey[800],
+                                fontSize: 14,
+                                height: 1.3,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        if (tags.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Wrap(
+                              spacing: 4,
+                              runSpacing: 4,
+                              children: tags.map((tag) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '#$tag',
+                                    style: TextStyle(
+                                      color: Colors.blue.shade700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // Action buttons
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Expanded(
+                          child: _AnimatedRocketLike(
+                            key: ValueKey('like_${post['id']}'),
+                            isLiked: post['isLiked'] ?? false,
+                            onTap: () => _toggleLike(post['id'].toString(), post['isLiked'] ?? false),
+                          ),
+                        ),
+                        Expanded(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () => _showCommentsSheet(post['id'].toString()),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.chat_bubble_outline_rounded, size: 20, color: Colors.grey[700]),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'Comment',
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 13,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
                                     ),
                                   ],
                                 ),
-                                padding: const EdgeInsets.all(3),
-                                child: const Icon(Icons.rocket_launch_rounded, color: Colors.orange, size: 14),
                               ),
                             ),
-                        ],
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              userProfile?['name'] ?? 'Unknown User',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 15,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              _formatDate(post['created_at']),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                      ),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () {
-                            showModalBottomSheet(
-                              context: context,
-                              builder: (context) => Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(Icons.flag_outlined, color: Colors.red),
-                                    title: const Text('Report Post'),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      _showReportDialog(post['id'].toString());
-                                    },
-                                  ),
-                                  if (post['user_id'] == widget.userId)
-                                    ListTile(
-                                      leading: const Icon(Icons.delete_outline, color: Colors.red),
-                                      title: const Text('Delete Post'),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        _deletePost(post['id'].toString());
-                                      },
+                        Expanded(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () {
+                                // TODO: Implement share functionality
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.share_rounded, size: 20, color: Colors.grey[700]),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'Share',
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 13,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
                                     ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Icon(Icons.more_horiz_rounded, size: 20, color: Colors.grey[700]),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Post content
-                if (imageUrls.isNotEmpty)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      imageUrls.first,
-                      height: 180,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 180,
-                          color: Colors.grey[200],
-                          child: const Icon(Icons.broken_image, size: 40),
-                        );
-                      },
+                        Expanded(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () {
+                                // TODO: Implement bookmark functionality
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.bookmark_border_rounded,
+                                      size: 20,
+                                      color: Colors.grey[700],
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'Save',
+                                        style: TextStyle(
+                                          color: Colors.grey[700],
+                                          fontSize: 13,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post['title'] ?? '',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (post['description'] != null && post['description'].isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            post['description'],
-                            style: TextStyle(
-                              color: Colors.grey[800],
-                              fontSize: 14,
-                              height: 1.3,
-                            ),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      if (tags.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: tags.map((tag) {
-                              return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  '#$tag',
-                                  style: TextStyle(
-                                    color: Colors.blue[700],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                // Action buttons
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: Colors.grey.shade200),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _AnimatedRocketLike(
-                        key: ValueKey('like_${post['id']}'),
-                        isLiked: post['isLiked'] ?? false,
-                        onTap: () => _toggleLike(post['id'].toString(), post['isLiked'] ?? false),
-                      ),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => _showCommentsSheet(post['id'].toString()),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            child: Row(
-                              children: [
-                                Icon(Icons.chat_bubble_outline_rounded, size: 20, color: Colors.grey[700]),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Comment',
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () {
-                            // TODO: Implement share functionality
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            child: Row(
-                              children: [
-                                Icon(Icons.share_rounded, size: 20, color: Colors.grey[700]),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Share',
-                                  style: TextStyle(
-                                    color: Colors.grey[700],
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () {
-                            // TODO: Implement bookmark functionality
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: Icon(
-                              Icons.bookmark_border_rounded,
-                              size: 20,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
   Widget _buildCreatePostTab() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16), // Consistent padding
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -835,8 +945,8 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 150, // Maximum width of each grid item
         crossAxisSpacing: 4,
         mainAxisSpacing: 4,
       ),
@@ -923,7 +1033,9 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
           elevation: 0,
           automaticallyImplyLeading: false,
         ),
-        body: _buildFeedTab(),
+        body: SafeArea(
+          child: _buildFeedTab(),
+        ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             showModalBottomSheet(
@@ -956,9 +1068,10 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _showReportDialog(String postId) async {
-    final reasonController = TextEditingController();
-    
-    final result = await showDialog<Map<String, String>>(
+    String? selectedReason;
+    final TextEditingController detailsController = TextEditingController();
+
+    await showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Report Post'),
@@ -992,21 +1105,18 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
                 ),
               ],
               onChanged: (value) {
-                if (value == 'other') {
-                  reasonController.text = '';
-                } else {
-                  reasonController.text = value ?? '';
-                }
+                selectedReason = value;
               },
+              hint: const Text('Select a reason'),
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                labelText: 'Additional Details (Optional)',
-                border: OutlineInputBorder(),
-              ),
+              controller: detailsController,
               maxLines: 3,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                hintText: 'Additional details (optional)',
+              ),
             ),
           ],
         ),
@@ -1015,49 +1125,43 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () {
-              if (reasonController.text.isNotEmpty) {
-                Navigator.pop(context, {
-                  'reason': reasonController.text,
-                  'postId': postId,
+          ElevatedButton(
+            onPressed: () async {
+              if (selectedReason == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please select a reason')),
+                );
+                return;
+              }
+
+              try {
+                await supabase.from('reports').insert({
+                  'post_id': postId,
+                  'reporter_id': widget.userId,
+                  'reason': selectedReason,
+                  'details': detailsController.text.trim(),
+                  'created_at': DateTime.now().toIso8601String(),
                 });
+
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Report submitted successfully')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to submit report: $e')),
+                  );
+                }
               }
             },
-            child: const Text('Submit Report'),
+            child: const Text('Submit'),
           ),
         ],
       ),
     );
-
-    if (result != null) {
-      try {
-        await supabase.from('reports').insert({
-          'post_id': postId,
-          'reporter_id': widget.userId,
-          'reason': result['reason'],
-          'created_at': DateTime.now().toIso8601String(),
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Report submitted successfully. Our team will review it.'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to submit report: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
   }
 
   Future<void> _deletePost(String postId) async {
@@ -1368,8 +1472,9 @@ class _AnimatedRocketLikeState extends State<_AnimatedRocketLike> with SingleTic
         borderRadius: BorderRadius.circular(20),
         onTap: widget.onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ScaleTransition(
                 scale: _scaleAnim,
@@ -1380,12 +1485,16 @@ class _AnimatedRocketLikeState extends State<_AnimatedRocketLike> with SingleTic
                 ),
               ),
               const SizedBox(width: 4),
-              Text(
-                'Like',
-                style: TextStyle(
-                  color: widget.isLiked ? Colors.orange : Colors.grey[700],
-                  fontSize: 13,
-                  fontWeight: widget.isLiked ? FontWeight.w600 : FontWeight.normal,
+              Expanded(
+                child: Text(
+                  'Like',
+                  style: TextStyle(
+                    color: widget.isLiked ? Colors.orange : Colors.grey[700],
+                    fontSize: 13,
+                    fontWeight: widget.isLiked ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
