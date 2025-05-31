@@ -137,7 +137,6 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
       final data = await supabase
           .from('posts')
           .select('*')
-          .neq('user_id', widget.userId)
           .order('created_at', ascending: false)
           .range(rangeFrom, rangeTo);
 
@@ -358,10 +357,14 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
       final response = await supabase.from('posts').insert(post).select().single();
       
       if (response != null) {
-        // Add the new post to the beginning of the myPosts and feedPosts lists
+        // Get user profile data first
+        final userProfile = await _getUserProfile(widget.userId);
+        
+        // Then update the state with both the post and profile data
         setState(() {
           _myPosts.insert(0, response);
-          // No need to insert into _feedPosts, as feed will be reloaded or paginated later
+          response['user_profile'] = userProfile;
+          _feedPosts.insert(0, response);
         });
 
         // Clear form
@@ -372,9 +375,6 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
         _tagController.clear();
 
         _showSnackBar('Post created successfully!');
-
-        // Reload my posts to ensure consistency
-        _loadMyPosts();
         
         // Close the bottom sheet
         if (mounted) {
@@ -427,350 +427,352 @@ class _PostScreenState extends State<PostScreen> with TickerProviderStateMixin {
                   padding: EdgeInsets.all(16.0),
                   child: Center(child: Text('No more posts')),
                 );
+              } else {
+                // Should not happen if _hasMoreFeedPosts is false when index == _feedPosts.length
+                return const SizedBox.shrink();
               }
-            }
+            } else {
+              // This is a regular post item
+              final post = _feedPosts[index];
+              final userProfile = post['user_profile'];
+              final imageUrls = List<String>.from(post['image_urls'] ?? []);
+              final tags = List<String>.from(post['tags'] ?? []);
+              final isStartup = userProfile?['user_type'] == 'startup';
 
-            final post = _feedPosts[index];
-            final userProfile = post['user_profile'];
-            final imageUrls = List<String>.from(post['image_urls'] ?? []);
-            final tags = List<String>.from(post['tags'] ?? []);
-            final isStartup = userProfile?['user_type'] == 'startup';
-
-            // Existing post item UI
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header with user info
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12), // Standardized padding
-                    child: Row(
-                      children: [
-                        Stack(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isStartup ? Colors.orange : Colors.blue,
-                                  width: 1.5,
+              // Existing post item UI
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with user info
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12), // Standardized padding
+                      child: Row(
+                        children: [
+                          Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isStartup ? Colors.orange : Colors.blue,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage: userProfile?['avatar_url'] != null
+                                      ? NetworkImage(userProfile['avatar_url'])
+                                      : null,
+                                  backgroundColor: Colors.blue.shade50,
+                                  child: userProfile?['avatar_url'] == null
+                                      ? Text(
+                                          (userProfile?['name'] ?? 'U')[0].toUpperCase(),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: isStartup ? Colors.orange : Colors.blue,
+                                          ),
+                                        )
+                                      : null,
                                 ),
                               ),
-                              child: CircleAvatar(
-                                radius: 20,
-                                backgroundImage: userProfile?['avatar_url'] != null
-                                    ? NetworkImage(userProfile['avatar_url'])
-                                    : null,
-                                backgroundColor: Colors.blue.shade50,
-                                child: userProfile?['avatar_url'] == null
-                                    ? Text(
-                                        (userProfile?['name'] ?? 'U')[0].toUpperCase(),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: isStartup ? Colors.orange : Colors.blue,
+                              if (isStartup)
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 2,
                                         ),
-                                      )
-                                    : null,
+                                      ],
+                                    ),
+                                    padding: const EdgeInsets.all(3),
+                                    child: const Icon(Icons.rocket_launch_rounded, color: Colors.orange, size: 14),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  userProfile?['name'] ?? 'Unknown User',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  _formatDate(post['created_at']),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(20),
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  builder: (context) => Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      ListTile(
+                                        leading: const Icon(Icons.flag_outlined, color: Colors.red),
+                                        title: const Text('Report Post'),
+                                        onTap: () {
+                                          Navigator.pop(context);
+                                          _showReportDialog(post['id'].toString());
+                                        },
+                                      ),
+                                      if (post['user_id'] == widget.userId)
+                                        ListTile(
+                                          leading: const Icon(Icons.delete_outline, color: Colors.red),
+                                          title: const Text('Delete Post'),
+                                          onTap: () {
+                                            Navigator.pop(context);
+                                            _deletePost(post['id'].toString());
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(8), // Keep padding for tap target
+                                child: Icon(Icons.more_horiz_rounded, size: 20, color: Colors.grey[700]),
                               ),
                             ),
-                            if (isStartup)
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.1),
-                                        blurRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Post content
+                    if (imageUrls.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12), // Standardized horizontal padding
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.network(
+                            imageUrls.first,
+                            height: 180,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 180,
+                                color: Colors.grey[200],
+                                child: const Icon(Icons.broken_image, size: 40),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12), // Standardized padding
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            post['title'] ?? '',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (post['description'] != null && post['description'].isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(
+                                post['description'],
+                                style: TextStyle(
+                                  color: Colors.grey[800],
+                                  fontSize: 14,
+                                  height: 1.3,
+                                ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          if (tags.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: tags.map((tag) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '#$tag',
+                                      style: TextStyle(
+                                        color: Colors.blue.shade700,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    // Action buttons
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Expanded(
+                            child: _AnimatedRocketLike(
+                              key: ValueKey('like_${post['id']}'),
+                              isLiked: post['isLiked'] ?? false,
+                              onTap: () => _toggleLike(post['id'].toString(), post['isLiked'] ?? false),
+                            ),
+                          ),
+                          Expanded(
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () => _showCommentsSheet(post['id'].toString()),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.chat_bubble_outline_rounded, size: 20, color: Colors.grey[700]),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Comment',
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                            fontSize: 13,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                  padding: const EdgeInsets.all(3),
-                                  child: const Icon(Icons.rocket_launch_rounded, color: Colors.orange, size: 14),
                                 ),
                               ),
-                          ],
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                userProfile?['name'] ?? 'Unknown User',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              Text(
-                                _formatDate(post['created_at']),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: () {
-                              showModalBottomSheet(
-                                context: context,
-                                builder: (context) => Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ListTile(
-                                      leading: const Icon(Icons.flag_outlined, color: Colors.red),
-                                      title: const Text('Report Post'),
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        _showReportDialog(post['id'].toString());
-                                      },
-                                    ),
-                                    if (post['user_id'] == widget.userId)
-                                      ListTile(
-                                        leading: const Icon(Icons.delete_outline, color: Colors.red),
-                                        title: const Text('Delete Post'),
-                                        onTap: () {
-                                          Navigator.pop(context);
-                                          _deletePost(post['id'].toString());
-                                        },
-                                      ),
-                                  ],
-                                ),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(8), // Keep padding for tap target
-                              child: Icon(Icons.more_horiz_rounded, size: 20, color: Colors.grey[700]),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Post content
-                  if (imageUrls.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12), // Standardized horizontal padding
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          imageUrls.first,
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 180,
-                              color: Colors.grey[200],
-                              child: const Icon(Icons.broken_image, size: 40),
-                            );
-                          },
-                        ),
+                          Expanded(
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () {
+                                  // TODO: Implement share functionality
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.share_rounded, size: 20, color: Colors.grey[700]),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Share',
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                            fontSize: 13,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(20),
+                                onTap: () {
+                                  // TODO: Implement bookmark functionality
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.bookmark_border_rounded,
+                                        size: 20,
+                                        color: Colors.grey[700],
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          'Save',
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                            fontSize: 13,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12), // Standardized padding
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          post['title'] ?? '',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (post['description'] != null && post['description'].isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              post['description'],
-                              style: TextStyle(
-                                color: Colors.grey[800],
-                                fontSize: 14,
-                                height: 1.3,
-                              ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        if (tags.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Wrap(
-                              spacing: 4,
-                              runSpacing: 4,
-                              children: tags.map((tag) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '#$tag',
-                                    style: TextStyle(
-                                      color: Colors.blue.shade700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-
-                  // Action buttons
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: Colors.grey.shade200),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Expanded(
-                          child: _AnimatedRocketLike(
-                            key: ValueKey('like_${post['id']}'),
-                            isLiked: post['isLiked'] ?? false,
-                            onTap: () => _toggleLike(post['id'].toString(), post['isLiked'] ?? false),
-                          ),
-                        ),
-                        Expanded(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () => _showCommentsSheet(post['id'].toString()),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.chat_bubble_outline_rounded, size: 20, color: Colors.grey[700]),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        'Comment',
-                                        style: TextStyle(
-                                          color: Colors.grey[700],
-                                          fontSize: 13,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () {
-                                // TODO: Implement share functionality
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.share_rounded, size: 20, color: Colors.grey[700]),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        'Share',
-                                        style: TextStyle(
-                                          color: Colors.grey[700],
-                                          fontSize: 13,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
-                              onTap: () {
-                                // TODO: Implement bookmark functionality
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.bookmark_border_rounded,
-                                      size: 20,
-                                      color: Colors.grey[700],
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        'Save',
-                                        style: TextStyle(
-                                          color: Colors.grey[700],
-                                          fontSize: 13,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
+                  ],
+                ),
+              );
+            }
           },
         ),
       ),
