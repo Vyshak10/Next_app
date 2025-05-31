@@ -138,13 +138,13 @@ class _SeekerPageState extends State<SeekerPage> with SingleTickerProviderStateM
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.blueAccent.withOpacity(0.2) : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: 24, end: isSelected ? 28 : 24),
@@ -158,22 +158,30 @@ class _SeekerPageState extends State<SeekerPage> with SingleTickerProviderStateM
                 );
               },
             ),
+            const SizedBox(height: 4),
             AnimatedOpacity(
               opacity: isSelected ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
-              child: isSelected ? Padding(
-                padding: const EdgeInsets.only(top: 4.0),
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    color: isSelected ? Colors.blueAccent : Colors.grey[600],
-                    fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.blueAccent : Colors.grey[600],
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
-              ) : const SizedBox.shrink(),
+              ),
             ),
+            if (isSelected)
+              Container(
+                margin: const EdgeInsets.only(top: 4),
+                height: 3,
+                width: 24,
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent,
+                  borderRadius: BorderRadius.circular(1.5),
+                ),
+              ),
           ],
         ),
       ),
