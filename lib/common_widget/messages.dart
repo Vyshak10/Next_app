@@ -19,6 +19,7 @@ class MessagesScreen extends StatefulWidget {
 class _MessagesScreenState extends State<MessagesScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
   final TextEditingController _messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   late RealtimeChannel _channel;
 
@@ -26,48 +27,104 @@ class _MessagesScreenState extends State<MessagesScreen> {
   List<Map<String, dynamic>> profiles = [];
   String? selectedRecipientId;
   String? conversationId;
+  bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadProfiles();
     _setupRealtime();
+    // Load messages initially if a conversation is pre-selected
+    if (widget.conversationId != null) {
+      conversationId = widget.conversationId;
+      _loadMessages();
+    }
   }
 
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.dispose();
     supabase.removeChannel(_channel);
     super.dispose();
   }
 
   Future<void> _loadMessages() async {
+    if (isLoading) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
     try {
-      late PostgrestFilterBuilder query;
+      List<Map<String, dynamic>> fetchedMessages = [];
 
       if (conversationId == 'broadcast') {
-        // Load broadcast messages (where receivers_id is NULL or matches current user)
-        query = supabase
+        // Load broadcast messages (where conversation_id is NULL)
+        final response = await supabase
             .from('messages')
-            .select()
-            .or('receivers_id.is.null,receivers_id.eq.${widget.userId}');
-      } else if (conversationId != null) {
-        // Load conversation messages
-        query = supabase
+            .select('*')
+            .isFilter('conversation_id', null)
+            .order('created_at', ascending: true);
+
+        fetchedMessages = List<Map<String, dynamic>>.from(response);
+      } else if (conversationId != null && conversationId != 'broadcast') {
+        // Load conversation messages for specific conversation
+        final response = await supabase
             .from('messages')
-            .select()
-            .eq('conversation_id', conversationId!);
+            .select('*')
+            .eq('conversation_id', conversationId!)
+            .order('created_at', ascending: true);
+
+        fetchedMessages = List<Map<String, dynamic>>.from(response);
       } else {
-        return; // No conversation selected
+        // Load all messages where user is sender or receiver
+        final response = await supabase
+            .from('messages')
+            .select('*')
+            .or('senders_id.eq.${widget.userId},receivers_id.eq.${widget.userId},receivers_id.is.null')
+            .order('created_at', ascending: true);
+
+        fetchedMessages = List<Map<String, dynamic>>.from(response);
       }
 
-      final response = await query.order('created_at', ascending: true);
+      // Fetch sender names for all messages
+      for (var message in fetchedMessages) {
+        final senderId = message['senders_id'];
+        if (senderId != null) {
+          try {
+            final senderProfile = await supabase
+                .from('profiles')
+                .select('name')
+                .eq('id', senderId)
+                .single();
+            message['sender_name'] = senderProfile['name'] ?? 'Unknown';
+          } catch (e) {
+            message['sender_name'] = 'Unknown';
+          }
+        }
+      }
 
       setState(() {
-        messages = List<Map<String, dynamic>>.from(response);
+        messages = fetchedMessages;
+        isLoading = false;
       });
+
+      // Scroll to bottom after loading messages
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
+
     } catch (error) {
       debugPrint('Error loading messages: $error');
+      setState(() {
+        isLoading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading messages: $error')),
+        );
+      }
     }
   }
 
@@ -87,23 +144,71 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   void _setupRealtime() {
-    _channel = supabase.channel('public:messages');
+    _channel = supabase.channel('messages_channel_${widget.userId}');
 
     _channel
         .onPostgresChanges(
       event: PostgresChangeEvent.insert,
       schema: 'public',
       table: 'messages',
-      callback: (payload) {
-        final newMessage = payload.newRecord;
-        if (newMessage['conversation_id'] == conversationId) {
+      callback: (payload) async {
+        final newMessage = Map<String, dynamic>.from(payload.newRecord);
+
+        // Check if this message is relevant to current user
+        bool shouldAddMessage = false;
+
+        if (conversationId == 'broadcast' && newMessage['conversation_id'] == null) {
+          // Broadcast message and we're viewing broadcast
+          shouldAddMessage = true;
+        } else if (conversationId != null && conversationId != 'broadcast' &&
+            newMessage['conversation_id'] == conversationId) {
+          // Direct conversation message
+          shouldAddMessage = true;
+        } else if (conversationId == null) {
+          // No specific conversation selected, show if user is involved
+          shouldAddMessage = newMessage['senders_id'] == widget.userId ||
+              newMessage['receivers_id'] == widget.userId ||
+              newMessage['receivers_id'] == null; // broadcast
+        }
+
+        if (shouldAddMessage) {
+          // Fetch sender name for the new message
+          final senderId = newMessage['senders_id'];
+          if (senderId != null) {
+            try {
+              final senderProfile = await supabase
+                  .from('profiles')
+                  .select('name')
+                  .eq('id', senderId)
+                  .single();
+              newMessage['sender_name'] = senderProfile['name'] ?? 'Unknown';
+            } catch (e) {
+              newMessage['sender_name'] = 'Unknown';
+            }
+          }
+
           setState(() {
             messages.add(newMessage);
+          });
+
+          // Scroll to bottom when new message arrives
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom();
           });
         }
       },
     )
         .subscribe();
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   Future<void> _ensureConversationExists() async {
@@ -113,7 +218,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
       return;
     }
 
-    // At this point, selectedRecipientId is guaranteed to be non-null
     final recipientId = selectedRecipientId!;
 
     try {
@@ -134,7 +238,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           'user1_id': widget.userId,
           'user2_id': recipientId,
           'last_message': '',
-          'last_message_at': DateTime.now().toIso8601String(),
+          'last_message_time': DateTime.now().toIso8601String(),
         })
             .select('id')
             .single();
@@ -143,6 +247,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
       }
     } catch (error) {
       debugPrint('Error ensuring conversation exists: $error');
+      // If conversation creation fails, still allow messaging
+      conversationId = 'temp_${widget.userId}_$recipientId';
     }
   }
 
@@ -150,26 +256,33 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    try {
-      await _ensureConversationExists();
+    // Clear the input immediately for better UX
+    _messageController.clear();
 
+    try {
       if (selectedRecipientId != null) {
+        // Ensure conversation exists for direct messages
+        await _ensureConversationExists();
+
         // Single user message
         await supabase.from('messages').insert({
-          'conversation_id': conversationId == 'broadcast' ? null : conversationId,
+          'conversation_id': conversationId == 'broadcast' ? null :
+          (conversationId?.startsWith('temp_') == true ? null : conversationId),
           'senders_id': widget.userId,
           'receivers_id': selectedRecipientId,
           'content': text,
           'created_at': DateTime.now().toIso8601String(),
         });
 
-        // Update conversation's last message (only for non-broadcast)
-        if (conversationId != null && conversationId != 'broadcast') {
+        // Update conversation's last message (only for non-broadcast and existing conversations)
+        if (conversationId != null &&
+            conversationId != 'broadcast' &&
+            !conversationId!.startsWith('temp_')) {
           await supabase
               .from('conversations')
               .update({
             'last_message': text,
-            'last_message_at': DateTime.now().toIso8601String(),
+            'last_message_time': DateTime.now().toIso8601String(),
           })
               .eq('id', conversationId!);
         }
@@ -182,11 +295,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
           'content': text,
           'created_at': DateTime.now().toIso8601String(),
         });
+
+        conversationId = 'broadcast';
       }
 
-      _messageController.clear();
-      await _loadMessages();
     } catch (error) {
+      debugPrint('Detailed error sending message: $error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error sending message: $error')),
@@ -201,106 +315,203 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final timeString =
         '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
 
+    final senderName = msg['sender_name'] ?? 'Unknown';
+
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 8),
       child: Column(
         crossAxisAlignment:
         isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: isMe ? Colors.green[400] : Colors.grey[300],
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(12),
-                topRight: const Radius.circular(12),
-                bottomLeft:
-                isMe ? const Radius.circular(12) : const Radius.circular(0),
-                bottomRight:
-                isMe ? const Radius.circular(0) : const Radius.circular(12),
+          if (!isMe && (selectedRecipientId == null || conversationId == 'broadcast'))
+            Padding(
+              padding: const EdgeInsets.only(left: 12, bottom: 2),
+              child: Text(
+                senderName,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-            child: Text(
-              msg['content'] ?? '',
-              style: TextStyle(
-                color: isMe ? Colors.white : Colors.black87,
-                fontSize: 16,
+          Row(
+            mainAxisAlignment:
+            isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            children: [
+              Flexible(
+                child: Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.75,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isMe ? const Color(0xFF25D366) : Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(12),
+                      topRight: const Radius.circular(12),
+                      bottomLeft: isMe ? const Radius.circular(12) : const Radius.circular(2),
+                      bottomRight: isMe ? const Radius.circular(2) : const Radius.circular(12),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 1,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        msg['content'] ?? '',
+                        style: TextStyle(
+                          color: isMe ? Colors.white : Colors.black87,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            timeString,
+                            style: TextStyle(
+                              color: isMe ? Colors.white70 : Colors.grey[600],
+                              fontSize: 11,
+                            ),
+                          ),
+                          if (isMe) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.done_all,
+                              size: 14,
+                              color: Colors.white70,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            timeString,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-            ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  String _getAppBarTitle() {
+    if (selectedRecipientId == null) {
+      return 'Broadcast Chat';
+    } else {
+      final selectedProfile = profiles.firstWhere(
+            (profile) => profile['id'] == selectedRecipientId,
+        orElse: () => {'name': 'Chat'},
+      );
+      return selectedProfile['name'] ?? 'Chat';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFECE5DD), // WhatsApp-like background
       appBar: AppBar(
-        title: const Text('Chat'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        title: Text(_getAppBarTitle()),
+        backgroundColor: const Color(0xFF075E54), // WhatsApp green
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: Column(
         children: [
+          // Recipient selection dropdown
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            color: Colors.white,
+            child: DropdownButton<String>(
+              value: selectedRecipientId,
+              hint: const Text('Select recipient (leave empty for broadcast)'),
+              isExpanded: true,
+              items: [
+                const DropdownMenuItem<String>(
+                  value: null,
+                  child: Text('🌐 Broadcast to all users'),
+                ),
+                ...profiles.map((profile) {
+                  return DropdownMenuItem<String>(
+                    value: profile['id'],
+                    child: Text('👤 ${profile['name'] ?? 'Unnamed'}'),
+                  );
+                }).toList(),
+              ],
+              onChanged: (value) async {
+                setState(() {
+                  selectedRecipientId = value;
+                  messages.clear(); // Clear current messages
+                });
+
+                if (value == null) {
+                  conversationId = 'broadcast';
+                } else {
+                  await _ensureConversationExists();
+                }
+
+                await _loadMessages();
+              },
+            ),
+          ),
+
+          // Messages list
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : messages.isEmpty
+                ? const Center(
+              child: Text(
+                'No messages yet. Start the conversation!',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+                : ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: messages.length,
               itemBuilder: (context, index) {
                 return _buildMessageItem(messages[index]);
               },
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Column(
-                children: [
-                  // Dropdown for recipient selection
-                  DropdownButton<String>(
-                    value: selectedRecipientId,
-                    hint: const Text('Select recipient (optional)'),
-                    isExpanded: true,
-                    items: [
-                      const DropdownMenuItem<String>(
-                        value: null,
-                        child: Text('Send to all users'),
-                      ),
-                      ...profiles.map((profile) {
-                        return DropdownMenuItem<String>(
-                          value: profile['id'],
-                          child: Text(profile['name'] ?? 'Unnamed'),
-                        );
-                      }).toList(),
-                    ],
-                    onChanged: (value) async {
-                      setState(() {
-                        selectedRecipientId = value;
-                      });
-                      await _ensureConversationExists();
-                      await _loadMessages();
-                    },
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
+
+          // Message input
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
                         child: TextField(
                           controller: _messageController,
                           decoration: InputDecoration(
-                            hintText: 'Type a message...',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            hintText: selectedRecipientId == null
+                                ? 'Broadcast message to all...'
+                                : 'Type a message...',
+                            border: InputBorder.none,
                             contentPadding: const EdgeInsets.symmetric(
                               vertical: 10,
                               horizontal: 16,
@@ -308,19 +519,21 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           ),
                           textInputAction: TextInputAction.send,
                           onSubmitted: (_) => _sendMessage(),
+                          maxLines: null,
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      CircleAvatar(
-                        backgroundColor: Colors.green[400],
-                        child: IconButton(
-                          icon: const Icon(Icons.send, color: Colors.white),
-                          onPressed: _sendMessage,
-                        ),
+                    ),
+                    const SizedBox(width: 8),
+                    CircleAvatar(
+                      backgroundColor: const Color(0xFF25D366),
+                      radius: 24,
+                      child: IconButton(
+                        icon: const Icon(Icons.send, color: Colors.white),
+                        onPressed: _sendMessage,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
