@@ -26,6 +26,8 @@ dependencies:
   sign_in_with_apple: ^6.1.0
   supabase_flutter: 2.9.0
   realtime_client: ^2.5.0
+  timeago: ^3.0.2
+  font_awesome_flutter: ^10.5.0
 
 
 dev_dependencies:

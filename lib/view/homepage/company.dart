@@ -26,7 +26,10 @@ class _CompanyScreenState extends State<CompanyScreen> with SingleTickerProvider
     final userId = user?.id ?? '';
     _screens = [
       HomeScreen(onProfileTap: () => _onItemTapped(2)),
-      MessagesScreen(userId: userId),
+      MessagesScreen(
+        userId: userId,
+        conversationId: DateTime.now().millisecondsSinceEpoch.toString(), // Generate unique ID
+      ),
       ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
     ];
     _controller = AnimationController(

@@ -70,7 +70,10 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
       case 1:
         return PostScreen(userId: userId);
       case 2:
-        return MessagesScreen(userId: userId);
+        return MessagesScreen(
+          userId: userId,
+          conversationId: DateTime.now().millisecondsSinceEpoch.toString(), // Generate unique ID
+        );
       case 3:
         return ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0));
       default:

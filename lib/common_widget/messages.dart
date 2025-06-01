@@ -1,10 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:intl/intl.dart';
 
 class MessagesScreen extends StatefulWidget {
   final String userId;
-  const MessagesScreen({super.key, required this.userId});
+  final String? conversationId;
+
+  const MessagesScreen({
+    Key? key,
+    required this.userId,
+    this.conversationId,
+  }) : super(key: key);
 
   @override
   State<MessagesScreen> createState() => _MessagesScreenState();
@@ -12,737 +18,314 @@ class MessagesScreen extends StatefulWidget {
 
 class _MessagesScreenState extends State<MessagesScreen> {
   final SupabaseClient supabase = Supabase.instance.client;
-  List<Map<String, dynamic>> conversations = [];
-  bool isLoading = true;
-  final TextEditingController messageController = TextEditingController();
-  String? selectedConversationId;
+  final TextEditingController _messageController = TextEditingController();
+
+  late RealtimeChannel _channel;
+
   List<Map<String, dynamic>> messages = [];
-  late RealtimeChannel messageChannel;
-  bool showConversationList = true;
-  final ScrollController _scrollController = ScrollController();
+  List<Map<String, dynamic>> profiles = [];
+  String? selectedRecipientId;
+  String? conversationId;
 
   @override
   void initState() {
     super.initState();
-    fetchConversations();
-    subscribeToMessages();
+    _loadProfiles();
+    _setupRealtime();
   }
 
   @override
   void dispose() {
-    messageController.dispose();
-    messageChannel.unsubscribe();
-    _scrollController.dispose();
+    _messageController.dispose();
+    supabase.removeChannel(_channel);
     super.dispose();
   }
 
-  Future<void> fetchConversations() async {
-    setState(() => isLoading = true);
+  Future<void> _loadMessages() async {
     try {
-      final response = await supabase
-          .from('conversations')
-          .select('*, participants:conversation_participants(user_id, profiles:profiles(id, full_name, avatar_url))')
-          .contains('participants', [{'user_id': widget.userId}])
-          .order('updated_at', ascending: false);
+      late PostgrestFilterBuilder query;
 
-      setState(() {
-        conversations = List<Map<String, dynamic>>.from(response);
-        isLoading = false;
-      });
-    } catch (e) {
-      print('Error fetching conversations: $e');
-      setState(() => isLoading = false);
-    }
-  }
+      if (conversationId == 'broadcast') {
+        // Load broadcast messages (where receivers_id is NULL or matches current user)
+        query = supabase
+            .from('messages')
+            .select()
+            .or('receivers_id.is.null,receivers_id.eq.${widget.userId}');
+      } else if (conversationId != null) {
+        // Load conversation messages
+        query = supabase
+            .from('messages')
+            .select()
+            .eq('conversation_id', conversationId!);
+      } else {
+        return; // No conversation selected
+      }
 
-  Future<void> fetchMessages(String conversationId) async {
-    try {
-      final response = await supabase
-          .from('messages')
-          .select('*, sender:profiles(full_name, avatar_url)')
-          .eq('conversation_id', conversationId)
-          .order('created_at', ascending: true);
+      final response = await query.order('created_at', ascending: true);
 
       setState(() {
         messages = List<Map<String, dynamic>>.from(response);
       });
-      // Scroll to bottom after messages are loaded
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    } catch (e) {
-      print('Error fetching messages: $e');
+    } catch (error) {
+      debugPrint('Error loading messages: $error');
     }
   }
 
-  void subscribeToMessages() {
-    messageChannel = supabase.channel('public:messages');
+  Future<void> _loadProfiles() async {
+    try {
+      final response = await supabase
+          .from('profiles')
+          .select('id, name')
+          .neq('id', widget.userId); // exclude self
 
-    messageChannel
+      setState(() {
+        profiles = List<Map<String, dynamic>>.from(response);
+      });
+    } catch (error) {
+      debugPrint('Error loading profiles: $error');
+    }
+  }
+
+  void _setupRealtime() {
+    _channel = supabase.channel('public:messages');
+
+    _channel
         .onPostgresChanges(
       event: PostgresChangeEvent.insert,
       schema: 'public',
       table: 'messages',
       callback: (payload) {
         final newMessage = payload.newRecord;
-        if (newMessage != null && newMessage['conversation_id'] == selectedConversationId) {
-          fetchMessages(selectedConversationId!);
+        if (newMessage['conversation_id'] == conversationId) {
+          setState(() {
+            messages.add(newMessage);
+          });
         }
       },
-    ).subscribe();
+    )
+        .subscribe();
   }
 
-  Future<void> sendMessage() async {
-    if (messageController.text.trim().isEmpty || selectedConversationId == null) return;
+  Future<void> _ensureConversationExists() async {
+    if (selectedRecipientId == null) {
+      // Broadcast conversation
+      conversationId = 'broadcast';
+      return;
+    }
+
+    // At this point, selectedRecipientId is guaranteed to be non-null
+    final recipientId = selectedRecipientId!;
 
     try {
-      await supabase.from('messages').insert({
-        'conversation_id': selectedConversationId,
-        'sender_id': widget.userId,
-        'content': messageController.text.trim(),
-      });
+      // Check if conversation already exists between these two users
+      final existingConversation = await supabase
+          .from('conversations')
+          .select('id')
+          .or('and(user1_id.eq.${widget.userId},user2_id.eq.$recipientId),and(user1_id.eq.$recipientId,user2_id.eq.${widget.userId})')
+          .maybeSingle();
 
-      messageController.clear();
-    } catch (e) {
-      print('Error sending message: $e');
+      if (existingConversation != null) {
+        conversationId = existingConversation['id'].toString();
+      } else {
+        // Create new conversation
+        final newConversation = await supabase
+            .from('conversations')
+            .insert({
+          'user1_id': widget.userId,
+          'user2_id': recipientId,
+          'last_message': '',
+          'last_message_at': DateTime.now().toIso8601String(),
+        })
+            .select('id')
+            .single();
+
+        conversationId = newConversation['id'].toString();
+      }
+    } catch (error) {
+      debugPrint('Error ensuring conversation exists: $error');
     }
   }
 
-  Future<void> createNewConversation(String otherUserId) async {
+  Future<void> _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
     try {
-      final response = await supabase.from('conversations').insert({
-        'participants': [
-          {'user_id': widget.userId},
-          {'user_id': otherUserId}
-        ]
-      }).select().single();
+      await _ensureConversationExists();
 
-      setState(() {
-        selectedConversationId = response['id'];
-        showConversationList = false;
-      });
-      fetchConversations();
-      fetchMessages(response['id']);
-    } catch (e) {
-      print('Error creating conversation: $e');
+      if (selectedRecipientId != null) {
+        // Single user message
+        await supabase.from('messages').insert({
+          'conversation_id': conversationId == 'broadcast' ? null : conversationId,
+          'senders_id': widget.userId,
+          'receivers_id': selectedRecipientId,
+          'content': text,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+
+        // Update conversation's last message (only for non-broadcast)
+        if (conversationId != null && conversationId != 'broadcast') {
+          await supabase
+              .from('conversations')
+              .update({
+            'last_message': text,
+            'last_message_at': DateTime.now().toIso8601String(),
+          })
+              .eq('id', conversationId!);
+        }
+      } else {
+        // Broadcast to all users (set receivers_id to null for broadcast)
+        await supabase.from('messages').insert({
+          'conversation_id': null, // Broadcast messages don't have conversation_id
+          'senders_id': widget.userId,
+          'receivers_id': null, // NULL means broadcast to all
+          'content': text,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+
+      _messageController.clear();
+      await _loadMessages();
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sending message: $error')),
+        );
+      }
     }
   }
 
-  String _formatTime(String? timestamp) {
-    if (timestamp == null) return '';
-    final date = DateTime.parse(timestamp);
-    final now = DateTime.now();
-    final difference = now.difference(date);
+  Widget _buildMessageItem(Map<String, dynamic> msg) {
+    final isMe = msg['senders_id'] == widget.userId;
+    final timestamp = DateTime.parse(msg['created_at']).toLocal();
+    final timeString =
+        '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
 
-    if (difference.inDays == 0) {
-      return DateFormat('h:mm a').format(date);
-    } else if (difference.inDays == 1) {
-      return 'Yesterday';
-    } else if (difference.inDays < 7) {
-      return DateFormat('EEEE').format(date);
-    } else {
-      return DateFormat('MMM d').format(date);
-    }
-  }
-
-  Widget _buildConversationList() {
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (conversations.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 64,
-              color: Colors.grey[400],
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      child: Column(
+        crossAxisAlignment:
+        isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isMe ? Colors.green[400] : Colors.grey[300],
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(12),
+                topRight: const Radius.circular(12),
+                bottomLeft:
+                isMe ? const Radius.circular(12) : const Radius.circular(0),
+                bottomRight:
+                isMe ? const Radius.circular(0) : const Radius.circular(12),
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'No conversations yet',
+            child: Text(
+              msg['content'] ?? '',
               style: TextStyle(
-                fontSize: 18,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Start a conversation with someone!',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: conversations.length,
-      itemBuilder: (context, index) {
-        final conversation = conversations[index];
-        final otherParticipant = (conversation['participants'] as List)
-            .firstWhere((p) => p['user_id'] != widget.userId);
-        final profile = otherParticipant['profiles'];
-
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundImage: profile['avatar_url'] != null
-                      ? NetworkImage(profile['avatar_url'])
-                      : null,
-                  child: profile['avatar_url'] == null
-                      ? Text(
-                          profile['full_name'][0].toUpperCase(),
-                          style: const TextStyle(fontSize: 20),
-                        )
-                      : null,
-                ),
-                if (conversation['is_online'] == true)
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            title: Text(
-              profile['full_name'] ?? 'Unknown',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
+                color: isMe ? Colors.white : Colors.black87,
                 fontSize: 16,
               ),
             ),
-            subtitle: Text(
-              conversation['last_message'] ?? 'No messages yet',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  _formatTime(conversation['updated_at']),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                if (conversation['unread_count'] > 0) ...[
-                  const SizedBox(height: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      conversation['unread_count'].toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            onTap: () {
-              setState(() {
-                selectedConversationId = conversation['id'];
-                showConversationList = false;
-              });
-              fetchMessages(conversation['id']);
-            },
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMessageBubble(Map<String, dynamic> message) {
-    final isMe = message['sender_id'] == widget.userId;
-    final time = _formatTime(message['created_at']);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          if (!isMe) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundImage: message['sender']?['avatar_url'] != null
-                  ? NetworkImage(message['sender']['avatar_url'])
-                  : null,
-              child: message['sender']?['avatar_url'] == null
-                  ? Text(message['sender']?['full_name'][0].toUpperCase() ?? '?')
-                  : null,
-            ),
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: isMe ? Colors.blue : Colors.grey[200],
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    message['content'],
-                    style: TextStyle(
-                      color: isMe ? Colors.white : Colors.black,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    time,
-                    style: TextStyle(
-                      color: isMe ? Colors.white70 : Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
+          const SizedBox(height: 4),
+          Text(
+            timeString,
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 12,
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildChatScreen() {
-    final conversation = conversations.firstWhere(
-      (c) => c['id'] == selectedConversationId,
-      orElse: () => {},
-    );
-    final otherParticipant = (conversation['participants'] as List?)
-        ?.firstWhere((p) => p['user_id'] != widget.userId);
-    final profile = otherParticipant?['profiles'];
-
-    return Column(
-      children: [
-        // Chat header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 2,
-                offset: const Offset(0, 1),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  setState(() {
-                    showConversationList = true;
-                  });
-                },
-              ),
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: profile?['avatar_url'] != null
-                    ? NetworkImage(profile!['avatar_url'])
-                    : null,
-                child: profile?['avatar_url'] == null
-                    ? Text(profile?['full_name'][0].toUpperCase() ?? '?')
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profile?['full_name'] ?? 'Unknown',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      'Online',
-                      style: TextStyle(
-                        color: Colors.green[600],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.more_vert),
-                onPressed: () {
-                  // Show chat options
-                },
-              ),
-            ],
-          ),
-        ),
-        // Messages
-        Expanded(
-          child: Container(
-            color: Colors.grey[50],
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.only(top: 16, bottom: 16),
-              itemCount: messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessageBubble(messages[index]);
-              },
-            ),
-          ),
-        ),
-        // Message input
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                spreadRadius: 1,
-                blurRadius: 2,
-                offset: const Offset(0, -1),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.attach_file),
-                onPressed: () {
-                  // Handle file attachment
-                },
-              ),
-              Expanded(
-                child: TextField(
-                  controller: messageController,
-                  decoration: InputDecoration(
-                    hintText: 'Type a message...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                  ),
-                  maxLines: null,
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  icon: const Icon(Icons.send),
-                  color: Colors.white,
-                  onPressed: sendMessage,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        title: const Text('Chat'),
         backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : conversations.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(8),
+              itemCount: messages.length,
+              itemBuilder: (context, index) {
+                return _buildMessageItem(messages[index]);
+              },
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Column(
+                children: [
+                  // Dropdown for recipient selection
+                  DropdownButton<String>(
+                    value: selectedRecipientId,
+                    hint: const Text('Select recipient (optional)'),
+                    isExpanded: true,
+                    items: [
+                      const DropdownMenuItem<String>(
+                        value: null,
+                        child: Text('Send to all users'),
+                      ),
+                      ...profiles.map((profile) {
+                        return DropdownMenuItem<String>(
+                          value: profile['id'],
+                          child: Text(profile['name'] ?? 'Unnamed'),
+                        );
+                      }).toList(),
+                    ],
+                    onChanged: (value) async {
+                      setState(() {
+                        selectedRecipientId = value;
+                      });
+                      await _ensureConversationExists();
+                      await _loadMessages();
+                    },
+                  ),
+                  Row(
                     children: [
-                      Icon(Icons.chat_bubble_outline_rounded, size: 64, color: Colors.grey[400]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No conversations yet',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          decoration: InputDecoration(
+                            hintText: 'Type a message...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 10,
+                              horizontal: 16,
+                            ),
+                          ),
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Start a new chat to connect with others',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
+                      const SizedBox(width: 4),
+                      CircleAvatar(
+                        backgroundColor: Colors.green[400],
+                        child: IconButton(
+                          icon: const Icon(Icons.send, color: Colors.white),
+                          onPressed: _sendMessage,
                         ),
                       ),
                     ],
                   ),
-                )
-              : ListView.builder(
-                  itemCount: conversations.length,
-                  itemBuilder: (context, index) {
-                    final conversation = conversations[index];
-                    return _buildConversationTile(conversation);
-                  },
-                ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) => Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 12),
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'New Chat',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Search users...',
-                            prefixIcon: const Icon(Icons.search_rounded),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[100],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        // TODO: Add user list here
-                        const Center(
-                          child: Text(
-                            'Search for users to start a chat',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
-          );
-        },
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.chat_bubble_outline_rounded),
-      ),
-    );
-  }
-
-  Widget _buildConversationTile(Map<String, dynamic> conversation) {
-    final otherParticipant = (conversation['participants'] as List)
-        .firstWhere((p) => p['user_id'] != widget.userId);
-    final profile = otherParticipant['profiles'];
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 2,
-            offset: const Offset(0, 1),
           ),
         ],
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: Stack(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundImage: profile['avatar_url'] != null
-                  ? NetworkImage(profile['avatar_url'])
-                  : null,
-              child: profile['avatar_url'] == null
-                  ? Text(
-                      profile['full_name'][0].toUpperCase(),
-                      style: const TextStyle(fontSize: 20),
-                    )
-                  : null,
-            ),
-            if (conversation['is_online'] == true)
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        title: Text(
-          profile['full_name'] ?? 'Unknown',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-        subtitle: Text(
-          conversation['last_message'] ?? 'No messages yet',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 14,
-          ),
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              _formatTime(conversation['updated_at']),
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-            if (conversation['unread_count'] > 0) ...[
-              const SizedBox(height: 4),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  conversation['unread_count'].toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        onTap: () {
-          setState(() {
-            selectedConversationId = conversation['id'];
-            showConversationList = false;
-          });
-          fetchMessages(conversation['id']);
-        },
-      ),
     );
   }
-} 
+}
