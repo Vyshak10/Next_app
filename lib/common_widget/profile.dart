@@ -1228,7 +1228,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           )
                                         : const Icon(Icons.upload),
                                     label: Text(
-                                      isUploadingVideo ? 'Uploading...' : 'Upload Video (2-3 mins)',
+                                      isUploadingVideo ? 'Uploading...' : 'Upload Pitch Video',
                                     ),
                                     style: TextButton.styleFrom(
                                       foregroundColor: Colors.blue,
