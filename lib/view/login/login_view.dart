@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:next_app/services/auth_service.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -34,30 +35,24 @@ class _LoginViewState extends State<LoginView> {
 
     setState(() => isLoading = true);
 
-    final url = Uri.parse('https://indianrupeeservices.in/NEXT/backend/login.php');
+    try {
+      final authService = AuthService();
+      final result = await authService.login(
+        email: email,
+        password: password,
+        userType: userType,
+      );
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-        'userType': userType,
-      }),
-    );
-
-    setState(() => isLoading = false);
-
-    if (response.statusCode == 200) {
-      final result = jsonDecode(response.body);
       if (result['success'] == true) {
         _showSnackBar('Login successful!');
         _navigateToUserScreen(userType);
       } else {
-        _showSnackBar('Login failed: ${result['error'] ?? 'Unknown error'}');
+        _showSnackBar(result['message'] ?? 'Login failed');
       }
-    } else {
-      _showSnackBar('Server error: ${response.statusCode}');
+    } catch (e) {
+      _showSnackBar('An error occurred: ${e.toString()}');
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 

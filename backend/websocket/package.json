@@ -1,0 +1,19 @@
+{
+  "name": "next-app-websocket",
+  "version": "1.0.0",
+  "description": "WebSocket server for Next App real-time chat",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0",
+    "mysql2": "^3.9.1",
+    "dotenv": "^16.4.1",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  }
+} 

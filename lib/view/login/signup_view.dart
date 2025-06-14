@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:next_app/services/auth_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -55,34 +56,37 @@ class _SignUpPageState extends State<SignUpPage> {
       return;
     }
 
+    if (!acceptTerms) {
+      _showSnackBar('Please accept the terms and conditions');
+      return;
+    }
+
     setState(() => isLoading = true);
 
-    final url = Uri.parse('https://indianrupeeservices.in/NEXT/backend/signup.php');
+    try {
+      final authService = AuthService();
+      final result = await authService.signUp(
+        email: email,
+        password: password,
+        userType: userType,
+        companyName: companyNameController.text.trim(),
+        industry: industryController.text.trim(),
+        startupName: startupNameController.text.trim(),
+        stage: stageController.text.trim(),
+        fullName: fullNameController.text.trim(),
+        skills: skillsController.text.trim(),
+      );
 
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'email': email,
-        'password': password,
-        'userType': userType,
-        'companyName': companyNameController.text.trim(),
-        'industry': industryController.text.trim(),
-        'startupName': startupNameController.text.trim(),
-        'stage': stageController.text.trim(),
-        'fullName': fullNameController.text.trim(),
-        'skills': skillsController.text.trim(),
-      }),
-    );
-
-    setState(() => isLoading = false);
-
-    final result = jsonDecode(response.body);
-    if (result['success'] == true) {
-      _showSnackBar('Signup successful! Please login.');
-      Navigator.pushReplacementNamed(context, '/login', arguments: {'userType': userType});
-    } else {
-      _showSnackBar('Signup failed: ${result['error'] ?? 'Unknown error'}');
+      if (result['success'] == true) {
+        _showSnackBar('Signup successful! Please check your email for verification.');
+        Navigator.pushReplacementNamed(context, '/login', arguments: {'userType': userType});
+      } else {
+        _showSnackBar(result['message'] ?? 'Signup failed');
+      }
+    } catch (e) {
+      _showSnackBar('An error occurred: ${e.toString()}');
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 

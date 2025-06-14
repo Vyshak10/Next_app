@@ -10,11 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
 
-
   like_button: ^2.0.5
   table_calendar: ^3.0.9
   url_launcher: ^6.2.5
   http: ^0.13.5
+  app_links: ^3.4.1
 
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0
@@ -38,8 +38,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-
 
   assets:
     - assets/img/Icon.png
