@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:next_app/services/auth_service.dart';
+import 'package:http/http.dart' as http;
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -30,59 +31,63 @@ class _SignUpPageState extends State<SignUpPage> {
     userType = args?['userType'] ?? 'Unknown';
   }
 
-  void _signUp() async {
+  Future<void> _signUp() async {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
-      );
+      _showSnackBar('Please enter email and password');
       return;
     }
 
-    // Basic validation for additional fields
     if (userType == 'Established Company' && companyNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter company name')),
-      );
+      _showSnackBar('Please enter company name');
       return;
     }
 
     if (userType == 'Startup' && startupNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter startup name')),
-      );
+      _showSnackBar('Please enter startup name');
       return;
     }
 
     if (userType == 'Job Seeker' && fullNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter full name')),
-      );
+      _showSnackBar('Please enter full name');
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
-    final result = await AuthService().signUp(email, password, userType);
+    final url = Uri.parse('https://indianrupeeservices.in/NEXT/backend/signup.php');
 
-    setState(() {
-      isLoading = false;
-    });
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'userType': userType,
+        'companyName': companyNameController.text.trim(),
+        'industry': industryController.text.trim(),
+        'startupName': startupNameController.text.trim(),
+        'stage': stageController.text.trim(),
+        'fullName': fullNameController.text.trim(),
+        'skills': skillsController.text.trim(),
+      }),
+    );
 
-    if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Signup successful! Please login.')),
-      );
+    setState(() => isLoading = false);
+
+    final result = jsonDecode(response.body);
+    if (result['success'] == true) {
+      _showSnackBar('Signup successful! Please login.');
       Navigator.pushReplacementNamed(context, '/login', arguments: {'userType': userType});
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Signup failed: $result')),
-      );
+      _showSnackBar('Signup failed: ${result['error'] ?? 'Unknown error'}');
     }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -106,10 +111,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text(
-                'Sign up as a $userType',
-                style: const TextStyle(fontSize: 18, color: Colors.grey),
-              ),
+              Text('Sign up as a $userType', style: const TextStyle(fontSize: 18, color: Colors.grey)),
               const SizedBox(height: 30),
               _buildSignupForm(userType),
               const SizedBox(height: 30),
@@ -117,31 +119,19 @@ class _SignUpPageState extends State<SignUpPage> {
                 children: [
                   Checkbox(
                     value: acceptTerms,
-                    onChanged: (value) {
-                      setState(() {
-                        acceptTerms = value ?? false;
-                      });
-                    },
+                    onChanged: (value) => setState(() => acceptTerms = value ?? false),
                   ),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(context, '/terms-and-conditions');
-                      },
+                      onTap: () => Navigator.pushNamed(context, '/terms-and-conditions'),
                       child: RichText(
-                        text: TextSpan(
+                        text: const TextSpan(
                           text: 'I accept the ',
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 16,
-                          ),
+                          style: TextStyle(color: Colors.black, fontSize: 16),
                           children: [
                             TextSpan(
                               text: 'terms and conditions',
-                              style: const TextStyle(
-                                color: Colors.blue,
-                                decoration: TextDecoration.underline,
-                              ),
+                              style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
                             ),
                           ],
                         ),
@@ -161,13 +151,8 @@ class _SignUpPageState extends State<SignUpPage> {
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
                   child: isLoading
-                      ? const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        )
-                      : const Text(
-                          'Create Account',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
+                      ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.white))
+                      : const Text('Create Account', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -178,11 +163,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   },
                   child: const Text(
                     'Already have an account? Login',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
                   ),
                 ),
               )
@@ -214,15 +195,8 @@ class _SignUpPageState extends State<SignUpPage> {
         hintText: 'Enter your password',
         border: const OutlineInputBorder(),
         suffixIcon: IconButton(
-          icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: Colors.grey,
-          ),
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
+          icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility, color: Colors.grey),
+          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
         ),
       ),
       obscureText: _obscurePassword,
@@ -234,29 +208,17 @@ class _SignUpPageState extends State<SignUpPage> {
       children: [
         TextField(
           controller: companyNameController,
-          decoration: const InputDecoration(
-            labelText: 'Company Name',
-            hintText: 'Enter your company name',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Company Name', border: OutlineInputBorder()),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: industryController,
-          decoration: const InputDecoration(
-            labelText: 'Industry',
-            hintText: 'Enter your industry',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Industry', border: OutlineInputBorder()),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: emailController,
-          decoration: const InputDecoration(
-            labelText: 'Email',
-            hintText: 'Enter your email',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
@@ -270,29 +232,17 @@ class _SignUpPageState extends State<SignUpPage> {
       children: [
         TextField(
           controller: startupNameController,
-          decoration: const InputDecoration(
-            labelText: 'Startup Name',
-            hintText: 'Enter your startup name',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Startup Name', border: OutlineInputBorder()),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: stageController,
-          decoration: const InputDecoration(
-            labelText: 'Stage of Startup',
-            hintText: 'Enter your startup stage',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Stage of Startup', border: OutlineInputBorder()),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: emailController,
-          decoration: const InputDecoration(
-            labelText: 'Email',
-            hintText: 'Enter your email',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
@@ -306,30 +256,18 @@ class _SignUpPageState extends State<SignUpPage> {
       children: [
         TextField(
           controller: fullNameController,
-          decoration: const InputDecoration(
-            labelText: 'Full Name',
-            hintText: 'Enter your full name',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Full Name', border: OutlineInputBorder()),
         ),
         const SizedBox(height: 16),
         TextField(
           controller: skillsController,
-          decoration: const InputDecoration(
-            labelText: 'Skills',
-            hintText: 'Enter your skills',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Skills', border: OutlineInputBorder()),
           maxLines: 2,
         ),
         const SizedBox(height: 16),
         TextField(
           controller: emailController,
-          decoration: const InputDecoration(
-            labelText: 'Email',
-            hintText: 'Enter your email',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),

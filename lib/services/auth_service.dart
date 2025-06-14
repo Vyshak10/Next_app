@@ -1,108 +1,48 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class AuthService {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  final String baseUrl = "https://indianrupeeservices.in/NEXT/backend";
 
-  // SignUp: includes saving userType to 'profiles' table
+  /// SIGN UP
   Future<String?> signUp(String email, String password, String userType) async {
-    try {
-      final response = await _supabase.auth.signUp(
-        email: email,
-        password: password,
-      );
+    final response = await http.post(
+      Uri.parse('$baseUrl/signup.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'email': email,
+        'password': password,
+        'userType': userType,
+      }),
+    );
 
-      final user = response.user;
-      if (user != null) {
-        // Create profile
-        await _supabase.from('profiles').insert({
-          'id': user.id,
-          'user_type': userType,
-        });
-        return null; // success
-      } else if (response.session == null && response.user == null) {
-        // Confirmation required
-        return 'Signup successful! Please check your email to confirm your account before logging in.';
-      } else {
-        return 'Signup failed. Please try again.';
-      }
-    } on AuthException catch (e) {
-      return e.message;
-    } catch (e) {
-      return 'Unexpected error: $e';
+    final data = json.decode(response.body);
+
+    if (response.statusCode == 200 && data['success'] == true) {
+      return null; // success
+    } else {
+      return data['message'] ?? 'Signup failed'; // ✅ fixed key
     }
   }
 
-  // SignIn: returns error and userType as a record
-  Future<(String? error, String? userType)> signIn(String email, String password) async {
-    try {
-      final response = await _supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+  /// LOGIN
+  Future<String?> login(String email, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/login.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'email': email,
+        'password': password,
+      }),
+    );
 
-      final user = response.user;
-      if (user != null) {
-        // Use select().limit(1) instead of .single() to avoid PGRST116 error
-        final profileResponse = await _supabase
-            .from('profiles')
-            .select('user_type')
-            .eq('id', user.id)
-            .limit(1);
+    final data = json.decode(response.body);
 
-        if (profileResponse.isNotEmpty) {
-          final userType = profileResponse[0]['user_type'] as String?;
-          return (null, userType);
-        } else {
-          // Profile doesn't exist, create one with default user type
-          return ('Profile not found. Please contact support.', null);
-        }
-      } else {
-        return ('Login failed. Please try again.', null);
-      }
-    } on AuthException catch (e) {
-      return (e.message, null);
-    } catch (e) {
-      return ('Unexpected error: $e', null);
-    }
-  }
-
-  // Sign out method
-  Future<void> signOut() async {
-    await _supabase.auth.signOut();
-  }
-
-  // Get current user
-  User? get currentUser => _supabase.auth.currentUser;
-
-  Future<String?> login(String email, String password, String userType) async {
-    try {
-      final response = await _supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-
-      final user = response.user;
-      if (user != null) {
-        // Use select().limit(1) instead of .single() to avoid PGRST116 error
-        final profileResponse = await _supabase
-            .from('profiles')
-            .select('user_type')
-            .eq('id', user.id)
-            .limit(1);
-
-        if (profileResponse.isNotEmpty) {
-          final userType = profileResponse[0]['user_type'] as String?;
-          return null; // Successful login
-        } else {
-          return 'Profile not found. Please contact support.'; // Profile doesn't exist
-        }
-      } else {
-        return 'Login failed. Please try again.'; // Failed login
-      }
-    } on AuthException catch (e) {
-      return e.message; // Return the error message from Supabase
-    } catch (e) {
-      return 'Unexpected error: $e'; // Handle unexpected errors
+    if (response.statusCode == 200 && data['success'] == true) {
+      // You can store userType or userId from response if needed
+      return null; // login successful
+    } else {
+      return data['message'] ?? 'Login failed'; // ✅ fixed key
     }
   }
 }

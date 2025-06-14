@@ -1,6 +1,6 @@
-// login_view.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:next_app/services/auth_service.dart';
+import 'package:http/http.dart' as http;
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -23,52 +23,62 @@ class _LoginViewState extends State<LoginView> {
     userType = args?['userType'] ?? 'Unknown';
   }
 
-  void _login() async {
+  Future<void> _login() async {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter email and password')),
-      );
+      _showSnackBar('Please enter email and password');
       return;
     }
 
-    setState(() {
-      isLoading = true;
-    });
+    setState(() => isLoading = true);
 
-    final result = await AuthService().login(email, password, userType);
+    final url = Uri.parse('https://indianrupeeservices.in/NEXT/backend/login.php');
 
-    setState(() {
-      isLoading = false;
-    });
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'userType': userType,
+      }),
+    );
 
-    if (result == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login successful!')),
-      );
-      // Route to the respective screen based on user type
-      switch (userType) {
-        case 'Job Seeker':
-          Navigator.pushReplacementNamed(context, '/Seeker');
-          break;
-        case 'Startup':
-          Navigator.pushReplacementNamed(context, '/startUp');
-          break;
-        case 'Established Company':
-          Navigator.pushReplacementNamed(context, '/Company');
-          break;
-        default:
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Unknown user type: $userType')),
-          );
+    setState(() => isLoading = false);
+
+    if (response.statusCode == 200) {
+      final result = jsonDecode(response.body);
+      if (result['success'] == true) {
+        _showSnackBar('Login successful!');
+        _navigateToUserScreen(userType);
+      } else {
+        _showSnackBar('Login failed: ${result['error'] ?? 'Unknown error'}');
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: $result')),
-      );
+      _showSnackBar('Server error: ${response.statusCode}');
     }
+  }
+
+  void _navigateToUserScreen(String userType) {
+    switch (userType) {
+      case 'Job Seeker':
+        Navigator.pushReplacementNamed(context, '/Seeker');
+        break;
+      case 'Startup':
+        Navigator.pushReplacementNamed(context, '/startUp');
+        break;
+      case 'Established Company':
+        Navigator.pushReplacementNamed(context, '/Company');
+        break;
+      default:
+        _showSnackBar('Unknown user type: $userType');
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -118,11 +128,7 @@ class _LoginViewState extends State<LoginView> {
                       _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       color: Colors.grey,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
                 obscureText: _obscurePassword,
@@ -139,12 +145,12 @@ class _LoginViewState extends State<LoginView> {
                   ),
                   child: isLoading
                       ? const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        )
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  )
                       : const Text(
-                          'Login',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
+                    'Login',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
