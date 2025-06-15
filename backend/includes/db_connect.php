@@ -1,9 +1,9 @@
 <?php
 class Database {
     private $host = "localhost";
-    private $db_name = "next_app_db";
-    private $username = "your_username";
-    private $password = "your_password";
+    private $db_name = "indiaium_next";
+    private $username = "indiaium_NEXT";
+    private $password = "72mpqjhheexU";
     public $conn;
 
     public function getConnection() {

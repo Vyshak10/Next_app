@@ -11,9 +11,9 @@ return [
     // Database settings
     'database' => [
         'host' => 'localhost',
-        'name' => 'next_app_db',
-        'username' => 'your_username',
-        'password' => 'your_password',
+        'name' => 'indiaium_next',
+        'username' => 'indiaium_NEXT',
+        'password' => '72mpqjhheexU',
     ],
 
     // Email settings
