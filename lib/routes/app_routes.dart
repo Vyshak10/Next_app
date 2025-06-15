@@ -5,8 +5,14 @@ import 'package:next_app/view/login/login_view.dart';
 import 'package:next_app/view/legal/terms_and_conditions.dart';
 import '../view/homepage/startUp.dart';
 import '../view/login/signup_view.dart';
+import '../view/on_boarding/started_view.dart';
+import '../view/on_boarding/onboardingpages.dart';
+import '../view/login/user_type.dart';
 
 class AppRoutes {
+  static const String splash = '/';
+  static const String onboarding = '/onboarding';
+  static const String userType = '/user-type';
   static const String signup = '/signup';
   static const String login = '/login';
   static const String startUp = '/startUp';
@@ -16,6 +22,9 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
+      splash: (context) => const StartedView(),
+      onboarding: (context) => const OnboardingPages(),
+      userType: (context) => const UserType(),
       signup: (context) => const SignUpPage(),
       login: (context) => const LoginView(),
       startUp: (context) => const Startup(),

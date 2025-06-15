@@ -76,17 +76,7 @@ class _OnboardingPagesState extends State<OnboardingPages> {
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(duration: const Duration(milliseconds: 400), curve: Curves.easeInOut);
     } else {
-      final selectedRole = await Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const UserType()),
-      );
-      if (selectedRole != null && mounted) {
-        Navigator.pushReplacementNamed(
-          context, 
-          '/signup',
-          arguments: {'userType': selectedRole}
-        );
-      }
+      Navigator.pushReplacementNamed(context, '/user-type');
     }
   }
 

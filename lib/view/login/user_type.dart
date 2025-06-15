@@ -113,7 +113,11 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
     setState(() => _isLoading = false);
     
     if (mounted) {
-      Navigator.pop(context, _selectedType);
+      Navigator.pushReplacementNamed(
+        context,
+        '/signup',
+        arguments: {'userType': _selectedType}
+      );
     }
   }
 

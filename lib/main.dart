@@ -101,7 +101,7 @@ class _MyAppState extends State<MyApp> {
         ),
       ),
       debugShowCheckedModeBanner: false,
-      home: const LoginView(),
+      initialRoute: '/',
       routes: AppRoutes.getRoutes(),
     );
   }

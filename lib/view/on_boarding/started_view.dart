@@ -34,6 +34,13 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
       curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
     );
     _controller.forward();
+
+    // Navigate to onboarding after animation completes
+    Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/onboarding');
+      }
+    });
   }
 
   @override
