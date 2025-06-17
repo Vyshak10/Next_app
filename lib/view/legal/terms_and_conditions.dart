@@ -76,7 +76,7 @@ class TermsAndConditions extends StatelessWidget {
             ),
             _buildSection(
               '11. Data Protection',
-              'We implement appropriate security measures to protect your data. We use Supabase for secure data storage and processing.',
+              'We implement appropriate security measures to protect your data. We use cpanel for secure data storage and processing.',
             ),
             _buildSection(
               '12. User Rights',

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../common_widget/home.dart';
 import '../../common_widget/profile.dart';
 import '../../common_widget/messages.dart';
+
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SeekerPage extends StatefulWidget {
   const SeekerPage({super.key});
@@ -14,32 +17,25 @@ class SeekerPage extends StatefulWidget {
 
 class _SeekerPageState extends State<SeekerPage> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
-  final user = Supabase.instance.client.auth.currentUser;
+  final secureStorage = FlutterSecureStorage();
   late final List<Widget> _screens;
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   String userName = '';
+  String userId = '';
 
   @override
   void initState() {
     super.initState();
-    final userId = user?.id ?? '';
-    _screens = [
-      HomeScreen(onProfileTap: () => _onItemTapped(2)),
-      MessagesScreen(
-        userId: userId,
-        conversationId: DateTime.now().millisecondsSinceEpoch.toString(), // Generate unique ID
-      ),
-      ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
-    ];
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
-    fetchUserName();
+    fetchUserAndInitializeScreens(); // <-- New function
   }
+
 
   @override
   void dispose() {
@@ -54,20 +50,42 @@ class _SeekerPageState extends State<SeekerPage> with SingleTickerProviderStateM
     });
   }
 
-  Future<void> fetchUserName() async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    if (user != null) {
-      final response = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
+  Future<void> fetchUserAndInitializeScreens() async {
+    final token = await secureStorage.read(key: 'auth_token');
+    if (token == null) {
+      print('No auth token found');
+      return;
+    }
+
+    final response = await http.get(
+      Uri.parse('https://yourdomain.com/backend2/public/api/profile'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
       setState(() {
-        userName = response['full_name'] ?? user.email ?? '';
+        userName = data['full_name'] ?? data['email'] ?? '';
+        userId = data['id'] ?? '';
+
+        // Reinitialize _screens with userId
+        _screens = [
+          HomeScreen(onProfileTap: () => _onItemTapped(2)),
+          MessagesScreen(
+            userId: userId,
+            conversationId: DateTime.now().millisecondsSinceEpoch.toString(),
+          ),
+          ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
+        ];
       });
+    } else {
+      print('Failed to fetch profile: ${response.body}');
     }
   }
+
 
   String getGreeting() {
     final hour = DateTime.now().hour;

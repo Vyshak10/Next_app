@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 
 class ConnectionRequest extends StatefulWidget {
   final String currentUserId;
@@ -22,7 +24,7 @@ class ConnectionRequest extends StatefulWidget {
 }
 
 class _ConnectionRequestState extends State<ConnectionRequest> {
-  final supabase = Supabase.instance.client;
+  final String baseUrl = "https://indianrupeeservices.in/NEXT/backend/api";
   bool _isLoading = false;
   String? _connectionStatus;
 
@@ -35,17 +37,13 @@ class _ConnectionRequestState extends State<ConnectionRequest> {
   Future<void> _checkConnectionStatus() async {
     setState(() => _isLoading = true);
     try {
-      // Check if there's an existing connection
-      final connection = await supabase
-          .from('connections')
-          .select()
-          .or('(user_id.eq.${widget.currentUserId},connected_user_id.eq.${widget.targetUserId}),' +
-              '(user_id.eq.${widget.targetUserId},connected_user_id.eq.${widget.currentUserId})')
-          .maybeSingle();
-
-      if (connection != null) {
+      final response = await http.get(Uri.parse(
+        "$baseUrl/connection-status?user_id=${widget.currentUserId}&target_user_id=${widget.targetUserId}",
+      ));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
         setState(() {
-          _connectionStatus = connection['status'];
+          _connectionStatus = data['status'];
         });
       }
     } catch (e) {
@@ -58,38 +56,24 @@ class _ConnectionRequestState extends State<ConnectionRequest> {
   Future<void> _sendConnectionRequest() async {
     setState(() => _isLoading = true);
     try {
-      // Create connection request
-      await supabase.from('connections').insert({
-        'user_id': widget.currentUserId,
-        'connected_user_id': widget.targetUserId,
-        'status': 'pending',
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      // Create notification for the target user
-      await supabase.from('notifications').insert({
-        'user_id': widget.targetUserId,
-        'title': 'New Connection Request',
-        'body': '${widget.targetUserName} wants to connect with you',
-        'type': 'connection_request',
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      setState(() {
-        _connectionStatus = 'pending';
-      });
-
-      if (mounted) {
+      final response = await http.post(
+        Uri.parse("$baseUrl/send-connection-request"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': widget.currentUserId,
+          'target_user_id': widget.targetUserId,
+        }),
+      );
+      if (response.statusCode == 200) {
+        setState(() => _connectionStatus = 'pending');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Connection request sent')),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send connection request: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to send connection request: $e')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -98,37 +82,24 @@ class _ConnectionRequestState extends State<ConnectionRequest> {
   Future<void> _acceptConnectionRequest() async {
     setState(() => _isLoading = true);
     try {
-      // Update connection status
-      await supabase
-          .from('connections')
-          .update({'status': 'accepted'})
-          .eq('user_id', widget.targetUserId)
-          .eq('connected_user_id', widget.currentUserId);
-
-      // Create notification for the requester
-      await supabase.from('notifications').insert({
-        'user_id': widget.targetUserId,
-        'title': 'Connection Accepted',
-        'body': '${widget.targetUserName} accepted your connection request',
-        'type': 'connection_accepted',
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      setState(() {
-        _connectionStatus = 'accepted';
-      });
-
-      if (mounted) {
+      final response = await http.post(
+        Uri.parse("$baseUrl/accept-connection-request"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': widget.currentUserId,
+          'target_user_id': widget.targetUserId,
+        }),
+      );
+      if (response.statusCode == 200) {
+        setState(() => _connectionStatus = 'accepted');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Connection request accepted')),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to accept connection request: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to accept connection request: $e')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -137,28 +108,24 @@ class _ConnectionRequestState extends State<ConnectionRequest> {
   Future<void> _rejectConnectionRequest() async {
     setState(() => _isLoading = true);
     try {
-      // Delete the connection request
-      await supabase
-          .from('connections')
-          .delete()
-          .eq('user_id', widget.targetUserId)
-          .eq('connected_user_id', widget.currentUserId);
-
-      setState(() {
-        _connectionStatus = null;
-      });
-
-      if (mounted) {
+      final response = await http.post(
+        Uri.parse("$baseUrl/reject-connection-request"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': widget.currentUserId,
+          'target_user_id': widget.targetUserId,
+        }),
+      );
+      if (response.statusCode == 200) {
+        setState(() => _connectionStatus = null);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Connection request rejected')),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to reject connection request: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to reject connection request: $e')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
@@ -167,32 +134,29 @@ class _ConnectionRequestState extends State<ConnectionRequest> {
   Future<void> _removeConnection() async {
     setState(() => _isLoading = true);
     try {
-      // Delete the connection
-      await supabase
-          .from('connections')
-          .delete()
-          .or('(user_id.eq.${widget.currentUserId},connected_user_id.eq.${widget.targetUserId}),' +
-              '(user_id.eq.${widget.targetUserId},connected_user_id.eq.${widget.currentUserId})');
-
-      setState(() {
-        _connectionStatus = null;
-      });
-
-      if (mounted) {
+      final response = await http.post(
+        Uri.parse("$baseUrl/remove-connection"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': widget.currentUserId,
+          'target_user_id': widget.targetUserId,
+        }),
+      );
+      if (response.statusCode == 200) {
+        setState(() => _connectionStatus = null);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Connection removed')),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to remove connection: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to remove connection: $e')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

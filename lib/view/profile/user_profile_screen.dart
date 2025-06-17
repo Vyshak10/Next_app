@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert';
 import '../../common_widget/connection_request.dart';
+
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -17,7 +20,7 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
-  final supabase = Supabase.instance.client;
+  final secureStorage = const FlutterSecureStorage();
   Map<String, dynamic>? _userProfile;
   bool _isLoading = true;
 
@@ -29,38 +32,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _loadUserProfile() async {
     setState(() => _isLoading = true);
+
     try {
-      // First check profiles table
-      final profileData = await supabase
-          .from('profiles')
-          .select('id, name, avatar_url, user_type, bio, location, website')
-          .eq('id', widget.targetUserId)
-          .maybeSingle();
+      final token = await secureStorage.read(key: 'auth_token');
+      if (token == null) throw Exception('Token not found');
 
-      if (profileData != null) {
-        // If user_type indicates startup, get additional startup data
-        if (profileData['user_type'] == 'startup') {
-          final startupData = await supabase
-              .from('startups')
-              .select('name, logo, description, industry, founded_year')
-              .eq('id', widget.targetUserId)
-              .maybeSingle();
+      final response = await http.get(
+        Uri.parse('https://indianrupeeservices.in/NEXT/backend/api/user-profile/${widget.targetUserId}'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
 
-          if (startupData != null) {
-            setState(() {
-              _userProfile = {
-                ...profileData,
-                'name': startupData['name'] ?? profileData['name'],
-                'avatar_url': startupData['logo'] ?? profileData['avatar_url'],
-                'description': startupData['description'],
-                'industry': startupData['industry'],
-                'founded_year': startupData['founded_year'],
-              };
-            });
-            return;
-          }
-        }
-        setState(() => _userProfile = profileData);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() => _userProfile = data['profile']);
+      } else {
+        print('Failed to load profile: ${response.body}');
       }
     } catch (e) {
       print('Error loading user profile: $e');
@@ -68,6 +57,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() => _isLoading = false);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

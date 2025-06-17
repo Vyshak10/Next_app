@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../login/user_type.dart'; // Import the UserType screen
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+import '../login/user_type.dart';
 import 'help_support_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -11,28 +14,44 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _darkModeEnabled = false; // Example state for dark mode toggle
+  bool _darkModeEnabled = false;
   bool _notificationsEnabled = false;
-  final supabase = Supabase.instance.client;
+  final storage = const FlutterSecureStorage();
+  final String baseUrl = "https://indianrupeeservices.in/NEXT/backend/api"; // Change this
+
+  String? _userId;
+  String? _authToken;
 
   @override
   void initState() {
     super.initState();
-    _loadNotificationSettings();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final token = await storage.read(key: 'auth_token');
+    final userId = await storage.read(key: 'user_id');
+
+    if (token != null && userId != null) {
+      setState(() {
+        _authToken = token;
+        _userId = userId;
+      });
+      _loadNotificationSettings();
+    }
   }
 
   Future<void> _loadNotificationSettings() async {
-    try {
-      final userId = supabase.auth.currentUser?.id;
-      if (userId == null) return;
+    if (_userId == null || _authToken == null) return;
 
-      final data = await supabase
-          .from('profiles')
-          .select('notify_enabled')
-          .eq('id', userId)
-          .single();
-      
-      if (mounted) {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/notification-status?user_id=$_userId'),
+        headers: {'Authorization': 'Bearer $_authToken'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
         setState(() {
           _notificationsEnabled = data['notify_enabled'] ?? false;
         });
@@ -43,38 +62,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _toggleNotifications(bool value) async {
+    if (_userId == null || _authToken == null) return;
+
     try {
-      final userId = supabase.auth.currentUser?.id;
-      if (userId == null) return;
+      final response = await http.post(
+        Uri.parse('$baseUrl/update-notification'),
+        headers: {
+          'Authorization': 'Bearer $_authToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'user_id': _userId, 'notify_enabled': value}),
+      );
 
-      await supabase
-          .from('profiles')
-          .update({'notify_enabled': value})
-          .eq('id', userId);
+      if (response.statusCode == 200) {
+        setState(() {
+          _notificationsEnabled = value;
+        });
 
-      setState(() {
-        _notificationsEnabled = value;
-      });
-
-      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               value ? 'Notifications enabled' : 'Notifications disabled',
             ),
-            duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update notification settings: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update notification settings: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -93,124 +112,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
           ),
         ],
       ),
     );
 
-    if (shouldDelete == true) {
+    if (shouldDelete == true && _userId != null && _authToken != null) {
       try {
-        final userId = supabase.auth.currentUser?.id;
-        if (userId == null) return;
+        final response = await http.post(
+          Uri.parse('$baseUrl/delete-account'),
+          headers: {
+            'Authorization': 'Bearer $_authToken',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({'user_id': _userId}),
+        );
 
-        // Delete user data from profiles table
-        await supabase
-            .from('profiles')
-            .delete()
-            .eq('id', userId);
-
-        // Delete user's auth account
-        await supabase.auth.admin.deleteUser(userId);
-
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const UserType()),
-          );
+        if (response.statusCode == 200) {
+          await storage.deleteAll();
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const UserType()),
+            );
+          }
+        } else {
+          throw Exception('Failed with status ${response.statusCode}');
         }
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete account: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete account: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    }
+  }
+
+  Future<void> _signOut() async {
+    await storage.deleteAll();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const UserType()),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
+      appBar: AppBar(backgroundColor: Colors.white, elevation: 0),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
           // Appearance Section
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              'Appearance',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: SwitchListTile(
+          sectionHeader('Appearance'),
+          settingsCard(
+            SwitchListTile(
               title: const Text('Dark Mode'),
               secondary: const Icon(Icons.dark_mode_outlined),
               value: _darkModeEnabled,
-              onChanged: (bool value) {
-                setState(() {
-                  _darkModeEnabled = value;
-                  // TODO: Implement dark mode logic
-                });
+              onChanged: (value) {
+                setState(() => _darkModeEnabled = value);
+                // TODO: Implement dark mode switch logic
               },
             ),
           ),
 
           const SizedBox(height: 24),
 
-          // Notifications Section
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              'Notifications',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: SwitchListTile(
+          // Notifications
+          sectionHeader('Notifications'),
+          settingsCard(
+            SwitchListTile(
               title: const Text('Push Notifications'),
               subtitle: const Text('Receive updates about your profile and connections'),
               secondary: const Icon(Icons.notifications_none_outlined),
@@ -221,49 +199,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // Privacy & Security Section
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              'Privacy & Security',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
+          // Privacy & Security
+          sectionHeader('Privacy & Security'),
+          settingsCard(
+            Column(
               children: [
                 ListTile(
                   title: const Text('Privacy Settings'),
                   leading: const Icon(Icons.lock_outline),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                   onTap: () {
-                    // TODO: Navigate to Privacy Settings
                     print('Privacy Settings tapped');
                   },
                 ),
-                const Divider(height: 0, indent: 16, endIndent: 16), // Divider between list tiles
+                const Divider(height: 0, indent: 16, endIndent: 16),
                 ListTile(
                   title: const Text('Location Services'),
                   leading: const Icon(Icons.location_on_outlined),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                   onTap: () {
-                    // TODO: Navigate to Location Services settings
                     print('Location Services tapped');
                   },
                 ),
@@ -273,32 +227,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // About Section
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              'About',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
+          // About
+          sectionHeader('About'),
+          settingsCard(
+            Column(
               children: [
                 ListTile(
                   title: const Text('Help & Support'),
@@ -307,7 +239,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const HelpSupportScreen()),
+                      MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
                     );
                   },
                 ),
@@ -317,16 +249,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.info_outline),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                   onTap: () {
-                    // TODO: Navigate to About NEXT screen
                     print('About NEXT tapped');
                   },
                 ),
                 const Divider(height: 0, indent: 16, endIndent: 16),
-                 ListTile(
+                ListTile(
                   title: const Text('App Version'),
                   leading: const Icon(Icons.smartphone),
-                  trailing: Text('1.0.0', style: TextStyle(color: Colors.grey[600])), // Static version text
-                  // No onTap as it's just text
+                  trailing: Text('1.0.0', style: TextStyle(color: Colors.grey[600])),
                 ),
               ],
             ),
@@ -334,32 +264,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const SizedBox(height: 24),
 
-          // Danger Zone Section
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Text(
-              'Danger Zone',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.red[700],
-              ),
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: ListTile(
+          // Danger Zone
+          sectionHeader('Danger Zone', color: Colors.red[700]),
+          settingsCard(
+            ListTile(
               title: const Text('Delete Account'),
               subtitle: const Text('Permanently delete your account and all data'),
               leading: const Icon(Icons.delete_forever, color: Colors.red),
@@ -375,36 +283,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               backgroundColor: Colors.redAccent,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12.0),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            onPressed: () async {
-              try {
-                await supabase.auth.signOut();
-                if (mounted) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const UserType()),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error signing out: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
+            onPressed: _signOut,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.logout, size: 20),
-                const SizedBox(width: 8),
-                const Text('Sign Out', style: TextStyle(fontSize: 16)),
+              children: const [
+                Icon(Icons.logout, size: 20),
+                SizedBox(width: 8),
+                Text('Sign Out', style: TextStyle(fontSize: 16)),
               ],
             ),
           ),
@@ -412,4 +299,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-} 
+
+  Widget sectionHeader(String title, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: color ?? Colors.grey[700],
+        ),
+      ),
+    );
+  }
+
+  Widget settingsCard(Widget child) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 3,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../common/color_extension.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+
 
 class StartupProfileScreen extends StatefulWidget {
   const StartupProfileScreen({super.key});
@@ -10,15 +13,10 @@ class StartupProfileScreen extends StatefulWidget {
 }
 
 class _StartupProfileScreenState extends State<StartupProfileScreen> {
-  final SupabaseClient supabase = Supabase.instance.client;
+  final storage = FlutterSecureStorage();
   bool isLoading = true;
   Map<String, dynamic>? startupData;
-  List<Map<String, dynamic>> teamMembers = [];
-  List<Map<String, dynamic>> achievements = [];
-  List<Map<String, dynamic>> fundingHistory = [];
-  List<Map<String, dynamic>> documents = [];
-  List<Map<String, dynamic>> metrics = [];
-  List<Map<String, dynamic>> socialLinks = [];
+  List teamMembers = [], achievements = [], fundingHistory = [], documents = [], metrics = [], socialLinks = [];
 
   @override
   void initState() {
@@ -27,65 +25,39 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
   }
 
   Future<void> fetchStartupData() async {
+    final token = await storage.read(key: 'auth_token');
+    if (token == null) return;
+
     setState(() => isLoading = true);
+
     try {
-      // Fetch startup profile data
-      final response = await supabase
-          .from('startup_profiles')
-          .select('*, industries:industries(name)')
-          .eq('user_id', supabase.auth.currentUser?.id)
-          .single();
+      final response = await http.get(
+        Uri.parse('https://indianrupeeservices.in/NEXT/backend/api/startup-profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
 
-      // Fetch team members
-      final teamResponse = await supabase
-          .from('team_members')
-          .select('*, profiles:profiles(full_name, avatar_url, role)')
-          .eq('startup_id', response['id']);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
 
-      // Fetch achievements
-      final achievementsResponse = await supabase
-          .from('achievements')
-          .select('*')
-          .eq('startup_id', response['id'])
-          .order('date', ascending: false);
-
-      // Fetch funding history
-      final fundingResponse = await supabase
-          .from('funding_rounds')
-          .select('*')
-          .eq('startup_id', response['id'])
-          .order('date', ascending: false);
-
-      // Fetch documents
-      final documentsResponse = await supabase
-          .from('startup_documents')
-          .select('*')
-          .eq('startup_id', response['id']);
-
-      // Fetch metrics
-      final metricsResponse = await supabase
-          .from('startup_metrics')
-          .select('*')
-          .eq('startup_id', response['id']);
-
-      // Fetch social links
-      final socialResponse = await supabase
-          .from('social_links')
-          .select('*')
-          .eq('startup_id', response['id']);
-
-      setState(() {
-        startupData = response;
-        teamMembers = List<Map<String, dynamic>>.from(teamResponse);
-        achievements = List<Map<String, dynamic>>.from(achievementsResponse);
-        fundingHistory = List<Map<String, dynamic>>.from(fundingResponse);
-        documents = List<Map<String, dynamic>>.from(documentsResponse);
-        metrics = List<Map<String, dynamic>>.from(metricsResponse);
-        socialLinks = List<Map<String, dynamic>>.from(socialResponse);
-        isLoading = false;
-      });
+        setState(() {
+          startupData = data['startup'];
+          teamMembers = data['team'];
+          achievements = data['achievements'];
+          fundingHistory = data['funding'];
+          documents = data['documents'];
+          metrics = data['metrics'];
+          socialLinks = data['social_links'];
+          isLoading = false;
+        });
+      } else {
+        print('Failed: ${response.statusCode}');
+        setState(() => isLoading = false);
+      }
     } catch (e) {
-      print('Error fetching startup data: $e');
+      print('Exception: $e');
       setState(() => isLoading = false);
     }
   }
@@ -746,17 +718,18 @@ class _StartupProfileScreenState extends State<StartupProfileScreen> {
   IconData _getSocialIcon(String platform) {
     switch (platform.toLowerCase()) {
       case 'linkedin':
-        return Icons.linkedin;
+        return FontAwesomeIcons.linkedin;
       case 'twitter':
-        return Icons.twitter;
+        return FontAwesomeIcons.twitter;
       case 'facebook':
-        return Icons.facebook;
+        return FontAwesomeIcons.facebook;
       case 'instagram':
-        return Icons.instagram;
+        return FontAwesomeIcons.instagram;
       default:
         return Icons.link;
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

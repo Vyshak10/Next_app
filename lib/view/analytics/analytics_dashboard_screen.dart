@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AnalyticsDashboardScreen extends StatefulWidget {
   final String userId;
@@ -11,9 +13,8 @@ class AnalyticsDashboardScreen extends StatefulWidget {
 }
 
 class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
-  final SupabaseClient supabase = Supabase.instance.client;
+  final storage = const FlutterSecureStorage();
 
-  // State variables to hold analytics data
   int totalProfileViews = 0;
   int totalPostLikes = 0;
   int totalConnections = 0;
@@ -22,138 +23,107 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
 
+  String baseUrl = 'https://yourdomain.com/backend2/api'; // Replace with your Laravel API base URL
+
   @override
   void initState() {
     super.initState();
-    _loadAnalyticsData();
-    _loadUserPostsAnalytics();
-    _loadConnectionActivity();
+    _loadAllAnalytics();
   }
 
-  Future<void> _loadAnalyticsData() async {
+  Future<String?> _getToken() async {
+    return await storage.read(key: 'auth_token');
+  }
+
+  Future<void> _loadAllAnalytics() async {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
     });
+
     try {
-      // Fetch total profile views for the current user
-      final profileViewsData = await supabase
-          .from('profile_visits')
-          .select('count')
-          .eq('profile_id', widget.userId)
-          .single();
-      totalProfileViews = profileViewsData['count'] ?? 0;
-
-      // Fetch total likes on posts by the current user
-      final userPostsResult = await supabase
-          .from('posts')
-          .select('id')
-          .eq('user_id', widget.userId);
-
-      List<String> userPostIds = userPostsResult.map((post) => post['id'] as String).toList();
-
-      if (userPostIds.isNotEmpty) {
-         final postLikesData = await supabase
-            .from('likes')
-            .select('count')
-            .inFilter('post_id', userPostIds);
-
-         totalPostLikes = postLikesData[0]['count'] ?? 0;
-      } else {
-        totalPostLikes = 0;
-      }
-
-      // Fetch total connections for the current user
-      final acceptedConnections = await supabase
-          .from('connections')
-          .select('count')
-          .or('user_id.eq.${widget.userId},connected_user_id.eq.${widget.userId}')
-          .eq('status', 'accepted');
-
-      totalConnections = acceptedConnections[0]['count'] ?? 0;
-
-      setState(() {
-        this.totalProfileViews = totalProfileViews;
-        this.totalPostLikes = totalPostLikes;
-        this.totalConnections = totalConnections;
-      });
-
+      await Future.wait([
+        _loadProfileViews(),
+        _loadPostLikes(),
+        _loadConnections(),
+        _loadUserPostsAnalytics(),
+        _loadConnectionActivity(),
+      ]);
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to load overall analytics: ${e.toString()}';
+        _errorMessage = 'Failed to load analytics: $e';
+      });
+    } finally {
+      setState(() {
         _isLoading = false;
       });
     }
   }
 
-   Future<void> _loadUserPostsAnalytics() async {
-     try {
-       final postsData = await supabase
-           .from('posts')
-           .select('id, title, created_at')
-           .eq('user_id', widget.userId);
+  Future<void> _loadProfileViews() async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/analytics/profile-views?user_id=${widget.userId}'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
 
-       if (mounted && postsData != null) {
-         List<Map<String, dynamic>> postsWithLikes = [];
-         for (var post in postsData) {
-           final likesData = await supabase
-               .from('likes')
-               .select('count')
-               .eq('post_id', post['id']);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      totalProfileViews = data['count'] ?? 0;
+    }
+  }
 
-           post['like_count'] = likesData[0]['count'] ?? 0;
-           postsWithLikes.add(post);
-         }
+  Future<void> _loadPostLikes() async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/analytics/post-likes?user_id=${widget.userId}'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
 
-         setState(() {
-           userPosts = postsWithLikes;
-         });
-       }
-     } catch (e) {
-       setState(() {
-         _errorMessage += '\nFailed to load post analytics: ${e.toString()}';
-         _isLoading = false;
-       });
-     }
-   }
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      totalPostLikes = data['count'] ?? 0;
+    }
+  }
 
-   Future<void> _loadConnectionActivity() async {
-     try {
-       final connectionsData = await supabase
-           .from('connections')
-           .select('user_id, connected_user_id, created_at')
-           .or('user_id.eq.${widget.userId},connected_user_id.eq.${widget.userId}')
-           .eq('status', 'accepted')
-           .order('created_at', ascending: false)
-           .limit(5);
+  Future<void> _loadConnections() async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/analytics/connections?user_id=${widget.userId}'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
 
-       if (mounted && connectionsData != null) {
-          List<Map<String, dynamic>> connectionsWithNames = [];
-          for(var connection in connectionsData) {
-            final otherUserId = connection['user_id'] == widget.userId ? connection['connected_user_id'] : connection['user_id'];
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      totalConnections = data['count'] ?? 0;
+    }
+  }
 
-            final otherUserProfile = await supabase
-              .from('profiles')
-              .select('name')
-              .eq('id', otherUserId)
-              .maybeSingle();
+  Future<void> _loadUserPostsAnalytics() async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/analytics/posts?user_id=${widget.userId}'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
 
-            connection['other_user_name'] = otherUserProfile?['name'] ?? 'Unknown User';
-            connectionsWithNames.add(connection);
-          }
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      userPosts = List<Map<String, dynamic>>.from(data['posts']);
+    }
+  }
 
-         setState(() {
-           recentConnections = connectionsWithNames;
-           _isLoading = false;
-         });
-       }
-     } catch (e) {
-       setState(() {
-         _errorMessage += '\nFailed to load connection activity: ${e.toString()}';
-         _isLoading = false;
-       });
-     }
-   }
+  Future<void> _loadConnectionActivity() async {
+    final token = await _getToken();
+    final response = await http.get(
+      Uri.parse('$baseUrl/analytics/recent-connections?user_id=${widget.userId}'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      recentConnections = List<Map<String, dynamic>>.from(data['connections']);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import '../../common_widget/home.dart';
 import '../../common_widget/post.dart';
@@ -15,55 +17,76 @@ class Startup extends StatefulWidget {
 
 class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
-  final user = Supabase.instance.client.auth.currentUser;
+  String userId = '';
+  String userName = '';
+  Map<String, dynamic>? _userProfile;
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+  late List<Widget> _screens;
 
-  Map<String, dynamic>? _userProfile;
-
-  final supabase = Supabase.instance.client;
+  final secureStorage = FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
-    final userId = user?.id ?? '';
-    _loadUserProfile(userId);
-
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+
+    fetchUserProfileFromAPI();
   }
 
-  Future<void> _loadUserProfile(String userId) async {
-    print('Attempting to load user profile for userId: $userId');
+  Future<void> fetchUserProfileFromAPI() async {
+    final token = await secureStorage.read(key: 'auth_token');
+
+    if (token == null) {
+      print('No auth token found');
+      return;
+    }
+
     try {
-      final profileData = await supabase
-          .from('profiles')
-          .select('name, avatar_url')
-          .eq('id', userId)
-          .maybeSingle();
+      final response = await http.get(
+        Uri.parse('https://indianrupeeservices.in/NEXT/backend/api/profile'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+        },
+      );
 
-      print('Fetched profileData: $profileData');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
 
-      if (mounted) {
-        print('Widget is mounted, setting state with profileData');
-        setState(() {
-          _userProfile = profileData;
-        });
+        if (mounted) {
+          setState(() {
+            userId = data['id'].toString();
+            userName = data['full_name'] ?? data['email'] ?? '';
+
+            // Initialize screens here if needed
+            _screens = [
+              HomeScreen(onProfileTap: () => _onItemTapped(2)),
+              MessagesScreen(
+                userId: userId,
+                conversationId: DateTime.now().millisecondsSinceEpoch.toString(),
+              ),
+              ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
+            ];
+          });
+        }
       } else {
-        print('Widget is not mounted, skipping setState');
+        print('Error: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      print('Error loading user profile: $e');
+      print('Exception: $e');
     }
   }
 
+
   // Helper method to build the current screen based on selected index
   Widget _buildScreenWidget(int index) {
-    final userId = user?.id ?? '';
+
     switch (index) {
       case 0:
         return HomeScreen(onProfileTap: () => _onItemTapped(3), userProfile: _userProfile);

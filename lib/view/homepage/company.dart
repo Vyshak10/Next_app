@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';//company.dart
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../common_widget/home.dart';
 import '../../common_widget/profile.dart';
 import '../../common_widget/messages.dart';
+
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({super.key});
@@ -14,7 +17,7 @@ class CompanyScreen extends StatefulWidget {
 
 class _CompanyScreenState extends State<CompanyScreen> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
-  final user = Supabase.instance.client.auth.currentUser;
+  final secureStorage = FlutterSecureStorage();
   late final List<Widget> _screens;
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
@@ -23,23 +26,15 @@ class _CompanyScreenState extends State<CompanyScreen> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    final userId = user?.id ?? '';
-    _screens = [
-      HomeScreen(onProfileTap: () => _onItemTapped(2)),
-      MessagesScreen(
-        userId: userId,
-        conversationId: DateTime.now().millisecondsSinceEpoch.toString(), // Generate unique ID
-      ),
-      ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
-    ];
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
-    fetchUserName();
+    fetchUserData(); // Fetch userId + name, then setup _screens
   }
+
 
   @override
   void dispose() {
@@ -54,20 +49,38 @@ class _CompanyScreenState extends State<CompanyScreen> with SingleTickerProvider
     });
   }
 
-  Future<void> fetchUserName() async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    if (user != null) {
-      final response = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
+  Future<void> fetchUserData() async {
+    const storage = FlutterSecureStorage();
+    final token = await storage.read(key: 'auth_token');
+
+    final response = await http.get(
+      Uri.parse('https://indianrupeeservices.in/NEXT/backend/api/profile'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final userId = data['id'];
+
       setState(() {
-        userName = response['full_name'] ?? user.email ?? '';
+        userName = data['full_name'] ?? data['email'] ?? '';
+        _screens = [
+          HomeScreen(onProfileTap: () => _onItemTapped(2)),
+          MessagesScreen(
+            userId: userId,
+            conversationId: DateTime.now().millisecondsSinceEpoch.toString(),
+          ),
+          ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
+        ];
       });
+    } else {
+      print('Failed to fetch user data');
     }
   }
+
 
   String getGreeting() {
     final hour = DateTime.now().hour;

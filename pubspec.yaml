@@ -13,7 +13,6 @@ dependencies:
   like_button: ^2.0.5
   table_calendar: ^3.0.9
   url_launcher: ^6.2.5
-  http: ^0.13.5
   app_links: ^3.4.1
 
   cached_network_image: ^3.3.1
@@ -28,8 +27,16 @@ dependencies:
   sign_in_with_apple: ^6.1.0
   timeago: ^3.0.2
   font_awesome_flutter: ^10.5.0
-  supabase_flutter: 2.9.0
   realtime_client: ^2.5.0
+  http: ^0.13.6
+
+
+
+
+
+
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
