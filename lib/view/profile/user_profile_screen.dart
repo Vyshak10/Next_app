@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-import '../../common_widget/connection_request.dart';
-
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../common_widget/connection_request.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -23,6 +22,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   final secureStorage = const FlutterSecureStorage();
   Map<String, dynamic>? _userProfile;
   bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -31,33 +31,49 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _loadUserProfile() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
 
     try {
       final token = await secureStorage.read(key: 'auth_token');
       if (token == null) throw Exception('Token not found');
 
+      final url = 'https://indianrupeeservices.in/NEXT/backend/api/user-profile/${widget.targetUserId}';
+      print('🔗 Fetching from: $url');
+
       final response = await http.get(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/api/user-profile/${widget.targetUserId}'),
+        Uri.parse(url),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
         },
       );
 
+      print('📥 Status: ${response.statusCode}');
+      print('📦 Body: ${response.body}');
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        setState(() => _userProfile = data['profile']);
+
+        if (data.containsKey('profile')) {
+          setState(() => _userProfile = data['profile']);
+        } else {
+          throw Exception("Response JSON does not contain 'profile' key.");
+        }
       } else {
-        print('Failed to load profile: ${response.body}');
+        throw Exception('Server returned ${response.statusCode}');
       }
     } catch (e) {
-      print('Error loading user profile: $e');
+      print('⚠️ Error loading user profile: $e');
+      setState(() {
+        _error = e.toString();
+      });
     } finally {
       setState(() => _isLoading = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -67,14 +83,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       );
     }
 
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Profile')),
+        body: Center(child: Text('Error: $_error')),
+      );
+    }
+
     if (_userProfile == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Profile'),
-        ),
-        body: const Center(
-          child: Text('User not found'),
-        ),
+        appBar: AppBar(title: const Text('Profile')),
+        body: const Center(child: Text('User not found')),
       );
     }
 
@@ -90,7 +109,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Cover Image
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -103,7 +121,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ),
                     ),
                   ),
-                  // Profile Image
                   Positioned(
                     bottom: 16,
                     left: 16,
@@ -130,7 +147,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name and Connection Button
                   Row(
                     children: [
                       Expanded(
@@ -147,18 +163,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             if (isStartup) ...[
                               Text(
                                 _userProfile!['industry'] ?? 'Industry not specified',
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 16,
-                                ),
+                                style: TextStyle(color: Colors.grey[600], fontSize: 16),
                               ),
-                              if (_userProfile!['founded_year'] != null)
+                              if (_userProfile!['founded_date'] != null)
                                 Text(
-                                  'Founded ${_userProfile!['founded_year']}',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
-                                  ),
+                                  'Founded ${_userProfile!['founded_date']}',
+                                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
                                 ),
                             ],
                           ],
@@ -175,8 +185,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Bio/Description
-                  if (_userProfile!['bio'] != null || _userProfile!['description'] != null)
+                  if (_userProfile!['description'] != null)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -189,27 +198,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _userProfile!['description'] ?? _userProfile!['bio'],
-                          style: TextStyle(
-                            color: Colors.grey[800],
-                            height: 1.5,
-                          ),
+                          _userProfile!['description'],
+                          style: TextStyle(color: Colors.grey[800], height: 1.5),
                         ),
                         const SizedBox(height: 24),
                       ],
                     ),
 
-                  // Location
-                  if (_userProfile!['location'] != null)
+                  if (_userProfile!['office_location'] != null)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Location',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         Row(
@@ -217,10 +219,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             Icon(Icons.location_on_outlined, color: Colors.grey[600]),
                             const SizedBox(width: 8),
                             Text(
-                              _userProfile!['location'],
-                              style: TextStyle(
-                                color: Colors.grey[800],
-                              ),
+                              _userProfile!['office_location'],
+                              style: TextStyle(color: Colors.grey[800]),
                             ),
                           ],
                         ),
@@ -228,22 +228,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ],
                     ),
 
-                  // Website
                   if (_userProfile!['website'] != null)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Website',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         InkWell(
                           onTap: () {
-                            // TODO: Launch website URL
+                            // TODO: Add URL launcher
                           },
                           child: Row(
                             children: [
@@ -269,4 +265,4 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       ),
     );
   }
-} 
+}
