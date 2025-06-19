@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-
 import '../../common_widget/home.dart';
 import '../../common_widget/post.dart';
 import '../../common_widget/profile.dart';
@@ -17,14 +13,12 @@ class Startup extends StatefulWidget {
 
 class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
-  String userId = '';
-  String userName = '';
-  Map<String, dynamic>? _userProfile;
+
+  // 👇 Hardcoded userId for demo
+  final String userId = '6852';
+
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  late List<Widget> _screens;
-
-  final secureStorage = FlutterSecureStorage();
 
   @override
   void initState() {
@@ -35,72 +29,32 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
-
-    fetchUserProfileFromAPI();
   }
 
-  Future<void> fetchUserProfileFromAPI() async {
-    final token = await secureStorage.read(key: 'auth_token');
-
-    if (token == null) {
-      print('No auth token found');
-      return;
-    }
-
-    try {
-      final response = await http.get(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/api/profile'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
-        if (mounted) {
-          setState(() {
-            userId = data['id'].toString();
-            userName = data['full_name'] ?? data['email'] ?? '';
-
-            // Initialize screens here if needed
-            _screens = [
-              HomeScreen(onProfileTap: () => _onItemTapped(2)),
-              MessagesScreen(
-                userId: userId,
-                conversationId: DateTime.now().millisecondsSinceEpoch.toString(),
-              ),
-              ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
-            ];
-          });
-        }
-      } else {
-        print('Error: ${response.statusCode} - ${response.body}');
-      }
-    } catch (e) {
-      print('Exception: $e');
-    }
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
-
-  // Helper method to build the current screen based on selected index
   Widget _buildScreenWidget(int index) {
-
     switch (index) {
       case 0:
-        return HomeScreen(onProfileTap: () => _onItemTapped(3), userProfile: _userProfile);
+        return HomeScreen(onProfileTap: () => _onItemTapped(3));
       case 1:
         return PostScreen(userId: userId);
       case 2:
         return MessagesScreen(
           userId: userId,
-          conversationId: DateTime.now().millisecondsSinceEpoch.toString(), // Generate unique ID
+          conversationId: DateTime.now().millisecondsSinceEpoch.toString(),
         );
       case 3:
-        return ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0));
+        return ProfileScreen(
+          userId: userId,
+          onBackTap: () => _onItemTapped(0),
+        );
       default:
-        return Center(child: Text('Error: Invalid index $index'));
+        return const Center(child: Text('Invalid tab index'));
     }
   }
 
@@ -110,16 +64,8 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
     super.dispose();
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-      print('Startup selected index: \$_selectedIndex');
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    print('Startup build called with index: \$_selectedIndex');
     return WillPopScope(
       onWillPop: () async {
         if (_selectedIndex != 0) {
@@ -133,41 +79,37 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
       child: Scaffold(
         body: FadeTransition(
           opacity: _fadeAnimation,
-          child: IndexedStack(
-            index: _selectedIndex,
-            children: [
-              _buildScreenWidget(0),
-              _buildScreenWidget(1),
-              _buildScreenWidget(2),
-              _buildScreenWidget(3),
-            ],
-          ),
+          child: _buildScreenWidget(_selectedIndex),
         ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20.0)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, -5),
-              ),
-            ],
+        bottomNavigationBar: _buildBottomNavBar(),
+      ),
+    );
+  }
+
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20.0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(Icons.home_rounded, 'Home', 0),
-                  _buildNavItem(Icons.add_box_rounded, 'Post', 1),
-                  _buildNavItem(Icons.chat_bubble_rounded, 'Messages', 2),
-                  _buildNavItem(Icons.account_circle_rounded, 'Profile', 3),
-                ],
-              ),
-            ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(Icons.home_rounded, 'Home', 0),
+              _buildNavItem(Icons.add_box_rounded, 'Post', 1),
+              _buildNavItem(Icons.chat_bubble_rounded, 'Messages', 2),
+              _buildNavItem(Icons.account_circle_rounded, 'Profile', 3),
+            ],
           ),
         ),
       ),
@@ -193,7 +135,6 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
               TweenAnimationBuilder<double>(
                 tween: Tween<double>(begin: 24, end: isSelected ? 28 : 24),
                 duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
                 builder: (context, size, child) {
                   return Icon(
                     icon,
@@ -206,7 +147,6 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
               AnimatedOpacity(
                 opacity: isSelected ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
                 child: Text(
                   label,
                   style: TextStyle(

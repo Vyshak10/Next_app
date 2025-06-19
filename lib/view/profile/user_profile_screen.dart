@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../common_widget/connection_request.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -21,6 +22,7 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final secureStorage = const FlutterSecureStorage();
   Map<String, dynamic>? _userProfile;
+  List<Map<String, dynamic>> _userPosts = [];
   bool _isLoading = true;
   String? _error;
 
@@ -40,25 +42,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final token = await secureStorage.read(key: 'auth_token');
       if (token == null) throw Exception('Token not found');
 
-      final url = 'https://indianrupeeservices.in/NEXT/backend/api/user-profile/${widget.targetUserId}';
-      print('🔗 Fetching from: $url');
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-
-      print('📥 Status: ${response.statusCode}');
-      print('📦 Body: ${response.body}');
+      final url = 'https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=${widget.targetUserId}';
+      final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-
         if (data.containsKey('profile')) {
-          setState(() => _userProfile = data['profile']);
+          setState(() {
+            _userProfile = data['profile'];
+            _userPosts = List<Map<String, dynamic>>.from(data['posts'] ?? []);
+          });
         } else {
           throw Exception("Response JSON does not contain 'profile' key.");
         }
@@ -66,12 +59,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         throw Exception('Server returned ${response.statusCode}');
       }
     } catch (e) {
-      print('⚠️ Error loading user profile: $e');
-      setState(() {
-        _error = e.toString();
-      });
+      setState(() => _error = e.toString());
     } finally {
       setState(() => _isLoading = false);
+    }
+  }
+
+  void _launchWebsite(String url) async {
+    if (await canLaunch(url)) {
+      await launch(url);
+    } else {
+      throw 'Could not launch $url';
     }
   }
 
@@ -100,168 +98,117 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final isStartup = _userProfile!['user_type'] == 'startup';
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.blue.shade700,
-                          Colors.blue.shade500,
-                        ],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundImage: _userProfile!['avatar_url'] != null
-                          ? NetworkImage(_userProfile!['avatar_url'])
-                          : null,
-                      child: _userProfile!['avatar_url'] == null
-                          ? Text(
-                              _userProfile!['name'][0].toUpperCase(),
-                              style: const TextStyle(fontSize: 32),
-                            )
-                          : null,
-                    ),
-                  ),
-                ],
+      appBar: AppBar(title: const Text('Profile')),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundImage: _userProfile!['avatar_url'] != null
+                      ? NetworkImage(_userProfile!['avatar_url'])
+                      : null,
+                  child: _userProfile!['avatar_url'] == null
+                      ? Text(
+                          _userProfile!['name'][0].toUpperCase(),
+                          style: const TextStyle(fontSize: 32),
+                        )
+                      : null,
+                ),
               ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  _userProfile!['name'],
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (_userProfile!['role'] != null)
+                Center(child: Text(_userProfile!['role'], style: const TextStyle(fontSize: 16))),
+              const SizedBox(height: 16),
+              ConnectionRequest(
+                currentUserId: widget.userId,
+                targetUserId: widget.targetUserId,
+                targetUserName: _userProfile!['name'],
+                targetUserAvatar: _userProfile!['avatar_url'],
+                targetUserType: _userProfile!['user_type'],
+              ),
+              const SizedBox(height: 24),
+              if (_userProfile!['description'] != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('About', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(_userProfile!['description'], style: TextStyle(color: Colors.grey[800])),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              if (_userProfile!['location'] != null)
+                Row(
+                  children: [
+                    const Icon(Icons.location_on_outlined),
+                    const SizedBox(width: 8),
+                    Text(_userProfile!['location']),
+                  ],
+                ),
+              const SizedBox(height: 16),
+              if (_userProfile!['website'] != null)
+                InkWell(
+                  onTap: () => _launchWebsite(_userProfile!['website']),
+                  child: Row(
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _userProfile!['name'],
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (isStartup) ...[
-                              Text(
-                                _userProfile!['industry'] ?? 'Industry not specified',
-                                style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                              ),
-                              if (_userProfile!['founded_date'] != null)
-                                Text(
-                                  'Founded ${_userProfile!['founded_date']}',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                                ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      ConnectionRequest(
-                        currentUserId: widget.userId,
-                        targetUserId: widget.targetUserId,
-                        targetUserName: _userProfile!['name'],
-                        targetUserAvatar: _userProfile!['avatar_url'],
-                        targetUserType: _userProfile!['user_type'],
-                      ),
+                      const Icon(Icons.link),
+                      const SizedBox(width: 8),
+                      Text(_userProfile!['website'], style: const TextStyle(color: Colors.blue)),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  if (_userProfile!['description'] != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isStartup ? 'About' : 'Bio',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _userProfile!['description'],
-                          style: TextStyle(color: Colors.grey[800], height: 1.5),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
+                ),
+              const SizedBox(height: 16),
+              if (_userProfile!['pitch_video_url'] != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Pitch Video', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Image.network(
+                      'https://img.youtube.com/vi/${Uri.parse(_userProfile!['pitch_video_url']).queryParameters['v']}/0.jpg',
+                      height: 200,
+                      fit: BoxFit.cover,
                     ),
-
-                  if (_userProfile!['office_location'] != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Location',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(Icons.location_on_outlined, color: Colors.grey[600]),
-                            const SizedBox(width: 8),
-                            Text(
-                              _userProfile!['office_location'],
-                              style: TextStyle(color: Colors.grey[800]),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                      ],
+                  ],
+                )
+              else
+                const Text("No pitch video uploaded."),
+              const SizedBox(height: 24),
+              const Text('Posts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              _userPosts.isEmpty
+                  ? const Text("No posts yet")
+                  : GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _userPosts.length,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                      ),
+                      itemBuilder: (context, index) {
+                        final post = _userPosts[index];
+                        return Image.network(
+                          post['image_url'],
+                          fit: BoxFit.cover,
+                        );
+                      },
                     ),
-
-                  if (_userProfile!['website'] != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Website',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () {
-                            // TODO: Add URL launcher
-                          },
-                          child: Row(
-                            children: [
-                              Icon(Icons.link, color: Colors.grey[600]),
-                              const SizedBox(width: 8),
-                              Text(
-                                _userProfile!['website'],
-                                style: TextStyle(
-                                  color: Colors.blue[700],
-                                  decoration: TextDecoration.underline,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
