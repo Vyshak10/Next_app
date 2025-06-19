@@ -265,15 +265,6 @@ class _PostsPageState extends State<PostsPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Posts'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _showCreatePostDialog,
-          ),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: _loadPosts,
         child: ListView.builder(
@@ -290,6 +281,16 @@ class _PostsPageState extends State<PostsPage> {
             );
           },
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.pushNamed(context, '/create-post');
+          if (result == true) {
+            _loadPosts();
+          }
+        },
+        child: const Icon(Icons.add),
+        tooltip: 'Create Post',
       ),
     );
   }

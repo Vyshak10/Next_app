@@ -163,21 +163,21 @@ class _PostScreenState extends State<PostScreen> {
   }
 }
 
-class _AnimatedRocketLike extends StatefulWidget {
+class AnimatedRocketLike extends StatefulWidget {
   final bool isLiked;
   final VoidCallback onTap;
 
-  const _AnimatedRocketLike({
+  const AnimatedRocketLike({
     Key? key,
     required this.isLiked,
     required this.onTap,
   }) : super(key: key);
 
   @override
-  State<_AnimatedRocketLike> createState() => _AnimatedRocketLikeState();
+  State<AnimatedRocketLike> createState() => AnimatedRocketLikeState();
 }
 
-class _AnimatedRocketLikeState extends State<_AnimatedRocketLike> with SingleTickerProviderStateMixin {
+class AnimatedRocketLikeState extends State<AnimatedRocketLike> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnim;
   bool _wasLiked = false;
@@ -198,7 +198,7 @@ class _AnimatedRocketLikeState extends State<_AnimatedRocketLike> with SingleTic
   }
 
   @override
-  void didUpdateWidget(covariant _AnimatedRocketLike oldWidget) {
+  void didUpdateWidget(covariant AnimatedRocketLike oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.isLiked != _wasLiked) {
       if (widget.isLiked) {

@@ -4,17 +4,20 @@ import 'package:like_button/like_button.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../models/post.dart';
 import '../../services/api_service.dart';
+import '../../common_widget/post.dart';
 
 class PostCard extends StatefulWidget {
   final Post post;
   final VoidCallback? onTap;
   final Function(String)? onTagTap;
+  final void Function(String postId)? onCommentTap;
 
   const PostCard({
     Key? key,
     required this.post,
     this.onTap,
     this.onTagTap,
+    this.onCommentTap,
   }) : super(key: key);
 
   @override
@@ -122,17 +125,24 @@ class _PostCardState extends State<PostCard> {
                   // Like and Comment Count
                   Row(
                     children: [
-                      LikeButton(
+                      AnimatedRocketLike(
                         isLiked: _post.isLiked,
-                        likeCount: _post.likeCount,
-                        onTap: _onLikeButtonTapped,
+                        onTap: () async {
+                          final newLiked = await _onLikeButtonTapped(_post.isLiked);
+                          setState(() {
+                            _post = _post.copyWith(
+                              isLiked: newLiked,
+                              likeCount: newLiked ? _post.likeCount + 1 : _post.likeCount - 1,
+                            );
+                          });
+                        },
                       ),
+                      const SizedBox(width: 8),
+                      Text('${_post.likeCount}'),
                       const SizedBox(width: 16),
                       IconButton(
                         icon: const Icon(Icons.comment),
-                        onPressed: () {
-                          // TODO: Implement comment functionality
-                        },
+                        onPressed: () => widget.onCommentTap?.call(_post.id),
                       ),
                       Text('${_post.commentCount}'),
                       const Spacer(),

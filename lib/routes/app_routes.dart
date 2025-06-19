@@ -10,6 +10,7 @@ import 'package:next_app/view/login/signup_view.dart';
 import 'package:next_app/view/on_boarding/started_view.dart';
 import 'package:next_app/view/on_boarding/onboardingpages.dart';
 import 'package:next_app/view/login/user_type.dart';
+import 'package:next_app/views/posts/create_post_page.dart';
 
 // Common Widgets
 import 'package:next_app/common_widget/profile.dart';
@@ -29,6 +30,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String home = '/home';
   static const String notifications = '/notifications';
+  static const String createPost = '/create-post';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -70,6 +72,8 @@ class AppRoutes {
           );
         }
       },
+
+      createPost: (context) => const CreatePostPage(),
     };
   }
 }
