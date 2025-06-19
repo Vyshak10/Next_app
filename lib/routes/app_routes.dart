@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+// Views
 import 'package:next_app/view/homepage/company.dart';
 import 'package:next_app/view/homepage/seeker.dart';
 import 'package:next_app/view/login/login_view.dart';
@@ -8,7 +10,11 @@ import 'package:next_app/view/login/signup_view.dart';
 import 'package:next_app/view/on_boarding/started_view.dart';
 import 'package:next_app/view/on_boarding/onboardingpages.dart';
 import 'package:next_app/view/login/user_type.dart';
-import 'package:next_app/common_widget/profile.dart'; // ✅ Profile Screen import
+
+// Common Widgets
+import 'package:next_app/common_widget/profile.dart';
+import 'package:next_app/common_widget/home.dart';
+import 'package:next_app/common_widget/NotificationsScreen.dart'; // ✅ Correct file name and class (MeetingScreen)
 
 class AppRoutes {
   static const String splash = '/';
@@ -21,6 +27,8 @@ class AppRoutes {
   static const String seeker = '/seeker';
   static const String termsAndConditions = '/terms-and-conditions';
   static const String profile = '/profile';
+  static const String home = '/home';
+  static const String notifications = '/notifications';
 
   static Map<String, WidgetBuilder> getRoutes() {
     return {
@@ -34,7 +42,13 @@ class AppRoutes {
       seeker: (context) => const SeekerPage(),
       termsAndConditions: (context) => const TermsAndConditions(),
 
-      /// ✅ Profile route (with arguments handling and fallback)
+      // ✅ Home route
+      home: (context) => HomeScreen(onProfileTap: () {}),
+
+      // ✅ Notifications route (uses MeetingScreen class)
+      notifications: (context) => const MeetingScreen(),
+
+      // ✅ Profile route with argument validation
       profile: (context) {
         final args = ModalRoute.of(context)!.settings.arguments;
 

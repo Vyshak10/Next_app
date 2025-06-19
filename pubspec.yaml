@@ -9,8 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Use the latest version
 
   # UI & Utility Packages
+  jwt_decoder: ^2.0.1
   like_button: ^2.0.5
   table_calendar: ^3.0.9
   url_launcher: ^6.2.5

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';//startUp.dart
 import '../../common_widget/home.dart';
 import '../../common_widget/post.dart';
 import '../../common_widget/profile.dart';
@@ -40,7 +40,10 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
   Widget _buildScreenWidget(int index) {
     switch (index) {
       case 0:
-        return HomeScreen(onProfileTap: () => _onItemTapped(3));
+        return HomeScreen(
+          onProfileTap: () => _onItemTapped(3),
+          userId: userId, // Pass userId to HomeScreen
+        );
       case 1:
         return PostScreen(userId: userId);
       case 2:
