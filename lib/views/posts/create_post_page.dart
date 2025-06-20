@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
@@ -15,7 +14,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final List<String> _tags = [];
-  final List<File> _selectedImages = [];
+  final List<XFile> _selectedImages = [];
   final _tagController = TextEditingController();
   bool _isLoading = false;
   final ApiService _apiService = ApiService();
@@ -25,7 +24,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
     final pickedFiles = await picker.pickMultiImage();
     if (pickedFiles.isNotEmpty) {
       setState(() {
-        _selectedImages.addAll(pickedFiles.map((file) => File(file.path)));
+        _selectedImages.addAll(pickedFiles);
       });
     }
   }
@@ -139,8 +138,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.only(right: 8),
-                                  child: Image.file(
-                                    _selectedImages[index],
+                                  child: Image.network(
+                                    _selectedImages[index].path,
                                     height: 100,
                                     width: 100,
                                     fit: BoxFit.cover,

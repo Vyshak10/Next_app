@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/post.dart';
@@ -20,7 +19,7 @@ class _PostsPageState extends State<PostsPage> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final List<String> _tags = [];
-  final List<File> _selectedImages = [];
+  final List<XFile> _selectedImages = [];
   final _tagController = TextEditingController();
 
   @override
@@ -51,7 +50,7 @@ class _PostsPageState extends State<PostsPage> {
     final pickedFiles = await picker.pickMultiImage();
     if (pickedFiles.isNotEmpty) {
       setState(() {
-        _selectedImages.addAll(pickedFiles.map((file) => File(file.path)));
+        _selectedImages.addAll(pickedFiles);
       });
     }
   }
@@ -208,8 +207,8 @@ class _PostsPageState extends State<PostsPage> {
                           children: [
                             Padding(
                               padding: const EdgeInsets.only(right: 8),
-                              child: Image.file(
-                                _selectedImages[index],
+                              child: Image.network(
+                                _selectedImages[index].path,
                                 height: 100,
                                 width: 100,
                                 fit: BoxFit.cover,
