@@ -7,21 +7,21 @@ import 'package:http/http.dart' as http;
 import 'company_detail_screen.dart';
 import 'package:next_app/common_widget/items_card.dart';
 import 'package:next_app/common_widget/NotificationsScreen.dart';
-import 'package:jwt_decoder/jwt_decoder.dart'; // make sure this package is added
 
 // Constants
-const String apiBaseUrl = 'https://indiaium.in/NEXT/backend';
+const String apiBaseUrl = 'https://indianrupeeservices.in/NEXT/backend';
 
 class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? userProfile;
   final VoidCallback? onProfileTap;
-  final String? userId; // Add userId parameter
+  final String? userId;
 
   const HomeScreen({super.key, this.userProfile, this.onProfileTap, this.userId});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   final secureStorage = const FlutterSecureStorage();
@@ -32,12 +32,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   List<Map<String, dynamic>> companyData = [];
   bool isLoading = true;
   bool notifyEnabled = true;
-  int unreadNotificationCount = 0; // Add notification counter
+  int unreadNotificationCount = 0;
+  bool _isLoadingData = false; // Add loading state flag
 
   final List<String> sectorOptions = ['All', 'Fintech', 'Healthtech', 'Edtech', 'AI', 'E-commerce'];
 
   Timer? _debounce;
-  Timer? _notificationTimer; // Add timer for periodic checks
+  Timer? _notificationTimer;
   late final AnimationController _gradientAnimationController;
   late final Animation<AlignmentGeometry> _gradientBeginAnimation;
   late final Animation<AlignmentGeometry> _gradientEndAnimation;
@@ -45,10 +46,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    fetchUserProfile();
-    fetchStartupData();
-    _startNotificationTimer(); // Start notification polling
+    _initializeScreen();
+    _setupAnimations();
+  }
 
+  void _initializeScreen() async {
+    // Initialize in sequence to avoid multiple simultaneous calls
+    await fetchUserProfile();
+    await fetchStartupData();
+    _startNotificationTimer();
+  }
+
+  void _setupAnimations() {
     _gradientAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -68,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     _debounce?.cancel();
-    _notificationTimer?.cancel(); // Cancel notification timer
+    _notificationTimer?.cancel();
     _gradientAnimationController.dispose();
     searchController.dispose();
     super.dispose();
@@ -82,6 +91,270 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       });
       _fetchNotificationCount(); // Initial fetch
     }
+  }
+
+  Future<void> fetchStartupData() async {
+    // Prevent multiple simultaneous calls
+    if (_isLoadingData) {
+      print('⚠️ Already loading data, skipping request');
+      return;
+    }
+
+    _isLoadingData = true;
+    
+    if (!mounted) {
+      _isLoadingData = false;
+      return;
+    }
+    
+    setState(() => isLoading = true);
+
+    try {
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (searchController.text.trim().isNotEmpty) {
+        queryParams['search'] = searchController.text.trim();
+      }
+      if (selectedSector != 'All') {
+        queryParams['sector'] = selectedSector;
+      }
+
+      final uri = Uri.parse('$apiBaseUrl/get_startups.php').replace(queryParameters: queryParams);
+      
+      print('🔍 Fetching from URL: $uri');
+
+      // Get authentication token
+      final token = await secureStorage.read(key: 'auth_token');
+      
+      final headers = <String, String>{
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      };
+
+      if (token != null) {
+        headers['Authorization'] = 'Bearer $token';
+        print('🔐 Using authentication token');
+      } else {
+        print('⚠️ No auth token available');
+      }
+
+      final response = await http.get(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
+
+      print('📡 Response status: ${response.statusCode}');
+      print('📄 Response body length: ${response.body.length}');
+      
+      if (!mounted) {
+        _isLoadingData = false;
+        return;
+      }
+      
+      if (response.statusCode == 200) {
+        await _processSuccessResponse(response.body);
+      } else {
+        await _handleErrorResponse(response.statusCode, response.body);
+      }
+    } catch (e) {
+      print('💥 Network/General error: $e');
+      if (mounted) {
+        setState(() {
+          companyData = [];
+          isLoading = false;
+        });
+        
+        String errorMessage = _getErrorMessage(e);
+        _showErrorSnackBar(errorMessage);
+      }
+    } finally {
+      _isLoadingData = false;
+    }
+  }
+
+  Future<void> _processSuccessResponse(String responseBody) async {
+    try {
+      final responseBodyTrimmed = responseBody.trim();
+      
+      if (responseBodyTrimmed.isEmpty) {
+        print('❌ Empty response body');
+        setState(() {
+          companyData = [];
+          isLoading = false;
+        });
+        _showErrorSnackBar('Server returned empty response');
+        return;
+      }
+
+      final data = json.decode(responseBodyTrimmed) as Map<String, dynamic>? ?? {};
+      print('✅ JSON decoded successfully');
+      print('🔍 Data keys: ${data.keys.toList()}');
+      
+      // Check for error status in response
+      if (data['status'] == 'error') {
+        print('❌ API returned error: ${data['message']}');
+        setState(() {
+          companyData = [];
+          isLoading = false;
+        });
+        _showErrorSnackBar(data['message'] ?? 'Unknown API error');
+        return;
+      }
+      
+      // Extract startups data
+      List<dynamic> startups = [];
+      if (data['startups'] != null && data['startups'] is List) {
+        startups = data['startups'];
+      } else if (data['data'] != null && data['data'] is List) {
+        startups = data['data'];
+      } else {
+        print('❌ No valid startups array found');
+        setState(() {
+          companyData = [];
+          isLoading = false;
+        });
+        _showErrorSnackBar('No startups data found');
+        return;
+      }
+      
+      final processedStartups = _processStartupsData(startups);
+      
+      setState(() {
+        companyData = processedStartups;
+        isLoading = false;
+      });
+      
+      print('🎉 Successfully loaded ${companyData.length} startups');
+      
+      if (processedStartups.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Loaded ${processedStartups.length} startups'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      
+    } catch (jsonError) {
+      print('❌ JSON parsing error: $jsonError');
+      print('📄 Raw response preview: ${responseBody.length > 200 ? responseBody.substring(0, 200) + "..." : responseBody}');
+      setState(() {
+        companyData = [];
+        isLoading = false;
+      });
+      _showErrorSnackBar('Invalid response format from server');
+    }
+  }
+
+  List<Map<String, dynamic>> _processStartupsData(List<dynamic> startups) {
+    List<Map<String, dynamic>> processedStartups = [];
+    
+    for (int i = 0; i < startups.length; i++) {
+      try {
+        final startup = startups[i];
+        if (startup is! Map) {
+          print('⚠️ Skipping invalid startup at index $i: not a map');
+          continue;
+        }
+        
+        Map<String, dynamic> processedStartup = Map<String, dynamic>.from(startup);
+        
+        // Ensure required fields have default values
+        processedStartup['id'] = processedStartup['id']?.toString() ?? i.toString();
+        processedStartup['name'] = processedStartup['name']?.toString() ?? 'Unknown Startup';
+        processedStartup['sector'] = processedStartup['sector']?.toString() ?? '';
+        processedStartup['bio'] = processedStartup['bio']?.toString() ?? '';
+        processedStartup['location'] = processedStartup['location']?.toString() ?? '';
+        processedStartup['website'] = processedStartup['website']?.toString() ?? '';
+        processedStartup['role'] = processedStartup['role']?.toString() ?? '';
+        processedStartup['skills'] = processedStartup['skills']?.toString() ?? '';
+        processedStartup['description'] = processedStartup['description']?.toString() ?? '';
+        
+        // Handle avatar_url and logo fields
+        processedStartup['avatar_url'] = processedStartup['avatar_url']?.toString() ?? 
+                                       processedStartup['logo']?.toString() ?? '';
+        
+        // Process tags
+        processedStartup['tags'] = _processTags(processedStartup['tags']);
+        
+        processedStartups.add(processedStartup);
+        print('✅ Processed startup: ${processedStartup['name']}');
+        
+      } catch (e) {
+        print('⚠️ Error processing startup at index $i: $e');
+        continue;
+      }
+    }
+    
+    return processedStartups;
+  }
+
+  List<String> _processTags(dynamic tags) {
+    if (tags == null) return <String>[];
+    
+    if (tags is List) {
+      return List<String>.from(
+        tags.map((e) => e?.toString() ?? '').where((e) => e.isNotEmpty)
+      );
+    } else if (tags is String && tags.isNotEmpty) {
+      return tags.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    }
+    
+    return <String>[];
+  }
+
+  Future<void> _handleErrorResponse(int statusCode, String responseBody) async {
+    print('❌ HTTP Error: $statusCode');
+    print('📄 Response body: $responseBody');
+    
+    setState(() {
+      companyData = [];
+      isLoading = false;
+    });
+    
+    String errorMessage;
+    if (statusCode == 401) {
+      errorMessage = 'Authentication failed. Please login again.';
+    } else if (statusCode == 404) {
+      errorMessage = 'Startups endpoint not found.';
+    } else if (statusCode == 500) {
+      errorMessage = 'Server error. Please try again later.';
+    } else {
+      errorMessage = 'Server error: $statusCode';
+    }
+    
+    _showErrorSnackBar(errorMessage);
+  }
+
+  String _getErrorMessage(dynamic error) {
+    String errorMessage = 'Network error occurred';
+    final errorString = error.toString();
+    
+    if (errorString.contains('TimeoutException')) {
+      errorMessage = 'Request timed out. Please check your connection.';
+    } else if (errorString.contains('SocketException')) {
+      errorMessage = 'No internet connection';
+    } else if (errorString.contains('FormatException')) {
+      errorMessage = 'Invalid response format';
+    }
+    
+    return errorMessage;
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Retry',
+          textColor: Colors.white,
+          onPressed: fetchStartupData,
+        ),
+      ),
+    );
   }
 
   // Fetch notification count
@@ -112,88 +385,111 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       print('Error fetching notification count: $e');
     }
   }
-
-  Future<void> fetchUserProfile() async {
+Future<void> fetchUserProfile() async {
   try {
-   
-    final token = await secureStorage.read(key: 'jwt_token');
-
+    print('🔄 Starting fetchUserProfile...');
+    
+    final token = await secureStorage.read(key: 'auth_token');
     if (token == null) {
-      print("JWT Token missing");
+      print('❌ No auth token found');
+      if (mounted) {
+        setState(() {
+          userName = 'User';
+        });
+      }
       return;
     }
 
+    print('🔐 Auth token found, making API call...');
+    
     final response = await http.get(
-      Uri.parse('$apiBaseUrl/get_profile.php'),
+      Uri.parse('$apiBaseUrl/get_profile.php?id=${widget.userId ?? '6852'}'),
       headers: {
         'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
       },
-    );
+    ).timeout(const Duration(seconds: 10));
+
+    print('📡 Profile API Response Status: ${response.statusCode}');
+    print('📄 Raw API Response: ${response.body}');
+
+    if (!mounted) return;
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body) as Map<String, dynamic>;
-      if (!mounted) return;
-      setState(() {
-        userName = data['full_name'] ?? data['name'] ?? data['email'] ?? '';
-      });
+      try {
+        final data = json.decode(response.body.trim()) as Map<String, dynamic>;
+        print('✅ JSON decoded successfully');
+        print('🔍 Full parsed data: $data');
+        
+        if (data['status'] == 'success') {
+          final profile = data['profile'] ?? data['data'];
+          print('👤 Profile object: $profile');
+          
+          if (profile != null && profile is Map) {
+            final profileName = profile['name']?.toString() ?? 
+                               profile['full_name']?.toString() ?? '';
+            
+            print('📝 Extracted name: "$profileName"');
+            
+            if (mounted) {
+              setState(() {
+                userName = profileName.isNotEmpty ? profileName : 'User';
+              });
+              print('✅ User profile loaded: $userName');
+              
+              // Force a rebuild of the widget to ensure UI updates
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {});
+                }
+              });
+            }
+          } else {
+            print('❌ Profile is null or not a Map');
+            if (mounted) {
+              setState(() {
+                userName = 'User';
+              });
+            }
+          }
+        } else {
+          print('❌ API status not success: ${data['status']}');
+          if (mounted) {
+            setState(() {
+              userName = 'User';
+            });
+          }
+        }
+        
+      } catch (jsonError) {
+        print('❌ JSON parsing error: $jsonError');
+        if (mounted) {
+          setState(() {
+            userName = 'User';
+          });
+        }
+      }
     } else {
-      print('Failed to fetch profile: ${response.statusCode} ${response.body}');
+      print('❌ HTTP Error: ${response.statusCode}');
+      if (mounted) {
+        setState(() {
+          userName = 'User';
+        });
+      }
     }
   } catch (e) {
-    print('Exception fetching profile: $e');
-  }
-}
-  Future<void> fetchStartupData() async {
-    if (!mounted) return;
-    setState(() => isLoading = true);
-
-    try {
-      final token = await secureStorage.read(key: 'auth_token');
-      if (token == null) {
-        setState(() => isLoading = false);
-        return;
-      }
-
-      final queryParams = <String, String>{};
-      if (searchController.text.trim().isNotEmpty) {
-        queryParams['search'] = searchController.text.trim();
-      }
-      if (selectedSector != 'All') {
-        queryParams['sector'] = selectedSector;
-      }
-
-      final uri = Uri.parse('$apiBaseUrl/get_startups.php').replace(queryParameters: queryParams);
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Accept': 'application/json',
-        },
-      );
-
-      if (!mounted) return;
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>? ?? {};
-        setState(() {
-          companyData = List<Map<String, dynamic>>.from(data['startups'] ?? data['data'] ?? []);
-          isLoading = false;
-        });
-      } else {
-        print('Error fetching startups: ${response.statusCode} - ${response.body}');
-        setState(() => isLoading = false);
-      }
-    } catch (e) {
-      print('Error fetching startup data: $e');
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+    print('❌ Error fetching user profile: $e');
+    if (mounted) {
+      setState(() {
+        userName = 'User';
+      });
     }
   }
-
+}
   void onSearchChanged(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), fetchStartupData);
+    _debounce = Timer(const Duration(milliseconds: 800), fetchStartupData); // Increased debounce time
   }
 
   void onSectorSelected(String sector) {
@@ -224,10 +520,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.push(
       context,
       MaterialPageRoute(
-       builder: (context) => const MeetingScreen(),
+        builder: (context) => const MeetingScreen(),
       ),
     ).then((_) {
-      // Refresh notification count when returning
       _fetchNotificationCount();
     });
   }
@@ -238,7 +533,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       MaterialPageRoute(
         builder: (context) => CompanyDetailScreen(
           companyData: company,
-          userId: company['user_id']?.toString() ?? '',
+          userId: company['id']?.toString() ?? '',
         ),
       ),
     );
@@ -309,10 +604,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ],
                       ),
                       actions: [
-                        // Notification Icon with proper tap handling
                         GestureDetector(
-                          onTap: _navigateToNotifications, // Single tap - view notifications
-                          onDoubleTap: toggleNotification, // Double tap - toggle notifications
+                          onTap: _navigateToNotifications,
+                          onDoubleTap: toggleNotification,
                           child: Container(
                             margin: const EdgeInsets.all(8),
                             padding: const EdgeInsets.all(8),
@@ -329,7 +623,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   color: notifyEnabled ? Colors.blue : Colors.grey,
                                   size: 24,
                                 ),
-                                // Notification badge
                                 if (notifyEnabled && unreadNotificationCount > 0)
                                   Positioned(
                                     right: 0,
@@ -403,12 +696,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          userName.isNotEmpty ? '${getGreeting()}, $userName' : getGreeting(),
-                                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white.withOpacity(0.9)),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
+                                       Text(
+  userName.isNotEmpty && userName != 'User'
+      ? '${getGreeting()}, $userName'
+      : getGreeting(),
+  style: TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.bold,
+    color: Colors.white.withOpacity(0.9),
+  ),
+),
+               Text(
                                           'Discover innovative startups',
                                           style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.9)),
                                         ),
@@ -497,9 +795,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       sliver: companyData.isEmpty
                           ? SliverToBoxAdapter(
                               child: Center(
-                                child: Text(
-                                  'No startups found.',
-                                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.business_center_outlined,
+                                      size: 64,
+                                      color: Colors.grey[400],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No startups found.',
+                                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextButton(
+                                      onPressed: fetchStartupData,
+                                      child: const Text('Refresh'),
+                                    ),
+                                  ],
                                 ),
                               ),
                             )
@@ -512,10 +826,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     child: GestureDetector(
                                       onTap: () => navigateToCompanyDetail(company),
                                       child: CompanyCard(
-                                        logoUrl: company['logo'],
-                                        name: company['name'],
-                                        sector: company['sector'],
-                                        tags: List<String>.from(company['tags'] ?? []),
+                                        logoUrl: company['avatar_url'] ?? company['logo'] ?? '',
+                                        name: company['name'] ?? 'Unknown',
+                                        sector: company['sector'] ?? 'Not specified',
+                                        tags: company['tags'] is List 
+                                            ? List<String>.from(company['tags'])
+                                            : <String>[],
                                       ),
                                     ),
                                   );
@@ -523,7 +839,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 childCount: companyData.length,
                               ),
                             ),
-                    ),
+                    )
                   ],
                 ),
         ),
@@ -531,3 +847,4 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 }
+
