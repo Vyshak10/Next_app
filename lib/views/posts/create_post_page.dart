@@ -45,8 +45,17 @@ class _CreatePostPageState extends State<CreatePostPage> {
         );
         imageUrls.add(response['image_url']);
       }
+      // Get user_id from arguments or set a placeholder
+      String userId = '';
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map && args['user_id'] != null) {
+        userId = args['user_id'].toString();
+      } else {
+        userId = '6852'; // TODO: Replace with actual user id logic
+      }
       // Create post
       final postData = {
+        'user_id': userId,
         'title': _titleController.text,
         'description': _descriptionController.text,
         'tags': _tags,

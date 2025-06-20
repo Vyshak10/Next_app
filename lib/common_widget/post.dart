@@ -235,17 +235,15 @@ class AnimatedRocketLikeState extends State<AnimatedRocketLike> with SingleTicke
                 ),
               ),
               const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  'Like',
-                  style: TextStyle(
-                    color: widget.isLiked ? Colors.orange : Colors.grey[700],
-                    fontSize: 13,
-                    fontWeight: widget.isLiked ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
+              Text(
+                'Like',
+                style: TextStyle(
+                  color: widget.isLiked ? Colors.orange : Colors.grey[700],
+                  fontSize: 13,
+                  fontWeight: widget.isLiked ? FontWeight.w600 : FontWeight.normal,
                 ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ],
           ),
