@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'messages.dart'; // Import MessagesScreen
-import '../view/chat/individual_chat_screen.dart'; // Import IndividualChatScreen
+import '../view/chat/individual_chat_screen.dart'; 
+import 'package:url_launcher/url_launcher.dart';// Import IndividualChatScreen
 
 class CompanyDetailScreen extends StatelessWidget {
   final Map<String, dynamic> companyData;
@@ -627,6 +628,30 @@ class CompanyDetailScreen extends StatelessWidget {
             ),
           ),
         ],
+        // UPI button
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.qr_code),
+            label: const Text('Pay with UPI'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.deepPurple,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () async {
+              await launchUPIPayment(
+                context: context,
+                upiId: companyData['upi_id'] ?? 'yourupi@okicici', // Replace with actual UPI ID or add to your data
+                name: companyData['name'] ?? 'Company',
+                amount: '100', // You can get this from user input or dialog
+                transactionNote: 'Support for ${companyData['name']}',
+              );
+            },
+          ),
+        ),
       ],
     );
   }
@@ -665,6 +690,25 @@ class CompanyDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> launchUPIPayment({
+    required BuildContext context,
+    required String upiId,
+    required String name,
+    required String amount,
+    String? transactionNote,
+  }) async {
+    final uri = Uri.parse(
+      'upi://pay?pa=$upiId&pn=$name&am=$amount&tn=${Uri.encodeComponent(transactionNote ?? "")}&cu=INR',
+    );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not launch UPI app')),
+      );
+    }
   }
 }
 
