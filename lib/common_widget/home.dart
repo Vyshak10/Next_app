@@ -1,3 +1,4 @@
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -696,9 +697,10 @@ Future<void> fetchUserProfile() async {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                       Text(
-  userName.isNotEmpty && userName != 'User'
-      ? '${getGreeting()}, $userName'
+                                       // Replace your greeting Text widget with this debug version temporarily
+Text(
+  userName.isNotEmpty && userName != 'User' 
+      ? '${getGreeting()}, $userName' 
       : getGreeting(),
   style: TextStyle(
     fontSize: 22,
@@ -847,4 +849,3 @@ Future<void> fetchUserProfile() async {
     );
   }
 }
-

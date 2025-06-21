@@ -1,9 +1,8 @@
-import 'package:flutter/material.dart';//startUp.dart
+import 'package:flutter/material.dart';
 import '../../common_widget/home.dart';
-import '../../common_widget/post.dart';
+import '../../common_widget/post.dart'; // This should contain your PostScreen class
 import '../../common_widget/profile.dart';
 import '../../common_widget/messages.dart';
-import '../../views/posts/posts_page.dart';
 
 class Startup extends StatefulWidget {
   const Startup({super.key});
@@ -46,7 +45,8 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
           userId: userId, // Pass userId to HomeScreen
         );
       case 1:
-        return const PostsPage();
+        // 👇 Updated to use PostScreen instead of PostsPage
+        return const PostScreen();
       case 2:
         return MessagesScreen(
           userId: userId,
