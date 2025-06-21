@@ -33,7 +33,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   String? conversationId;
   bool isLoading = false;
 
-  final String apiUrl = 'https://yourdomain.com/backend2/api';
+  final String apiUrl = 'https://indianrupeeservices.in/NEXT/backend';
 
   @override
   void initState() {

@@ -6,6 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+// import 'package:your_app_name/views/messages/chat_list_page.dart';
+// If you need to use ChatListPage, use the correct import:
+// import '../views/messages/chat_list_page.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;

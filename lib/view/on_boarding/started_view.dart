@@ -20,7 +20,7 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 3),
+      duration: const Duration(seconds: 5),
       vsync: this,
     );
     _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
@@ -36,7 +36,7 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
     _controller.forward();
 
     // Navigate to onboarding after animation completes
-    Timer(const Duration(seconds: 3), () {
+    Timer(const Duration(seconds: 5), () {
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/onboarding');
       }
@@ -100,22 +100,6 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
                     ),
                   ),
                   const SizedBox(height: 60),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const OnboardingPages()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                      elevation: 5.0,
-                    ),
-                    child: const Text('Get Started', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  ),
                 ],
               ),
             ),
