@@ -1,9 +1,11 @@
+//profile.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -18,11 +20,14 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final storage = const FlutterSecureStorage();
   final ImagePicker _picker = ImagePicker();
+  late Razorpay _razorpay;
+  
   Map<String, dynamic>? profile;
   List<Map<String, dynamic>> posts = [];
   bool isLoading = true;
   bool isEditing = false;
   bool isUploadingAvatar = false;
+  bool _acceptingFunding = true;
   
   // Controllers for editing
   final _nameController = TextEditingController();
@@ -34,11 +39,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _locationController = TextEditingController();
   final _sectorController = TextEditingController();
   final _videoController = TextEditingController();
+  final _fundingGoalController = TextEditingController();
+  final _fundingDescriptionController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     fetchProfileData();
+    _initializeRazorpay();
+  }
+
+  void _initializeRazorpay() {
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
   @override
@@ -52,7 +67,116 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _locationController.dispose();
     _sectorController.dispose();
     _videoController.dispose();
+    _fundingGoalController.dispose();
+    _fundingDescriptionController.dispose();
+    _razorpay.clear();
     super.dispose();
+  }
+
+  // Payment Handlers
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    _showSuccessSnackBar('Payment successful! Payment ID: ${response.paymentId}');
+    _recordPayment(response.paymentId!, response.orderId, response.signature);
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    _showErrorSnackBar('Payment failed: ${response.message}');
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    _showErrorSnackBar('External wallet selected: ${response.walletName}');
+  }
+
+  Future<void> _recordPayment(String paymentId, String? orderId, String? signature) async {
+    try {
+      final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/record_payment.php');
+      final response = await http.post(uri, body: {
+        'payment_id': paymentId,
+        'order_id': orderId ?? '',
+        'signature': signature ?? '',
+        'recipient_id': widget.userId,
+        'payer_id': await _getCurrentUserId(),
+        'status': 'completed',
+      });
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          print('Payment recorded successfully');
+        }
+      }
+    } catch (e) {
+      print('Error recording payment: $e');
+    }
+  }
+
+  Future<String> _getCurrentUserId() async {
+    // Get current user ID from secure storage or your auth system
+    return await storage.read(key: 'user_id') ?? 'anonymous';
+  }
+
+  Future<void> _createPaymentOrder(double amount, String currency) async {
+    try {
+      final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/create_payment_order.php');
+      final response = await http.post(uri, body: {
+        'amount': (amount * 100).toString(), // Razorpay expects amount in paise
+        'currency': currency,
+        'recipient_id': widget.userId,
+      });
+      
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          _openRazorpayCheckout(data['order_id'], amount, currency);
+        } else {
+          _showErrorSnackBar('Failed to create payment order');
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error creating payment order: $e');
+    }
+  }
+
+  void _openRazorpayCheckout(String orderId, double amount, String currency) {
+    var options = {
+      'key': 'rzp_test_1DP5mmOlF5G5ag', // Replace with your Razorpay key
+      'amount': (amount * 100).toInt(),
+      'name': 'Fund ${profile?['name'] ?? 'User'}',
+      'description': 'Supporting ${profile?['name'] ?? 'this person'}\'s work',
+      'order_id': orderId,
+      'prefill': {
+        'contact': '',
+        'email': ''
+      },
+      'external': {
+        'wallets': ['paytm']
+      }
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      _showErrorSnackBar('Error opening Razorpay: $e');
+    }
+  }
+
+  void _showFundingBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: SizedBox.shrink(),
+      ),
+    );
   }
 
   Future<void> fetchProfileData() async {
@@ -403,6 +527,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
                   _buildSettingsItem(
+                    icon: Icons.account_balance_wallet,
+                    title: 'Funding Settings',
+                    subtitle: _acceptingFunding ? 'Currently accepting funding' : 'Not accepting funding',
+                    onTap: _showFundingSettings,
+                  ),
+                  _buildSettingsItem(
                     icon: Icons.palette,
                     title: 'Theme',
                     subtitle: 'Light',
@@ -747,6 +877,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Stack(
             alignment: Alignment.bottomRight,
             children: [
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: CircleAvatar(
+                  radius: 55,
+                  backgroundColor: Colors.white,
+                  child: CircleAvatar(
+                    radius: 52,
+                    backgroundColor: Colors.grey[300],
+                    backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+                    child: !hasAvatar 
+                      ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
+                      : null,
+                  ),
+                ),
+              ),
               Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
@@ -1303,6 +1457,78 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showFundingSettings() {
+    Navigator.pop(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Funding Settings'),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) => SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  title: const Text('Accept Funding'),
+                  subtitle: const Text('Allow others to support you financially'),
+                  value: _acceptingFunding,
+                  onChanged: (value) {
+                    setDialogState(() {
+                      _acceptingFunding = value;
+                    });
+                  },
+                  activeColor: Colors.green.shade600,
+                ),
+                if (_acceptingFunding) ...[
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _fundingGoalController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'Funding Goal (₹)',
+                      prefixIcon: const Icon(Icons.track_changes),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      hintText: 'Optional target amount',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _fundingDescriptionController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Funding Description',
+                      prefixIcon: const Icon(Icons.description),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      hintText: 'Describe what the funding will be used for',
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {});
+              _showSuccessSnackBar('Funding settings will be saved with profile');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade600,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
