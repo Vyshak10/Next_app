@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';//chat_page.dart
 import 'package:timeago/timeago.dart' as timeago;
 import '../../models/message.dart';
 import '../../models/user_profile.dart';
 import '../../services/api_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ChatPage extends StatefulWidget {
   final UserProfile otherUser;
@@ -33,14 +33,17 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    print('ChatPage opened for conversationId: \'${widget.conversationId}\' with otherUser: \'${widget.otherUser.userId}\'');
     _loadCurrentUserId();
   }
 
   Future<void> _loadCurrentUserId() async {
-    final prefs = await SharedPreferences.getInstance();
+    final storage = FlutterSecureStorage();
+    final id = await storage.read(key: 'user_id');
     setState(() {
-      _currentUserId = prefs.getString('user_id');
+      _currentUserId = id;
     });
+    print('Current user ID in ChatPage: \'$_currentUserId\'');
     _loadMessages();
     _markMessagesRead();
   }
@@ -67,13 +70,18 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _loadMessages() async {
     if (_currentUserId == null) return;
     try {
-      final messages = await _apiService.getMessages(widget.otherUser.userId);
+      final response = await http.get(Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_messages.php?conversation_id=${widget.conversationId}'));
+      final data = jsonDecode(response.body);
+      final messages = data['messages'] as List;
+      print('Loaded messages from backend:');
+      print(messages);
       setState(() {
         _messages = messages.map((json) => Message.fromJson(json)).toList();
         _isLoading = false;
       });
       _scrollToBottom();
     } catch (e) {
+      print('Error loading messages: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading messages: $e')),
       );
@@ -177,7 +185,7 @@ class _ChatPageState extends State<ChatPage> {
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 final message = _messages[index];
-                final isMe = message.senderId == 'current_user_id'; // TODO: Get current user ID
+                final isMe = message.senderId == _currentUserId;
                 return Dismissible(
                   key: ValueKey(message.id),
                   direction: isMe ? DismissDirection.endToStart : DismissDirection.none,
@@ -281,6 +289,58 @@ class _ChatPageState extends State<ChatPage> {
     _scrollController.dispose();
     super.dispose();
   }
+
+  Future<void> _showUserListAndStartChat() async {
+    final userId = await _getCurrentUserId();
+    if (userId == null) return;
+    final response = await http.get(
+      Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_users.php?user_id=$userId'),
+    );
+    final users = jsonDecode(response.body) as List;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          title: Text('Start New Chat'),
+          children: users.map((user) {
+            return SimpleDialogOption(
+              child: Text(user['name']),
+              onPressed: () async {
+                Navigator.pop(context);
+                // Get or create conversation
+                final conversationId = await getOrCreateConversationId(userId, user['id'].toString());
+                if (conversationId != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ChatPage(
+                        otherUser: UserProfile(
+                          id: user['id'].toString(),
+                          userId: user['id'].toString(),
+                          userType: user['user_type'] ?? '',
+                          name: user['name'] ?? '',
+                          skills: user['skills'] != null ? List<String>.from(user['skills']) : [],
+                          avatarUrl: user['avatar_url'],
+                          description: user['description'],
+                          notifyEnabled: user['notify_enabled'] ?? true,
+                        ),
+                        conversationId: conversationId,
+                      ),
+                    ),
+                  );
+                }
+              },
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Future<String?> _getCurrentUserId() async {
+    final storage = FlutterSecureStorage();
+    return await storage.read(key: 'user_id');
+  }
 }
 
 Future<String?> getOrCreateConversationId(String user1Id, String user2Id) async {
@@ -296,82 +356,4 @@ Future<String?> getOrCreateConversationId(String user1Id, String user2Id) async 
     return data['conversation_id']?.toString();
   }
   return null;
-}
-
-Future<void> openChat(BuildContext context, UserProfile otherUser) async {
-  final conversationId = await getOrCreateConversationId(_currentUserId!, otherUser.userId);
-  if (conversationId != null) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ChatPage(
-          otherUser: otherUser,
-          conversationId: conversationId,
-        ),
-      ),
-    );
-  }
-}
-
-Future<void> _showUserListAndStartChat() async {
-  final userId = await _getCurrentUserId();
-  if (userId == null) return;
-  final response = await http.get(
-    Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_users.php?user_id=$userId'),
-  );
-  final users = jsonDecode(response.body) as List;
-  showDialog(
-    context: context,
-    builder: (context) {
-      return SimpleDialog(
-        title: Text('Start New Chat'),
-        children: users.map((user) {
-          return SimpleDialogOption(
-            child: Text(user['name']),
-            onPressed: () async {
-              Navigator.pop(context);
-              // Get or create conversation
-              final conversationId = await getOrCreateConversationId(userId, user['id'].toString());
-              if (conversationId != null) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ChatPage(
-                      otherUser: UserProfile(
-                        userId: user['id'].toString(),
-                        name: user['name'],
-                        email: user['email'],
-                        avatarUrl: null,
-                        userType: '',
-                      ),
-                      conversationId: conversationId,
-                    ),
-                  ),
-                );
-              }
-            },
-          );
-        }).toList(),
-      );
-    },
-  );
-}
-
-Future<String?> _getCurrentUserId() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getString('user_id');
-}
-
-Future<void> _loadChats() async {
-  final userId = await _getCurrentUserId();
-  if (userId == null) return;
-  final response = await _apiService.get('get_chats.php?user_id=$userId');
-  // ... rest of your code
-}
-
-Future<void> _loadUnreadCount() async {
-  final userId = await _getCurrentUserId();
-  if (userId == null) return;
-  final response = await http.get(Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_unread_count.php?user_id=$userId'));
-  // ... rest of your code
 } 

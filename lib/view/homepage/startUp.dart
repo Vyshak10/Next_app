@@ -48,10 +48,7 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
         // 👇 Updated to use PostScreen instead of PostsPage
         return const PostScreen();
       case 2:
-        return MessagesScreen(
-          userId: userId,
-          conversationId: DateTime.now().millisecondsSinceEpoch.toString(),
-        );
+        return const MessagesPage();
       case 3:
         return ProfileScreen(
           userId: userId,

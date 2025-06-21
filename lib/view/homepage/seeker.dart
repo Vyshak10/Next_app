@@ -74,10 +74,7 @@ class _SeekerPageState extends State<SeekerPage> with SingleTickerProviderStateM
         // Reinitialize _screens with userId
         _screens = [
           HomeScreen(onProfileTap: () => _onItemTapped(2)),
-          MessagesScreen(
-            userId: userId,
-            conversationId: DateTime.now().millisecondsSinceEpoch.toString(),
-          ),
+          const MessagesPage(),
           ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
         ];
       });

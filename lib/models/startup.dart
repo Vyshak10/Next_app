@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../common_widget/home.dart';
 import '../../common_widget/post.dart';
 import '../../common_widget/profile.dart';
-import '../../common_widget/messages.dart';
+import '../../views/messages/chat_list_page.dart';
 
 class Startup extends StatefulWidget {
   const Startup({super.key});
@@ -44,10 +44,7 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
       case 1:
         return PostScreen(userId: userId);
       case 2:
-        return MessagesScreen(
-          userId: userId,
-          conversationId: DateTime.now().millisecondsSinceEpoch.toString(),
-        );
+        return ChatListPage();
       case 3:
         return ProfileScreen(
           userId: userId,

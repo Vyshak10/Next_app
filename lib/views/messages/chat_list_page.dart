@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';//chat_list_page.dart
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../models/message.dart';
@@ -7,7 +7,7 @@ import '../../services/api_service.dart';
 import 'chat_page.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({Key? key}) : super(key: key);
@@ -30,8 +30,8 @@ class _ChatListPageState extends State<ChatListPage> {
   }
 
   Future<String?> _getCurrentUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('user_id');
+    final storage = FlutterSecureStorage();
+    return await storage.read(key: 'user_id');
   }
 
   Future<void> _loadChats() async {
@@ -86,20 +86,34 @@ class _ChatListPageState extends State<ChatListPage> {
           children: users.map((user) {
             return SimpleDialogOption(
               child: Text(user['name']),
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                // Navigate to chat page with selected user
+                // Fetch or create conversationId from backend
+                final convResponse = await http.post(
+                  Uri.parse('https://indianrupeeservices.in/NEXT/backend/create_conversation.php'),
+                  body: {
+                    'user1_id': userId,
+                    'user2_id': user['id'].toString(),
+                  },
+                );
+                final convData = jsonDecode(convResponse.body);
+                final conversationId = convData['conversation_id'].toString();
+                // Navigate to chat page with selected user and conversationId
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => ChatPage(
                       otherUser: UserProfile(
+                        id: user['id'].toString(),
                         userId: user['id'].toString(),
+                        userType: user['user_type'] ?? '',
                         name: user['name'],
-                        email: user['email'],
-                        avatarUrl: null,
-                        userType: '',
+                        skills: [],
+                        avatarUrl: user['avatar_url'],
+                        description: user['description'],
+                        notifyEnabled: user['notify_enabled'] ?? true,
                       ),
+                      conversationId: conversationId,
                     ),
                   ),
                 );
@@ -199,38 +213,23 @@ class _ChatListPageState extends State<ChatListPage> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            timeago.format(lastMessage.createdAt),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          if (unread)
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor,
+                      trailing: unread
+                          ? Container(
+                              width: 10,
+                              height: 10,
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Text(
-                                '1',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                            )
+                          : null,
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => ChatPage(
                               otherUser: user,
+                              conversationId: conversationId,
                             ),
                           ),
                         );

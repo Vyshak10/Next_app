@@ -69,10 +69,7 @@ class _CompanyScreenState extends State<CompanyScreen> with SingleTickerProvider
         userName = data['full_name'] ?? data['email'] ?? '';
         _screens = [
           HomeScreen(onProfileTap: () => _onItemTapped(2)),
-          MessagesScreen(
-            userId: userId,
-            conversationId: DateTime.now().millisecondsSinceEpoch.toString(),
-          ),
+          const MessagesPage(),
           ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0)),
         ];
       });
