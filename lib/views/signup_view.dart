@@ -50,16 +50,29 @@ class _SignupViewState extends State<SignupView> {
     try {
       final authService = AuthService();
       final result = await authService.signUp(
-        email: _emailController.text,
-        password: _passwordController.text,
-        userType: _selectedUserType,
-        companyName: _selectedUserType == 'company' ? _companyNameController.text : null,
-        industry: _selectedUserType == 'company' ? _industryController.text : null,
-        startupName: _selectedUserType == 'startup' ? _startupNameController.text : null,
-        stage: _selectedUserType == 'startup' ? _stageController.text : null,
-        fullName: _selectedUserType == 'seeker' ? _fullNameController.text : null,
-        skills: _selectedUserType == 'seeker' ? _skillsController.text : null,
-      );
+  email: _emailController.text,
+  password: _passwordController.text,
+  userType: _selectedUserType,
+  name: _selectedUserType == 'seeker'
+      ? _fullNameController.text
+      : 'N/A',
+  companyName: _selectedUserType == 'company'
+      ? _companyNameController.text
+      : null,
+  industry: _selectedUserType == 'company'
+      ? _industryController.text
+      : null,
+  startupName: _selectedUserType == 'startup'
+      ? _startupNameController.text
+      : null,
+  stage: _selectedUserType == 'startup'
+      ? _stageController.text
+      : null,
+  skills: _selectedUserType == 'seeker'
+      ? _skillsController.text
+      : null,
+);
+
 
       if (result['success']) {
         if (mounted) {

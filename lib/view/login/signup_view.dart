@@ -66,16 +66,22 @@ class _SignUpPageState extends State<SignUpPage> {
     try {
       final authService = AuthService();
       final result = await authService.signUp(
-        email: email,
-        password: password,
-        userType: userType,
-        companyName: companyNameController.text.trim(),
-        industry: industryController.text.trim(),
-        startupName: startupNameController.text.trim(),
-        stage: stageController.text.trim(),
-        fullName: fullNameController.text.trim(),
-        skills: skillsController.text.trim(),
-      );
+  email: email,
+  password: password,
+  userType: userType,
+  name: userType == 'Established Company'
+      ? companyNameController.text.trim()
+      : userType == 'Startup'
+          ? startupNameController.text.trim()
+          : fullNameController.text.trim(),
+  companyName: companyNameController.text.trim(),
+  industry: industryController.text.trim(),
+  startupName: startupNameController.text.trim(),
+  stage: stageController.text.trim(),
+  fullName: fullNameController.text.trim(),
+  skills: skillsController.text.trim(),
+);
+
 
       if (result['success'] == true) {
         _showSnackBar('Signup successful! Please check your email for verification.');

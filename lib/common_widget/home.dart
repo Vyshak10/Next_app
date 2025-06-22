@@ -36,7 +36,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int unreadNotificationCount = 0;
   bool _isLoadingData = false; // Add loading state flag
 
-  final List<String> sectorOptions = ['All', 'Fintech', 'Healthtech', 'Edtech', 'AI', 'E-commerce'];
+  final List<String> sectorOptions = [
+  'All',
+  'Fintech',
+  'Healthtech',
+  'Edtech',
+  'AI',
+  'Ecommerce',
+  'SaaS',
+  'AgriTech',
+  'CleanTech',
+  'Mobility',
+  'Logistics',
+  'Gaming',
+  'Biotech',
+  'Medtech',
+  'Insurtech',
+  'Proptech',
+  'HRTech',
+  'LegalTech',
+  'Energy',
+  'TravelTech',
+  'FoodTech',
+  'Robotics',
+  'MarTech',
+  'AdTech',
+  'GovTech',
+  'FashionTech'
+];
+
 
   Timer? _debounce;
   Timer? _notificationTimer;
