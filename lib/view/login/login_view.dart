@@ -65,7 +65,7 @@ class _LoginViewState extends State<LoginView> {
         Navigator.pushReplacementNamed(context, '/startUp');
         break;
       case 'Established Company':
-        Navigator.pushReplacementNamed(context, '/Company');
+        Navigator.pushReplacementNamed(context, '/company');
         break;
       default:
         _showSnackBar('Unknown user type: $userType');
