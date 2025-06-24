@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../common_widget/connection_request.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../common_widget/home.dart';
+import '../../common_widget/animated_greeting_gradient_mixin.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -19,7 +21,7 @@ class UserProfileScreen extends StatefulWidget {
   State<UserProfileScreen> createState() => _UserProfileScreenState();
 }
 
-class _UserProfileScreenState extends State<UserProfileScreen> {
+class _UserProfileScreenState extends State<UserProfileScreen> with TickerProviderStateMixin, AnimatedGreetingGradientMixin<UserProfileScreen> {
   final secureStorage = const FlutterSecureStorage();
   Map<String, dynamic>? _userProfile;
   List<Map<String, dynamic>> _userPosts = [];
@@ -30,6 +32,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void initState() {
     super.initState();
     _loadUserProfile();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _loadUserProfile() async {
@@ -105,31 +112,70 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: CircleAvatar(
-                  radius: 50,
-                  backgroundImage: _userProfile!['avatar_url'] != null
-                      ? NetworkImage(_userProfile!['avatar_url'])
-                      : null,
-                  child: _userProfile!['avatar_url'] == null
-                      ? Text(
-                          _userProfile!['name'][0].toUpperCase(),
-                          style: const TextStyle(fontSize: 32),
-                        )
-                      : null,
-                ),
+              AnimatedBuilder(
+                animation: gradientAnimationController,
+                builder: (context, child) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    decoration: BoxDecoration(
+                      gradient: getGreetingGradient(
+                        gradientBeginAnimation.value,
+                        gradientEndAnimation.value,
+                      ),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.15),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundImage: _userProfile!['avatar_url'] != null
+                              ? NetworkImage(_userProfile!['avatar_url'])
+                              : null,
+                          child: _userProfile!['avatar_url'] == null
+                              ? Text(
+                                  _userProfile!['name'][0].toUpperCase(),
+                                  style: const TextStyle(fontSize: 32),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          _userProfile!['name'],
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(color: Colors.black26, offset: Offset(0,2), blurRadius: 4)]),
+                        ),
+                        if (_userProfile!['role'] != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(_userProfile!['role'], style: const TextStyle(fontSize: 16, color: Colors.white70)),
+                          ),
+                        if (_userProfile!['user_type'] != null)
+                          Container(
+                            margin: const EdgeInsets.only(top: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: Colors.white.withOpacity(0.3)),
+                            ),
+                            child: Text(
+                              _userProfile!['user_type'].toString().toUpperCase(),
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 1),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  _userProfile!['name'],
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 8),
-              if (_userProfile!['role'] != null)
-                Center(child: Text(_userProfile!['role'], style: const TextStyle(fontSize: 16))),
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
               ConnectionRequest(
                 currentUserId: widget.userId,
                 targetUserId: widget.targetUserId,

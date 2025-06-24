@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 // Views
 import 'package:next_app/view/homepage/company.dart';
-import 'package:next_app/view/homepage/seeker.dart';
+// import 'package:next_app/view/homepage/seeker.dart';
 import 'package:next_app/view/login/login_view.dart';
 import 'package:next_app/view/legal/terms_and_conditions.dart';
 import 'package:next_app/view/homepage/startUp.dart';
@@ -41,7 +41,7 @@ class AppRoutes {
       login: (context) => const LoginView(),
       startUp: (context) => const Startup(),
       company: (context) => const CompanyScreen(),
-      seeker: (context) => const SeekerPage(),
+      // seeker: (context) => const SeekerPage(),
       termsAndConditions: (context) => const TermsAndConditions(),
 
       // ✅ Home route

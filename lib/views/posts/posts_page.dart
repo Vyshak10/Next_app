@@ -264,6 +264,17 @@ class _PostsPageState extends State<PostsPage> {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        // No title
+      ),
       body: RefreshIndicator(
         onRefresh: _loadPosts,
         child: ListView.builder(

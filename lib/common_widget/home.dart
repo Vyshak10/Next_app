@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -8,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'company_detail_screen.dart';
 import 'package:next_app/common_widget/items_card.dart';
 import 'package:next_app/common_widget/NotificationsScreen.dart';
+import 'animated_greeting_gradient_mixin.dart';
 
 // Constants
 const String apiBaseUrl = 'https://indianrupeeservices.in/NEXT/backend';
@@ -23,8 +23,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, AnimatedGreetingGradientMixin<HomeScreen> {
   final secureStorage = const FlutterSecureStorage();
   final TextEditingController searchController = TextEditingController();
 
@@ -68,15 +67,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Timer? _debounce;
   Timer? _notificationTimer;
-  late final AnimationController _gradientAnimationController;
-  late final Animation<AlignmentGeometry> _gradientBeginAnimation;
-  late final Animation<AlignmentGeometry> _gradientEndAnimation;
 
   @override
   void initState() {
     super.initState();
     _initializeScreen();
-    _setupAnimations();
   }
 
   void _initializeScreen() async {
@@ -86,29 +81,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _startNotificationTimer();
   }
 
-  void _setupAnimations() {
-    _gradientAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat(reverse: true);
-
-    _gradientBeginAnimation = Tween<AlignmentGeometry>(
-      begin: Alignment.centerRight,
-      end: Alignment.centerLeft,
-    ).animate(_gradientAnimationController);
-
-    _gradientEndAnimation = Tween<AlignmentGeometry>(
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
-    ).animate(_gradientAnimationController);
-  }
-
   @override
   void dispose() {
     _debounce?.cancel();
     _notificationTimer?.cancel();
-    _gradientAnimationController.dispose();
-    searchController.dispose();
     super.dispose();
   }
 
@@ -576,19 +552,6 @@ Future<void> fetchUserProfile() async {
     return 'Good Night';
   }
 
-  LinearGradient _getGreetingGradient(AlignmentGeometry begin, AlignmentGeometry end) {
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) {
-      return LinearGradient(colors: [Colors.orange.shade500, Colors.orange.shade300], begin: begin, end: end);
-    } else if (hour >= 12 && hour < 17) {
-      return LinearGradient(colors: [Colors.orange.shade400, Colors.yellow.shade300], begin: begin, end: end);
-    } else if (hour >= 17 && hour < 21) {
-      return LinearGradient(colors: [Colors.blue.shade800, Colors.blue.shade600], begin: begin, end: end);
-    } else {
-      return LinearGradient(colors: [Colors.black87, Colors.blueGrey.shade800], begin: begin, end: end);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -689,14 +652,14 @@ Future<void> fetchUserProfile() async {
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: AnimatedBuilder(
-                          animation: _gradientAnimationController,
+                          animation: gradientAnimationController,
                           builder: (context, child) {
                             return Container(
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                gradient: _getGreetingGradient(
-                                  _gradientBeginAnimation.value,
-                                  _gradientEndAnimation.value,
+                                gradient: getGreetingGradient(
+                                  gradientBeginAnimation.value,
+                                  gradientEndAnimation.value,
                                 ),
                                 borderRadius: BorderRadius.circular(20),
                                 boxShadow: [

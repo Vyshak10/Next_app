@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+// import 'package:share_plus/share_plus.dart';
 
 class PostScreen extends StatefulWidget {
   const PostScreen({super.key});
@@ -175,10 +176,15 @@ class _PostScreenState extends State<PostScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Posts'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        // No title
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -915,6 +921,180 @@ class AnimatedRocketLikeState extends State<AnimatedRocketLike> with SingleTicke
           ),
         ),
       ),
+    );
+  }
+}
+
+class CompanyPostScreen extends StatefulWidget {
+  const CompanyPostScreen({Key? key}) : super(key: key);
+
+  @override
+  State<CompanyPostScreen> createState() => _CompanyPostScreenState();
+}
+
+class _CompanyPostScreenState extends State<CompanyPostScreen> {
+  List<Map<String, dynamic>> _posts = [];
+  bool _isLoading = false;
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPosts();
+  }
+
+  Future<String?> getAuthToken() async {
+    return await _storage.read(key: 'auth_token');
+  }
+
+  Future<void> _loadPosts() async {
+    setState(() => _isLoading = true);
+    final token = await getAuthToken();
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_posts.php'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        if (data['success'] == true && data['posts'] != null) {
+          setState(() {
+            _posts = List<Map<String, dynamic>>.from(data['posts']);
+            for (var post in _posts) {
+              post['isLiked'] = post['isLiked'] ?? false;
+              post['likeCount'] = post['likeCount'] ?? 0;
+              post['comments'] = post['comments'] ?? <Map<String, dynamic>>[];
+              if (post['image_urls'] is String && post['image_urls'].isNotEmpty) {
+                try {
+                  post['image_urls'] = jsonDecode(post['image_urls']);
+                } catch (e) {
+                  post['image_urls'] = [];
+                }
+              } else if (post['image_urls'] == null) {
+                post['image_urls'] = [];
+              }
+              if (post['tags'] is String && post['tags'].isNotEmpty) {
+                try {
+                  post['tags'] = jsonDecode(post['tags']);
+                } catch (e) {
+                  post['tags'] = [];
+                }
+              } else if (post['tags'] == null) {
+                post['tags'] = [];
+              }
+            }
+          });
+        }
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading posts: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _sharePost(Map<String, dynamic> post) {
+    final text = '${post['title'] ?? ''}\n${post['description'] ?? ''}';
+    // TODO: Implement sharing using share_plus
+    // Share.share(text);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('All Posts'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _posts.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.post_add, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text('No posts yet'),
+                      const SizedBox(height: 8),
+                      ElevatedButton(
+                        onPressed: _loadPosts,
+                        child: const Text('Refresh'),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: _posts.length,
+                  itemBuilder: (context, index) {
+                    final post = _posts[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (post['image_urls'] != null && post['image_urls'].isNotEmpty)
+                            SizedBox(
+                              height: 200,
+                              child: PageView.builder(
+                                itemCount: post['image_urls'].length,
+                                itemBuilder: (context, imgIdx) {
+                                  return Image.network(
+                                    post['image_urls'][imgIdx],
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.error, color: Colors.red),
+                                  );
+                                },
+                              ),
+                            ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(post['title'] ?? '', style: Theme.of(context).textTheme.titleLarge),
+                                const SizedBox(height: 8),
+                                Text(post['description'] ?? '', style: Theme.of(context).textTheme.bodyMedium),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  children: (post['tags'] as List).map((tag) {
+                                    return Chip(
+                                      label: Text(tag),
+                                      backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Icon(Icons.thumb_up, color: Colors.blueAccent, size: 20),
+                                    const SizedBox(width: 4),
+                                    Text('${post['likeCount']}'),
+                                    const SizedBox(width: 16),
+                                    Icon(Icons.comment, color: Colors.grey, size: 20),
+                                    const SizedBox(width: 4),
+                                    Text('${post['comments'].length}'),
+                                    const Spacer(),
+                                    IconButton(
+                                      icon: const Icon(Icons.share, color: Colors.blueAccent),
+                                      onPressed: () => _sharePost(post),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }

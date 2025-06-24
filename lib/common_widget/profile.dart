@@ -9,6 +9,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 // import 'package:your_app_name/views/messages/chat_list_page.dart';
 // If you need to use ChatListPage, use the correct import:
 // import '../views/messages/chat_list_page.dart';
+import 'animated_greeting_gradient_mixin.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -20,7 +21,7 @@ class ProfileScreen extends StatefulWidget {
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateMixin, AnimatedGreetingGradientMixin<ProfileScreen> {
   final storage = const FlutterSecureStorage();
   final ImagePicker _picker = ImagePicker();
   late Razorpay _razorpay;
@@ -484,98 +485,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             // Header
-            Container(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.settings,
-                      color: Colors.blue.shade600,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Settings',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        'Manage your app preferences',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text('Settings', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
             ),
-            const Divider(),
-            // Settings options
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 children: [
                   _buildSettingsItem(
-                    icon: Icons.account_balance_wallet,
-                    title: 'Funding Settings',
-                    subtitle: _acceptingFunding ? 'Currently accepting funding' : 'Not accepting funding',
-                    onTap: _showFundingSettings,
+                    icon: Icons.account_circle,
+                    title: 'Profile',
+                    subtitle: 'Edit your profile information',
+                    onTap: () {
+                      Navigator.pop(context);
+                      setState(() => isEditing = true);
+                    },
                   ),
                   _buildSettingsItem(
-                    icon: Icons.palette,
-                    title: 'Theme',
-                    subtitle: 'Light',
-                    onTap: () => _showThemeDialog(),
+                    icon: Icons.lock_outline,
+                    title: 'Privacy',
+                    subtitle: 'Control your privacy settings',
+                    onTap: _showPrivacySettings,
                   ),
                   _buildSettingsItem(
                     icon: Icons.notifications,
                     title: 'Notifications',
                     subtitle: 'Manage notification preferences',
-                    onTap: () => _showNotificationSettings(),
-                  ),
-                  _buildSettingsItem(
-                    icon: Icons.privacy_tip,
-                    title: 'Privacy',
-                    subtitle: 'Control your privacy settings',
-                    onTap: () => _showPrivacySettings(),
+                    onTap: _showNotificationSettings,
                   ),
                   _buildSettingsItem(
                     icon: Icons.help_outline,
                     title: 'Help & FAQ',
                     subtitle: 'Get help and find answers',
-                    onTap: () => _showHelpAndFAQ(),
+                    onTap: _showHelpAndFAQ,
                   ),
                   _buildSettingsItem(
                     icon: Icons.info_outline,
                     title: 'About',
-                    subtitle: 'Version 1.0.0',
-                    onTap: () => _showAboutDialog(),
+                    subtitle: 'App information',
+                    onTap: _showAboutDialog,
                   ),
+                  const Divider(),
                   _buildSettingsItem(
-                    icon: Icons.description,
-                    title: 'Terms & Conditions',
-                    subtitle: 'Legal terms and conditions',
-                    onTap: () => _showTermsAndConditions(),
-                  ),
-                  _buildSettingsItem(
-                    icon: Icons.policy,
-                    title: 'Privacy Policy',
-                    subtitle: 'How we handle your data',
-                    onTap: () => _showPrivacyPolicy(),
+                    icon: Icons.delete_forever,
+                    title: 'Delete Account',
+                    subtitle: 'Permanently delete your account',
+                    onTap: _showDeleteAccountDialog,
+                    isDestructive: true,
                   ),
                   _buildSettingsItem(
                     icon: Icons.logout,
@@ -811,10 +768,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              // Add logout logic here
-              _showErrorSnackBar('Logout functionality to be implemented');
+              // Functional logout: clear secure storage and go to login/user type
+              await storage.deleteAll();
+              if (mounted) {
+                Navigator.pushNamedAndRemoveUntil(context, '/user-type', (route) => false);
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Logout'),
@@ -853,168 +813,168 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final role = profile?['role'] ?? '';
     final userType = profile?['user_type'] ?? '';
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.blue.shade400,
-            Colors.blue.shade600,
-            Colors.blue.shade700,
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.blue.shade200,
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          // Avatar
-          Stack(
-            alignment: Alignment.bottomRight,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 55,
-                  backgroundColor: Colors.white,
-                  child: CircleAvatar(
-                    radius: 52,
-                    backgroundColor: Colors.grey[300],
-                    backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
-                    child: !hasAvatar 
-                      ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
-                      : null,
-                  ),
-                ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 55,
-                  backgroundColor: Colors.white,
-                  child: CircleAvatar(
-                    radius: 52,
-                    backgroundColor: Colors.grey[300],
-                    backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
-                    child: !hasAvatar 
-                      ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
-                      : null,
-                  ),
-                ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 5,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: CircleAvatar(
-                  radius: 18,
-                  backgroundColor: Colors.white,
-                  child: CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.blue.shade600,
-                    child: isUploadingAvatar
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                            onPressed: _uploadAvatar,
-                          ),
-                  ),
-                ),
+    return AnimatedBuilder(
+      animation: gradientAnimationController,
+      builder: (context, child) {
+        return Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: getGreetingGradient(
+              gradientBeginAnimation.value,
+              gradientEndAnimation.value,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blue.shade200,
+                blurRadius: 10,
+                offset: const Offset(0, 5),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          // Name and Role
-          Text(
-            name,
-            style: const TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              shadows: [
-                Shadow(
-                  color: Colors.black26,
-                  offset: Offset(0, 2),
-                  blurRadius: 4,
-                ),
-              ],
-            ),
-          ),
-          if (role.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Text(
-                role,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white70,
-                  fontWeight: FontWeight.w400,
-                ),
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              // Avatar
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 55,
+                      backgroundColor: Colors.white,
+                      child: CircleAvatar(
+                        radius: 52,
+                        backgroundColor: Colors.grey[300],
+                        backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+                        child: !hasAvatar 
+                          ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
+                          : null,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 55,
+                      backgroundColor: Colors.white,
+                      child: CircleAvatar(
+                        radius: 52,
+                        backgroundColor: Colors.grey[300],
+                        backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+                        child: !hasAvatar 
+                          ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
+                          : null,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.white,
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: Colors.blue.shade600,
+                        child: isUploadingAvatar
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                                onPressed: _uploadAvatar,
+                              ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          if (userType.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withOpacity(0.3)),
-              ),
-              child: Text(
-                userType.toUpperCase(),
+              const SizedBox(height: 20),
+              // Name and Role
+              Text(
+                name,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
-                  letterSpacing: 1,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black26,
+                      offset: Offset(0, 2),
+                      blurRadius: 4,
+                    ),
+                  ],
                 ),
               ),
-            ),
-          const SizedBox(height: 25),
-        ],
-      ),
+              if (role.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    role,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white70,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+              if (userType.isNotEmpty)
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    userType.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 25),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1536,25 +1496,72 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showDeleteAccountDialog() {
+    Navigator.pop(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text('Are you sure you want to delete your account? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              // Call delete account logic (reuse SettingsScreen logic)
+              final storage = FlutterSecureStorage();
+              final token = await storage.read(key: 'auth_token');
+              final userId = await storage.read(key: 'user_id');
+              if (token != null && userId != null) {
+                try {
+                  final response = await http.post(
+                    Uri.parse('https://indianrupeeservices.in/NEXT/backend/api/delete-account'),
+                    headers: {
+                      'Authorization': 'Bearer $token',
+                      'Content-Type': 'application/json',
+                    },
+                    body: jsonEncode({'user_id': userId}),
+                  );
+                  if (response.statusCode == 200) {
+                    await storage.deleteAll();
+                    if (mounted) {
+                      Navigator.pushNamedAndRemoveUntil(context, '/user-type', (route) => false);
+                    }
+                  } else {
+                    throw Exception('Failed with status ${response.statusCode}');
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete account: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("Profile"),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: widget.onBackTap,
         ),
-        backgroundColor: Colors.blue.shade600,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: _showSettingsBottomSheet,
-          ),
-        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())

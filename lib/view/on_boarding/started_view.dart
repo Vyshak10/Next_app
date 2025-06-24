@@ -36,7 +36,7 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
     _controller.forward();
 
     // Navigate to onboarding after animation completes
-    Timer(const Duration(seconds: 5), () {
+    Timer(const Duration(seconds: 10), () {
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/onboarding');
       }
@@ -64,7 +64,7 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
                 children: [
                   ScaleTransition(
                     scale: _scaleAnimation,
-                    child: Image.asset('assets/img/Icon.png', height: 150, width: 150),
+                    child: Image.asset('assets/img/Icon.png', height: 200, width: 200),
                   ),
                   const SizedBox(height: 20),
                   FadeTransition(
@@ -80,6 +80,8 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
                           ),
                         ),
                         const SizedBox(height: 8),
+                        _AnimatedNextFullForm(controller: _controller),
+                        const SizedBox(height: 16),
                         FadeTransition(
                           opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
                             CurvedAnimation(
@@ -106,6 +108,54 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
           );
         },
       ),
+    );
+  }
+}
+
+class _AnimatedNextFullForm extends StatelessWidget {
+  final AnimationController controller;
+  _AnimatedNextFullForm({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    // Each word fades in sequentially
+    final words = [
+      'Nurturing',
+      'Entrepreneurs',
+      'and',
+      'eXeptional',
+      'Talents',
+    ];
+    final intervals = [
+      const Interval(0.1, 0.3, curve: Curves.easeIn),
+      const Interval(0.3, 0.5, curve: Curves.easeIn),
+      const Interval(0.5, 0.6, curve: Curves.easeIn),
+      const Interval(0.6, 0.8, curve: Curves.easeIn),
+      const Interval(0.8, 1.0, curve: Curves.easeIn),
+    ];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(words.length, (i) {
+        return AnimatedBuilder(
+          animation: controller,
+          builder: (context, child) {
+            return Opacity(
+              opacity: intervals[i].transform(controller.value).clamp(0.0, 1.0),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                child: Text(
+                  words[i],
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.blueGrey[800],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      }),
     );
   }
 }

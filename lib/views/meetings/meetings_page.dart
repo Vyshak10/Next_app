@@ -176,6 +176,124 @@ class _MeetingsPageState extends State<MeetingsPage> {
     );
   }
 
+  void _showHostEventDialog(BuildContext context) {
+    final _titleController = TextEditingController();
+    final _descriptionController = TextEditingController();
+    DateTime _eventDate = DateTime.now();
+    TimeOfDay _eventTime = TimeOfDay.now();
+    final _linkController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Host Event'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Event Title',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                title: const Text('Event Date'),
+                subtitle: Text('${_eventDate.year}-${_eventDate.month}-${_eventDate.day}'),
+                trailing: const Icon(Icons.calendar_today),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _eventDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  if (picked != null) {
+                    _eventDate = picked;
+                  }
+                },
+              ),
+              ListTile(
+                title: const Text('Event Time'),
+                subtitle: Text('${_eventTime.format(context)}'),
+                trailing: const Icon(Icons.access_time),
+                onTap: () async {
+                  final picked = await showTimePicker(
+                    context: context,
+                    initialTime: _eventTime,
+                  );
+                  if (picked != null) {
+                    _eventTime = picked;
+                  }
+                },
+              ),
+              TextField(
+                controller: _linkController,
+                decoration: const InputDecoration(
+                  labelText: 'Event Link (optional)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (_titleController.text.isEmpty) return;
+              // Mock: Add event to meeting list
+              setState(() {
+                _meetings.add(Meeting(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  title: '[Event] ${_titleController.text}',
+                  description: _descriptionController.text,
+                  startTime: DateTime(
+                    _eventDate.year,
+                    _eventDate.month,
+                    _eventDate.day,
+                    _eventTime.hour,
+                    _eventTime.minute,
+                  ),
+                  endTime: DateTime(
+                    _eventDate.year,
+                    _eventDate.month,
+                    _eventDate.day,
+                    _eventTime.hour + 1,
+                    _eventTime.minute,
+                  ),
+                  status: 'event',
+                  meetingLink: _linkController.text.isNotEmpty ? _linkController.text : null,
+                ));
+              });
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Event hosted successfully (mock)')),
+                );
+              }
+            },
+            child: const Text('Host Event'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -189,6 +307,11 @@ class _MeetingsPageState extends State<MeetingsPage> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _showCreateMeetingDialog,
+          ),
+          IconButton(
+            icon: const Icon(Icons.event),
+            tooltip: 'Host Event',
+            onPressed: () => _showHostEventDialog(context),
           ),
         ],
       ),
