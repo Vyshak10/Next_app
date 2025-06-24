@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:next_app/services/auth_service.dart';
 import 'package:next_app/views/signup_view.dart';
 import 'package:next_app/views/forgot_password_view.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -14,6 +15,7 @@ class _LoginViewState extends State<LoginView> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _storage = const FlutterSecureStorage();
   bool _isLoading = false;
   String? _errorMessage;
   bool _obscurePassword = true;

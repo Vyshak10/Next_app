@@ -52,17 +52,20 @@ class _IndividualChatScreenState extends State<IndividualChatScreen> {
 
   Future<void> _sendMessage() async {
     final content = messageController.text.trim();
-    if (content.isEmpty || conversationId == null) return;
+    if (content.isEmpty) return;
 
-    await http.post(Uri.parse('$apiUrl/chat/message'), body: {
-      'conversation_id': conversationId,
-      'sender_id': widget.userId,
-      'receiver_id': widget.partnerId,
+    // Dummy: alternate sender for demo
+    final isMe = messages.isEmpty || (messages.last['sender_id'] != widget.userId);
+    final newMessage = {
+      'sender_id': isMe ? widget.userId : widget.partnerId,
+      'receiver_id': isMe ? widget.partnerId : widget.userId,
       'content': content,
+      'created_at': DateTime.now().toString(),
+    };
+    setState(() {
+      messages.add(newMessage);
+      messageController.clear();
     });
-
-    messageController.clear();
-    _fetchMessages();
   }
 
   @override

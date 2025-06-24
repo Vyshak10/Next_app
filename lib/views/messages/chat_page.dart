@@ -101,40 +101,28 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _sendMessage() async {
     final message = _messageController.text.trim();
-    if (message.isEmpty || _isSending || _currentUserId == null || widget.conversationId == null) return;
+    if (message.isEmpty || _isSending) return;
 
     setState(() {
       _isSending = true;
     });
 
-    try {
-      final response = await http.post(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/send_message.php'),
-        body: {
-          'conversation_id': widget.conversationId!,
-          'senders_id': _currentUserId!,
-          'receivers_id': widget.otherUser.userId,
-          'content': message,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        _messageController.clear();
-        _loadMessages();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send message')),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sending message: $e')),
-      );
-    } finally {
-      setState(() {
-        _isSending = false;
-      });
-    }
+    // Dummy: alternate sender for demo
+    final isMe = _messages.isEmpty || (_messages.last.senderId != 'dummy_me');
+    final newMessage = Message(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      senderId: isMe ? 'dummy_me' : 'dummy_other',
+      receiverId: isMe ? 'dummy_other' : 'dummy_me',
+      content: message,
+      createdAt: DateTime.now(),
+      isRead: true,
+    );
+    setState(() {
+      _messages.add(newMessage);
+      _messageController.clear();
+      _isSending = false;
+    });
+    _scrollToBottom();
   }
 
   @override
@@ -202,13 +190,25 @@ class _ChatPageState extends State<ChatPage> {
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 8,
+                        vertical: 10,
+                      ),
+                      constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.75,
                       ),
                       decoration: BoxDecoration(
-                        color: isMe
-                            ? Theme.of(context).primaryColor
-                            : Colors.grey[300],
+                        color: isMe ? Colors.blue.shade600 : Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: isMe ? Colors.blue.shade800 : Colors.grey.shade400,
+                          width: 1,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -216,7 +216,7 @@ class _ChatPageState extends State<ChatPage> {
                           Text(
                             message.content,
                             style: TextStyle(
-                              color: isMe ? Colors.white : Colors.black,
+                              color: isMe ? Colors.white : Colors.black87,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -261,19 +261,31 @@ class _ChatPageState extends State<ChatPage> {
                     ),
                     maxLines: null,
                     textCapitalization: TextCapitalization.sentences,
+                    onChanged: (_) => setState(() {}),
                   ),
                 ),
-                IconButton(
-                  icon: _isSending
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.send),
-                  onPressed: _sendMessage,
+                Container(
+                  decoration: BoxDecoration(
+                    color: _messageController.text.trim().isNotEmpty && !_isSending
+                        ? Colors.blue
+                        : Colors.grey.shade400,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: _isSending
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.send, color: Colors.white),
+                    onPressed: _messageController.text.trim().isNotEmpty && !_isSending
+                        ? _sendMessage
+                        : null,
+                  ),
                 ),
               ],
             ),
