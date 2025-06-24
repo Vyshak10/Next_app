@@ -106,8 +106,8 @@ class _MessagesPageState extends State<MessagesPage> with SingleTickerProviderSt
   }
 
   Future<String?> _getCurrentUserId() async {
-    const storage = FlutterSecureStorage();
-    return await storage.read(key: 'user_id');
+    // TEMP: Hardcode user ID for demo
+    return '6852';
   }
 
   @override
@@ -197,17 +197,20 @@ class _ChatListTabState extends State<ChatListTab> {
   }
 
   Future<String?> _getCurrentUserId() async {
-    const storage = FlutterSecureStorage();
-    return await storage.read(key: 'user_id');
+    // TEMP: Hardcode user ID for demo
+    return '6852';
   }
 
   Future<void> _loadChats() async {
     final userId = await _getCurrentUserId();
-    if (userId == null) return;
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
     
     try {
       final response = await http.get(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_chats.php?user_id=$userId'),
+        Uri.parse('http://indianrupeeservices.in/NEXT/backend/get_chats.php?user_id=$userId'),
       );
       
       if (response.statusCode == 200) {
@@ -216,9 +219,12 @@ class _ChatListTabState extends State<ChatListTab> {
         
         setState(() {
           _chats = chats.map((chat) {
+            final lastMessage = chat['last_message'];
             return {
               'user': UserProfile.fromJson(chat['user']),
-              'lastMessage': Message.fromJson(chat['last_message']),
+              'lastMessage': (lastMessage is Map && lastMessage.isNotEmpty)
+                  ? Message.fromJson(Map<String, dynamic>.from(lastMessage))
+                  : null,
               'conversationId': chat['conversation_id'],
               'unread': chat['unread'] ?? false,
             };
@@ -243,7 +249,7 @@ class _ChatListTabState extends State<ChatListTab> {
   Future<void> _deleteConversation(String conversationId) async {
     try {
       await http.post(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/delete_conversation.php'),
+        Uri.parse('http://indianrupeeservices.in/NEXT/backend/delete_conversation.php'),
         body: {'conversation_id': conversationId},
       );
       _loadChats();
@@ -288,7 +294,7 @@ class _ChatListTabState extends State<ChatListTab> {
               itemBuilder: (context, index) {
                 final chat = _chats[index];
                 final user = chat['user'] as UserProfile;
-                final lastMessage = chat['lastMessage'] as Message;
+                final lastMessage = chat['lastMessage'] as Message?;
                 final conversationId = chat['conversationId'];
                 final unread = chat['unread'] ?? false;
 
@@ -346,21 +352,31 @@ class _ChatListTabState extends State<ChatListTab> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            lastMessage.content,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: unread ? FontWeight.w500 : FontWeight.normal,
+                          if (lastMessage != null) ...[
+                            Text(
+                              lastMessage.content,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: unread ? FontWeight.w500 : FontWeight.normal,
+                              ),
                             ),
-                          ),
-                          Text(
-                            timeago.format(lastMessage.createdAt),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
+                            Text(
+                              timeago.format(lastMessage.createdAt),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
                             ),
-                          ),
+                          ] else ...[
+                            Text(
+                              'No messages yet',
+                              style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                       trailing: unread
@@ -418,8 +434,8 @@ class _UsersTabState extends State<UsersTab> {
   }
 
   Future<String?> _getCurrentUserId() async {
-    const storage = FlutterSecureStorage();
-    return await storage.read(key: 'user_id');
+    // TEMP: Hardcode user ID for demo
+    return '6852';
   }
 
   Future<void> _loadUsers() async {
@@ -653,7 +669,7 @@ class _ChatPageState extends State<ChatPage> {
     if (_currentUserId == null) return;
     try {
       await http.post(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/mark_message_read.php'),
+        Uri.parse('http://indianrupeeservices.in/NEXT/backend/mark_message_read.php'),
         body: {
           'conversation_id': widget.conversationId,
           'user_id': _currentUserId!,
@@ -667,7 +683,7 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _deleteMessage(String messageId) async {
     try {
       await http.post(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/delete_message.php'),
+        Uri.parse('http://indianrupeeservices.in/NEXT/backend/delete_message.php'),
         body: {'message_id': messageId},
       );
       _loadMessages();
@@ -681,28 +697,17 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _loadMessages() async {
-    if (_currentUserId == null) return;
-    try {
-      final response = await http.get(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_messages.php?conversation_id=${widget.conversationId}'),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final messages = data['messages'] as List;
-        setState(() {
-          _messages = messages.map((json) => Message.fromJson(json)).toList();
-          _isLoading = false;
-        });
-        _scrollToBottom();
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading messages: $e')),
-        );
-      }
+    if (widget.conversationId == null) return;
+    final response = await http.get(
+      Uri.parse('http://indianrupeeservices.in/NEXT/backend/get_messages.php?conversation_id=${widget.conversationId}'),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        _messages = (data as List).map((json) => Message.fromJson(json)).toList();
+        _isLoading = false;
+      });
+      _scrollToBottom();
     }
   }
 
@@ -724,38 +729,23 @@ class _ChatPageState extends State<ChatPage> {
       _isSending = true;
     });
 
-    try {
-      final response = await http.post(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/send_message.php'),
-        body: {
-          'conversation_id': widget.conversationId,
-          'senders_id': _currentUserId!,
-          'receivers_id': widget.otherUser.userId,
-          'content': message,
-        },
-      );
+    final response = await http.post(
+      Uri.parse('http://indianrupeeservices.in/NEXT/backend/send_message.php'),
+      body: {
+        'conversation_id': widget.conversationId,
+        'senders_id': _currentUserId!,
+        'receivers_id': widget.otherUser.userId,
+        'content': message,
+      },
+    );
 
-      if (response.statusCode == 200) {
-        _messageController.clear();
-        _loadMessages();
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to send message')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending message: $e')),
-        );
-      }
-    } finally {
-      setState(() {
-        _isSending = false;
-      });
+    if (response.statusCode == 200) {
+      _messageController.clear();
+      _loadMessages();
     }
+    setState(() {
+      _isSending = false;
+    });
   }
 
   @override

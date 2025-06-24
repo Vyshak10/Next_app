@@ -44,6 +44,11 @@ class _LoginViewState extends State<LoginView> {
       );
       
       if (result['success']) {
+        // Store user ID in secure storage
+        final userId = result['userData']?['id']?.toString();
+        if (userId != null && userId.isNotEmpty) {
+          await _storage.write(key: 'user_id', value: userId);
+        }
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
         }
