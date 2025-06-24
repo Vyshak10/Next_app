@@ -79,13 +79,11 @@ class MessagesPage extends StatefulWidget {
 }
 
 class _MessagesPageState extends State<MessagesPage> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
   int _unreadCount = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadUnreadCount();
   }
 
@@ -110,60 +108,62 @@ class _MessagesPageState extends State<MessagesPage> with SingleTickerProviderSt
     return '6852';
   }
 
+  void _showUsersModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => const FractionallySizedBox(
+        heightFactor: 0.92,
+        child: UsersTab(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Messages'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.chat),
-                  const SizedBox(width: 8),
-                  const Text('Chats'),
-                  if (_unreadCount > 0) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '$_unreadCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 10),
-                      ),
-                    ),
-                  ],
-                ],
+        actions: [
+          if (_unreadCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$_unreadCount',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
               ),
             ),
-            const Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people),
-                  SizedBox(width: 8),
-                  Text('Users'),
-                ],
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Stack(
         children: [
           ChatListTab(onUnreadCountChanged: (count) {
             setState(() {
               _unreadCount = count;
             });
           }),
-          const UsersTab(),
+          Positioned(
+            top: 24,
+            right: 24,
+            child: FloatingActionButton(
+              heroTag: 'users_fab',
+              backgroundColor: Colors.white,
+              elevation: 4,
+              onPressed: _showUsersModal,
+              child: const Icon(Icons.people, color: Colors.blueAccent),
+              tooltip: 'Browse Users',
+            ),
+          ),
         ],
       ),
     );
@@ -171,7 +171,6 @@ class _MessagesPageState extends State<MessagesPage> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    _tabController.dispose();
     super.dispose();
   }
 }

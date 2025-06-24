@@ -40,32 +40,20 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   @override
   Widget build(BuildContext context) {
     final companyData = widget.companyData;
+    final width = MediaQuery.of(context).size.width;
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          companyData['name'] ?? 'Company Name',
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-      ),
       body: SingleChildScrollView(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cover photo with profile picture overlay
+            // Header: Cover photo, avatar, and action buttons
             Stack(
+              clipBehavior: Clip.none,
               children: [
                 GestureDetector(
                   onTap: _pickCoverPhoto,
                   child: Container(
-                    height: 180,
+                    height: 200,
                     width: double.infinity,
                     decoration: BoxDecoration(
                       color: Colors.blue.shade100,
@@ -102,30 +90,82 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                         : null,
                   ),
                 ),
+                // Action buttons (edit, settings, video)
                 Positioned(
-                  left: 24,
+                  top: 16,
+                  right: 16,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.settings, color: Colors.blueAccent),
+                        onPressed: () {},
+                        tooltip: 'Settings',
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.edit, size: 18),
+                        label: const Text('Edit Profile'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.blueAccent,
+                          elevation: 2,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: () {},
+                      ),
+                    ],
+                  ),
+                ),
+                // Avatar
+                Positioned(
                   bottom: -48,
-                  child: CircleAvatar(
-                    radius: 48,
-                    backgroundImage: companyData['logo'] != null && companyData['logo'].toString().isNotEmpty
-                        ? NetworkImage(companyData['logo'])
-                        : null,
-                    backgroundColor: Colors.grey[200],
-                    child: companyData['logo'] == null || companyData['logo'].toString().isEmpty
-                        ? const Icon(Icons.business, size: 48, color: Colors.blueGrey)
-                        : null,
+                  left: width / 2 - 48,
+                  child: Material(
+                    elevation: 6,
+                    shape: const CircleBorder(),
+                    child: CircleAvatar(
+                      radius: 48,
+                      backgroundImage: companyData['logo'] != null && companyData['logo'].toString().isNotEmpty
+                          ? NetworkImage(companyData['logo'])
+                          : null,
+                      backgroundColor: Colors.grey[200],
+                      child: companyData['logo'] == null || companyData['logo'].toString().isEmpty
+                          ? const Icon(Icons.business, size: 48, color: Colors.blueGrey)
+                          : null,
+                    ),
+                  ),
+                ),
+                // Video upload button (bottom right of cover)
+                Positioned(
+                  bottom: 12,
+                  right: 20,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.videocam, size: 18),
+                    label: const Text('Upload 1-min Intro Video'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {},
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 56),
-            // Name, tagline, sector
-            Center(
+            const SizedBox(height: 64),
+            // Company name, tagline, sector
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
                 children: [
                   Text(
                     companyData['name'] ?? 'Company Name',
                     style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
                   ),
                   if (companyData['tagline'] != null && companyData['tagline'].toString().isNotEmpty)
                     Padding(
@@ -154,26 +194,24 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
             ),
             const SizedBox(height: 24),
             // About Us
-            Text('About Us', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            Text(
-              companyData['about'] ?? 'We are a leading investment company focused on nurturing and scaling innovative startups. Our mission is to empower entrepreneurs and drive growth in the startup ecosystem.',
-              style: const TextStyle(fontSize: 16, color: Colors.black87),
+            _SectionCard(
+              title: 'About Us',
+              child: Text(
+                companyData['about'] ?? 'We are a leading investment company focused on nurturing and scaling innovative startups. Our mission is to empower entrepreneurs and drive growth in the startup ecosystem.',
+                style: const TextStyle(fontSize: 16, color: Colors.black87),
+              ),
             ),
-            const SizedBox(height: 24),
             // Investment Focus
-            Text('Investment Focus', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            _InvestmentFocusSection(companyData: companyData),
-            const SizedBox(height: 24),
-            // Key People (optional)
+            _SectionCard(
+              title: 'Investment Focus',
+              child: _InvestmentFocusSection(companyData: companyData),
+            ),
+            // Key People
             if (companyData['keyPeople'] != null && (companyData['keyPeople'] as List).isNotEmpty)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Key People', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  ...List.generate((companyData['keyPeople'] as List).length, (i) {
+              _SectionCard(
+                title: 'Key People',
+                child: Column(
+                  children: List.generate((companyData['keyPeople'] as List).length, (i) {
                     final person = companyData['keyPeople'][i];
                     return ListTile(
                       leading: CircleAvatar(
@@ -184,87 +222,38 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                       subtitle: Text(person['role'] ?? ''),
                     );
                   }),
-                ],
+                ),
               ),
-            if (companyData['keyPeople'] != null && (companyData['keyPeople'] as List).isNotEmpty)
-              const SizedBox(height: 24),
             // Contact/Links
-            Text('Contact', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            _ContactSection(companyData: companyData),
-            const SizedBox(height: 32),
-            // Marketing/CTA
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'Looking to invest in the next big thing?',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueAccent),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Let startups know what makes your company the ideal partner for their growth journey. Showcase your portfolio, success stories, and vision.',
-                    style: TextStyle(fontSize: 16, color: Colors.black87),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Implement connect/startup pitch action
-                    },
-                    icon: const Icon(Icons.connect_without_contact),
-                    label: const Text('Connect with Us'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                      textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                ],
-              ),
+            _SectionCard(
+              title: 'Contact',
+              child: _ContactSection(companyData: companyData),
             ),
             // Portfolio/Investments section
             if (companyData['portfolio'] != null && (companyData['portfolio'] as List).isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Investments', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: (companyData['portfolio'] as List).map<Widget>((startup) {
-                        // If startup is a map with logo and name, show logo; else just name
-                        if (startup is Map && startup['logo'] != null) {
-                          return Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircleAvatar(
-                                radius: 28,
-                                backgroundImage: NetworkImage(startup['logo']),
-                                backgroundColor: Colors.grey[200],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(startup['name'] ?? '', style: const TextStyle(fontSize: 14)),
-                            ],
-                          );
-                        } else {
-                          return Chip(label: Text(startup.toString()));
-                        }
-                      }).toList(),
-                    ),
-                  ],
+              _SectionCard(
+                title: 'Investments',
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: (companyData['portfolio'] as List).map<Widget>((startup) {
+                    if (startup is Map && startup['logo'] != null) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(
+                            radius: 28,
+                            backgroundImage: NetworkImage(startup['logo']),
+                            backgroundColor: Colors.grey[200],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(startup['name'] ?? '', style: const TextStyle(fontSize: 14)),
+                        ],
+                      );
+                    } else {
+                      return Chip(label: Text(startup.toString()));
+                    }
+                  }).toList(),
                 ),
               ),
           ],
@@ -405,6 +394,51 @@ class _ContactSection extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+// Add a reusable section card widget for consistent section styling
+class _SectionCard extends StatelessWidget {
+  final String title;
+  final Widget child;
+  const _SectionCard({required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              child,
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

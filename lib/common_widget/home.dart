@@ -688,18 +688,17 @@ Future<void> fetchUserProfile() async {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                       // Replace your greeting Text widget with this debug version temporarily
-Text(
-  userName.isNotEmpty && userName != 'User' 
-      ? '${getGreeting()}, $userName' 
-      : getGreeting(),
-  style: TextStyle(
-    fontSize: 22,
-    fontWeight: FontWeight.bold,
-    color: Colors.white.withOpacity(0.9),
-  ),
-),
-               Text(
+                                        Text(
+                                          userName.isNotEmpty && userName != 'User' 
+                                              ? '${getGreeting()}, $userName' 
+                                              : getGreeting(),
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white.withOpacity(0.9),
+                                          ),
+                                        ),
+                                        Text(
                                           'Discover innovative startups',
                                           style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.9)),
                                         ),
@@ -710,6 +709,70 @@ Text(
                               ),
                             );
                           },
+                        ),
+                      ),
+                    ),
+                    // Horizontal scroll of startups for company users
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Startups', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 120,
+                              child: companyData.isEmpty
+                                  ? Center(child: Text('No startups found.', style: TextStyle(color: Colors.grey[600])))
+                                  : ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      itemCount: companyData.length,
+                                      separatorBuilder: (context, i) => const SizedBox(width: 16),
+                                      itemBuilder: (context, index) {
+                                        final startup = companyData[index];
+                                        return GestureDetector(
+                                          onTap: () => navigateToCompanyDetail(startup),
+                                          child: Container(
+                                            width: 100,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(16),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.grey.withOpacity(0.12),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            padding: const EdgeInsets.all(12),
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                CircleAvatar(
+                                                  radius: 28,
+                                                  backgroundColor: Colors.grey[200],
+                                                  backgroundImage: (startup['avatar_url'] != null && startup['avatar_url'] != '')
+                                                      ? NetworkImage(startup['avatar_url'])
+                                                      : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                                                ),
+                                                const SizedBox(height: 10),
+                                                Text(
+                                                  startup['name'] ?? 'Startup',
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -783,56 +846,6 @@ Text(
                         ),
                       ),
                     ),
-                    SliverPadding(
-                      padding: const EdgeInsets.all(16),
-                      sliver: companyData.isEmpty
-                          ? SliverToBoxAdapter(
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.business_center_outlined,
-                                      size: 64,
-                                      color: Colors.grey[400],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No startups found.',
-                                      style: TextStyle(color: Colors.grey[600], fontSize: 16),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    TextButton(
-                                      onPressed: fetchStartupData,
-                                      child: const Text('Refresh'),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          : SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final company = companyData[index];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 16),
-                                    child: GestureDetector(
-                                      onTap: () => navigateToCompanyDetail(company),
-                                      child: CompanyCard(
-                                        logoUrl: company['avatar_url'] ?? company['logo'] ?? '',
-                                        name: company['name'] ?? 'Unknown',
-                                        sector: company['sector'] ?? 'Not specified',
-                                        tags: company['tags'] is List 
-                                            ? List<String>.from(company['tags'])
-                                            : <String>[],
-                                      ),
-                                    ),
-                                  );
-                                },
-                                childCount: companyData.length,
-                              ),
-                            ),
-                    )
                   ],
                 ),
         ),

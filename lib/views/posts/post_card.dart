@@ -129,7 +129,7 @@ class _PostCardState extends State<PostCard> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                // Title
+                // 
                 if (_post.title.isNotEmpty)
                   Text(
                     _post.title,
