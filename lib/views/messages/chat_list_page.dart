@@ -167,11 +167,6 @@ class _ChatListPageState extends State<ChatListPage> {
                 ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.add_comment),
-            onPressed: _showUserListAndStartChat,
-            tooltip: 'New Message',
-          ),
         ],
       ),
       body: RefreshIndicator(
@@ -239,6 +234,20 @@ class _ChatListPageState extends State<ChatListPage> {
                 },
               ),
       ),
+      floatingActionButton: Align(
+        alignment: Alignment.bottomLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 32, bottom: 16),
+          child: FloatingActionButton(
+            onPressed: _showUserListAndStartChat,
+            backgroundColor: Colors.blueAccent,
+            child: const Icon(Icons.person_add_alt_1),
+            tooltip: 'Start New Conversation',
+            elevation: 2,
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startDocked,
     );
   }
 } 

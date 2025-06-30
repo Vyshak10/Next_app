@@ -120,11 +120,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-          ),
+          color: Color(0xFFF5F7FA), // Light neutral background
         ),
         child: SafeArea(
           child: Center(
@@ -137,31 +133,24 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: topIconColor.withOpacity(0.12),
+                      color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: topIconColor.withOpacity(0.18),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
+                          color: Colors.blueAccent.withOpacity(0.10),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
-                    child: Icon(topIcon, color: topIconColor, size: 72),
+                    child: Icon(topIcon, color: topIconColor, size: 64),
                   ),
                   Text(
                     'Choose your role',
                     style: TextStyle(
                       fontSize: isSmallScreen ? 28 : 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      color: Color(0xFF1A237E),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -170,7 +159,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                     "Let's get you started on your journey!",
                     style: TextStyle(
                       fontSize: isSmallScreen ? 16 : 18,
-                      color: Colors.white70,
+                      color: Color(0xFF607D8B),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -179,7 +168,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                     'Select the type of account you want to create',
                     style: TextStyle(
                       fontSize: isSmallScreen ? 15 : 16,
-                      color: Colors.white60,
+                      color: Color(0xFF90A4AE),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -195,15 +184,14 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                           curve: Curves.easeInOut,
                           margin: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
-                            color: isSelected ? option.color.withOpacity(0.18) : Colors.white.withOpacity(0.8),
-                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
                             boxShadow: [
-                              if (isSelected)
-                                BoxShadow(
-                                  color: option.color.withOpacity(0.18),
-                                  blurRadius: 18,
-                                  offset: const Offset(0, 8),
-                                ),
+                              BoxShadow(
+                                color: isSelected ? option.color.withOpacity(0.13) : Colors.blueGrey.withOpacity(0.07),
+                                blurRadius: isSelected ? 18 : 8,
+                                offset: const Offset(0, 6),
+                              ),
                             ],
                             border: Border.all(
                               color: isSelected ? option.color : Colors.transparent,
@@ -213,7 +201,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(18),
                               onTap: () {
                                 setState(() {
                                   _selectedType = option.title;
@@ -224,7 +212,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                                 leading: Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: option.color.withOpacity(0.13),
+                                    color: option.color.withOpacity(0.10),
                                     borderRadius: BorderRadius.circular(14),
                                   ),
                                   child: Icon(option.icon, color: option.color, size: 32),
@@ -234,7 +222,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.blueGrey[900],
+                                    color: Color(0xFF263238),
                                   ),
                                 ),
                                 subtitle: Padding(
@@ -243,7 +231,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                                     option.description,
                                     style: TextStyle(
                                       fontSize: 15,
-                                      color: Colors.blueGrey[400],
+                                      color: Color(0xFF607D8B),
                                     ),
                                   ),
                                 ),
@@ -271,7 +259,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: Color(0xFF1A237E),
                                   ),
                                 ),
                                 const SizedBox(height: 10),
@@ -280,12 +268,12 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                                          Icon(Icons.check_circle, color: selectedOption.color, size: 18),
                                           const SizedBox(width: 8),
                                           Flexible(
                                             child: Text(
                                               b,
-                                              style: const TextStyle(color: Colors.white, fontSize: 15),
+                                              style: const TextStyle(color: Color(0xFF263238), fontSize: 15),
                                               textAlign: TextAlign.center,
                                             ),
                                           ),
@@ -309,7 +297,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                           boxShadow: _selectedType != null
                               ? [
                                   BoxShadow(
-                                    color: topIconColor.withOpacity(0.25),
+                                    color: Colors.blueAccent.withOpacity(0.18),
                                     blurRadius: 18,
                                     offset: const Offset(0, 8),
                                   ),
@@ -324,7 +312,7 @@ class _UserTypeState extends State<UserType> with SingleTickerProviderStateMixin
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 18),
                             textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                             elevation: 0,
                           ),
                           child: _isLoading

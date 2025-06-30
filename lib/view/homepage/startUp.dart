@@ -43,6 +43,7 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
         return HomeScreen(
           onProfileTap: () => _onItemTapped(3),
           userId: userId, // Pass userId to HomeScreen
+          verticalList: true, // Show vertical list for startups
         );
       case 1:
         // 👇 Updated to use PostScreen instead of PostsPage

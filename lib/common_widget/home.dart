@@ -16,8 +16,9 @@ class HomeScreen extends StatefulWidget {
   final Map<String, dynamic>? userProfile;
   final VoidCallback? onProfileTap;
   final String? userId;
+  final bool verticalList;
 
-  const HomeScreen({super.key, this.userProfile, this.onProfileTap, this.userId});
+  const HomeScreen({super.key, this.userProfile, this.onProfileTap, this.userId, this.verticalList = false});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -712,70 +713,6 @@ Future<void> fetchUserProfile() async {
                         ),
                       ),
                     ),
-                    // Horizontal scroll of startups for company users
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Startups', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800])),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 120,
-                              child: companyData.isEmpty
-                                  ? Center(child: Text('No startups found.', style: TextStyle(color: Colors.grey[600])))
-                                  : ListView.separated(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: companyData.length,
-                                      separatorBuilder: (context, i) => const SizedBox(width: 16),
-                                      itemBuilder: (context, index) {
-                                        final startup = companyData[index];
-                                        return GestureDetector(
-                                          onTap: () => navigateToCompanyDetail(startup),
-                                          child: Container(
-                                            width: 100,
-                                            decoration: BoxDecoration(
-                                              color: Colors.white,
-                                              borderRadius: BorderRadius.circular(16),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.grey.withOpacity(0.12),
-                                                  blurRadius: 8,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                            padding: const EdgeInsets.all(12),
-                                            child: Column(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                CircleAvatar(
-                                                  radius: 28,
-                                                  backgroundColor: Colors.grey[200],
-                                                  backgroundImage: (startup['avatar_url'] != null && startup['avatar_url'] != '')
-                                                      ? NetworkImage(startup['avatar_url'])
-                                                      : const AssetImage('assets/default_avatar.png') as ImageProvider,
-                                                ),
-                                                const SizedBox(height: 10),
-                                                Text(
-                                                  startup['name'] ?? 'Startup',
-                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                                  maxLines: 2,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -841,6 +778,156 @@ Future<void> fetchUserProfile() async {
                                   );
                                 }).toList(),
                               ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Startups', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: widget.verticalList ? null : 120,
+                              child: companyData.isEmpty
+                                  ? Center(child: Text('No startups found.', style: TextStyle(color: Colors.grey[600])))
+                                  : widget.verticalList
+                                      ? ListView.separated(
+                                          shrinkWrap: true,
+                                          physics: NeverScrollableScrollPhysics(),
+                                          itemCount: companyData.length,
+                                          separatorBuilder: (context, i) => const SizedBox(height: 16),
+                                          itemBuilder: (context, index) {
+                                            final startup = companyData[index];
+                                            return GestureDetector(
+                                              onTap: () => navigateToCompanyDetail(startup),
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  borderRadius: BorderRadius.circular(18),
+                                                  color: Colors.white,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.blue.withOpacity(0.07),
+                                                      blurRadius: 12,
+                                                      offset: const Offset(0, 4),
+                                                    ),
+                                                  ],
+                                                ),
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                                                child: Row(
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  children: [
+                                                    CircleAvatar(
+                                                      radius: 32,
+                                                      backgroundColor: Colors.grey[200],
+                                                      backgroundImage: (startup['avatar_url'] != null && startup['avatar_url'] != '')
+                                                          ? NetworkImage(startup['avatar_url'])
+                                                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                                                    ),
+                                                    const SizedBox(width: 18),
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            startup['name'] ?? 'Startup',
+                                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, letterSpacing: 0.1),
+                                                            maxLines: 1,
+                                                            overflow: TextOverflow.ellipsis,
+                                                          ),
+                                                          const SizedBox(height: 6),
+                                                          if ((startup['sector'] ?? '').isNotEmpty)
+                                                            Container(
+                                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                              decoration: BoxDecoration(
+                                                                color: Colors.blueAccent.withOpacity(0.13),
+                                                                borderRadius: BorderRadius.circular(20),
+                                                              ),
+                                                              child: Text(
+                                                                startup['sector'],
+                                                                style: const TextStyle(
+                                                                  color: Colors.blueAccent,
+                                                                  fontWeight: FontWeight.w600,
+                                                                  fontSize: 12,
+                                                                  letterSpacing: 0.2,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          if ((startup['tagline'] ?? '').isNotEmpty)
+                                                            Padding(
+                                                              padding: const EdgeInsets.only(top: 8.0),
+                                                              child: Text(
+                                                                startup['tagline'],
+                                                                style: const TextStyle(
+                                                                  color: Color(0xFF6B7280),
+                                                                  fontStyle: FontStyle.italic,
+                                                                  fontSize: 13,
+                                                                ),
+                                                                maxLines: 2,
+                                                                overflow: TextOverflow.ellipsis,
+                                                              ),
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Icon(Icons.chevron_right, color: Colors.blueAccent, size: 28),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        )
+                                      : ListView.separated(
+                                          scrollDirection: Axis.horizontal,
+                                          itemCount: companyData.length,
+                                          separatorBuilder: (context, i) => const SizedBox(width: 16),
+                                          itemBuilder: (context, index) {
+                                            final startup = companyData[index];
+                                            return GestureDetector(
+                                              onTap: () => navigateToCompanyDetail(startup),
+                                              child: Container(
+                                                width: 100,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  borderRadius: BorderRadius.circular(16),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.grey.withOpacity(0.12),
+                                                      blurRadius: 8,
+                                                      offset: const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                padding: const EdgeInsets.all(12),
+                                                child: Column(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    CircleAvatar(
+                                                      radius: 28,
+                                                      backgroundColor: Colors.grey[200],
+                                                      backgroundImage: (startup['avatar_url'] != null && startup['avatar_url'] != '')
+                                                          ? NetworkImage(startup['avatar_url'])
+                                                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                                                    ),
+                                                    const SizedBox(height: 10),
+                                                    Text(
+                                                      startup['name'] ?? 'Startup',
+                                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      textAlign: TextAlign.center,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
                             ),
                           ],
                         ),
