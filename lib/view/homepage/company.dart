@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../../common_widget/home.dart';
 import '../../common_widget/profile.dart';
 import '../../common_widget/messages.dart';
-import '../../common_widget/company_profile.dart';
 import '../../common_widget/items_card.dart';
 import '../../common_widget/company_detail_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -13,6 +12,7 @@ import '../../common_widget/animated_greeting_gradient_mixin.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../view/analytics/analytics_dashboard_screen.dart';
 import 'dart:math' as math;
+import '../../view/profile/company_profile.dart' as company_profile;
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({super.key});
@@ -74,7 +74,7 @@ class _CompanyScreenState extends State<CompanyScreen>
       case 1:
         return const MessagesPage();
       case 2:
-        return ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0));
+        return company_profile.CompanyProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0));
       default:
         return const Center(child: Text('Invalid tab index'));
     }
@@ -388,6 +388,7 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
 
   String userName = '';
   String? avatarUrl;
+  String? companySector;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -442,18 +443,28 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
     setState(() {
       _recentActivities = [
         {
+          'company': 'FintechX',
           'type': 'investment',
-          'company': 'DataSync Pro',
-          'amount': '500K',
-          'time': '2h ago',
           'icon': Icons.trending_up,
+          'amount': '50,000',
+          'time': '2 hours ago',
+          'status': '',
         },
         {
+          'company': 'Healthify',
           'type': 'meeting',
-          'company': 'CloudNine Solutions',
-          'status': 'scheduled',
-          'time': '4h ago',
           'icon': Icons.video_call,
+          'amount': '',
+          'time': 'Yesterday',
+          'status': 'scheduled',
+        },
+        {
+          'company': 'EduSpark',
+          'type': 'connection',
+          'icon': Icons.person_add_alt_1,
+          'amount': '',
+          'time': '3 days ago',
+          'status': '',
         },
       ];
     });
@@ -479,6 +490,7 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           setState(() {
             userName = profile['name'] ?? profile['full_name'] ?? '';
             avatarUrl = profile['avatar_url'];
+            companySector = profile['sector'] ?? profile['industry'];
           });
         }
       }
@@ -830,6 +842,10 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
   }
 
   Widget _buildTrendingSection() {
+    final trendingStartups = (companySector != null && _startups.any((s) => (s['sector'] ?? '').toLowerCase() == companySector!.toLowerCase()))
+      ? _startups.where((s) => (s['sector'] ?? '').toLowerCase() == companySector!.toLowerCase()).toList()
+      : (_startups..shuffle()).take(3).toList(); // fallback: random startups
+
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -855,62 +871,142 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
             ],
           ),
           const SizedBox(height: 15),
-          SizedBox(
-            height: 120,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: _trendingStartups.length,
-              itemBuilder: (context, index) {
-                final startup = _trendingStartups[index];
-                return Container(
-                  width: 200,
-                  margin: const EdgeInsets.only(right: 15),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.red.withOpacity(0.1), Colors.orange.withOpacity(0.1)],
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.red.withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 15,
-                            backgroundImage: NetworkImage(startup['logo']),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              startup['name'],
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          if (trendingStartups.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Trending Startups in $companySector', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 110,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: trendingStartups.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, index) {
+                        final s = trendingStartups[index];
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CompanyDetailScreen(
+                                  companyData: s,
+                                  userId: widget.userId,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 130,
                             decoration: BoxDecoration(
-                              color: Colors.green,
                               borderRadius: BorderRadius.circular(12),
+                              gradient: LinearGradient(
+                                colors: [Colors.blue.shade50, Colors.white],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
                             ),
-                            child: Text(
-                              startup['growth'],
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            child: Padding(
+                              padding: const EdgeInsets.all(5),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Center(
+                                    child: CircleAvatar(
+                                      backgroundImage: (s['logo'] != null && s['logo'] != '')
+                                          ? NetworkImage(s['logo'])
+                                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                                      radius: 18,
+                                      backgroundColor: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    s['name'] ?? 'Startup',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                      letterSpacing: 0.1,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blueAccent.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      s['sector'] ?? '',
+                                      style: const TextStyle(
+                                        color: Colors.blueAccent,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 8,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    s['tagline'] ?? '',
+                                    style: const TextStyle(
+                                      color: Colors.grey,
+                                      fontStyle: FontStyle.italic,
+                                      fontSize: 8,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 18,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blueAccent,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        padding: EdgeInsets.zero,
+                                        elevation: 0,
+                                      ),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => CompanyDetailScreen(
+                                              companyData: s,
+                                              userId: widget.userId,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text(
+                                        'View',
+                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 9),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(startup['sector'], style: TextStyle(color: Colors.grey[600], fontSize: 12)),
-                      Text('Funding: \$${startup['funding']}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                    ],
+                        );
+                      },
+                    ),
                   ),
-                );
-              },
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

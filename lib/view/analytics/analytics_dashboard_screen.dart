@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'dart:math' as math;
 
 class AnalyticsDashboardScreen extends StatefulWidget {
   final String userId;
@@ -130,6 +131,13 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Analytics Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadAllAnalytics,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -137,132 +145,197 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
               ? Center(child: Text(_errorMessage.contains('XMLHttpRequest')
                   ? 'Network error: Please check your internet connection or backend CORS settings.'
                   : 'Error: $_errorMessage'))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Overall Metrics',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16.0),
-                      Card(
-                        elevation: 2.0,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildMetricRow('Total Profile Views:', totalProfileViews),
-                              _buildMetricRow('Total Post Likes:', totalPostLikes),
-                              _buildMetricRow('Total Connections:', totalConnections),
-                            ],
+              : RefreshIndicator(
+                  onRefresh: _loadAllAnalytics,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Summary metrics card
+                        Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          color: Colors.blue.shade50,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildSummaryMetric(Icons.visibility, 'Views', totalProfileViews, Colors.blue),
+                                _buildSummaryMetric(Icons.thumb_up, 'Likes', totalPostLikes, Colors.orange),
+                                _buildSummaryMetric(Icons.people, 'Connections', totalConnections, Colors.green),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 24.0),
-                      Text(
-                        'Post Engagement',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16.0),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: userPosts.length,
-                        itemBuilder: (context, index) {
-                          final post = userPosts[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4.0),
-                            elevation: 1.0,
-                            child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        const SizedBox(height: 24.0),
+                        // Bar chart for post likes
+                        if (userPosts.isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Expanded(
-                                    child: Text(
-                                      post['title'] ?? 'Untitled Post',
-                                      style: Theme.of(context).textTheme.titleMedium,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                  Text('Post Likes Overview', style: Theme.of(context).textTheme.titleLarge),
+                                  const SizedBox(width: 8),
+                                  Tooltip(
+                                    message: 'Shows likes for your recent posts',
+                                    child: const Icon(Icons.info_outline, size: 18, color: Colors.grey),
                                   ),
-                                  Row(
-                                    children: [
-                                      Icon(Icons.rocket_launch_rounded, size: 18.0, color: Colors.orange[700]),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        post['like_count'].toString(),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 180,
+                                child: _SimpleBarChart(posts: userPosts),
+                              ),
+                            ],
+                          ),
+                        const SizedBox(height: 24.0),
+                        // Recent activity timeline
+                        Text('Recent Activity', style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 12),
+                        if (recentConnections.isEmpty)
+                          const Text('No recent activity.', style: TextStyle(color: Colors.grey)),
+                        ...recentConnections.map((activity) => _buildActivityTile(activity)).toList(),
+                        const SizedBox(height: 32),
+                        // Post Engagement List
+                        Text('Post Engagement', style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 16.0),
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: userPosts.length,
+                          itemBuilder: (context, index) {
+                            final post = userPosts[index];
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 4.0),
+                              elevation: 1.0,
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        post['title'] ?? 'Untitled Post',
                                         style: Theme.of(context).textTheme.titleMedium,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ],
-                                  ),
-                                ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        Icon(Icons.rocket_launch_rounded, size: 18.0, color: Colors.orange[700]),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          post['like_count'].toString(),
+                                          style: Theme.of(context).textTheme.titleMedium,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 24.0),
-                      Text(
-                        'Connection Activity',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 16.0),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: recentConnections.length,
-                        itemBuilder: (context, index) {
-                          final connection = recentConnections[index];
-                          final connectedUserName = connection['other_user_name'] ?? 'Unknown User';
-                          final connectionDate = DateTime.parse(connection['created_at']).toLocal().toString().split(' ')[0];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 4.0),
-                            elevation: 1.0,
-                            child: Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Connected with $connectedUserName',
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  Text(
-                                    connectionDate,
-                                    style: Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                 ),
     );
   }
 
-  Widget _buildMetricRow(String label, int value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Text(
-            value.toString(),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-          ),
-        ],
+  Widget _buildSummaryMetric(IconData icon, String label, int value, Color color) {
+    return Column(
+      children: [
+        CircleAvatar(
+          backgroundColor: color.withOpacity(0.15),
+          child: Icon(icon, color: color, size: 28),
+          radius: 28,
+        ),
+        const SizedBox(height: 8),
+        Text('$value', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
+
+  Widget _buildActivityTile(Map<String, dynamic> activity) {
+    final type = activity['type'] ?? 'connection';
+    final icon = type == 'investment'
+        ? Icons.trending_up
+        : type == 'meeting'
+            ? Icons.video_call
+            : Icons.person_add_alt_1;
+    final color = type == 'investment'
+        ? Colors.green
+        : type == 'meeting'
+            ? Colors.blue
+            : Colors.orange;
+    final description = type == 'investment'
+        ? 'Investment: ₹${activity['amount']}'
+        : type == 'meeting'
+            ? 'Meeting ${activity['status']}'
+            : 'Connected with ${activity['other_user_name'] ?? 'User'}';
+    final time = activity['created_at'] ?? '';
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: color.withOpacity(0.15),
+        child: Icon(icon, color: color),
       ),
+      title: Text(description, style: const TextStyle(fontWeight: FontWeight.w600)),
+      subtitle: Text(time, style: const TextStyle(fontSize: 12)),
+    );
+  }
+}
+
+// Simple bar chart for post likes (no external package)
+class _SimpleBarChart extends StatelessWidget {
+  final List<Map<String, dynamic>> posts;
+  const _SimpleBarChart({required this.posts});
+
+  @override
+  Widget build(BuildContext context) {
+    final maxLikes = posts.map((p) => (p['like_count'] ?? 0) as int).fold<int>(0, (a, b) => a > b ? a : b);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: posts.map((post) {
+        final likes = (post['like_count'] ?? 0) as int;
+        final barHeight = maxLikes > 0 ? (likes / maxLikes) * 120 : 10;
+        return Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                height: barHeight + 10,
+                width: 18,
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Center(
+                  child: Text(
+                    likes.toString(),
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                post['title'] != null && post['title'].toString().isNotEmpty
+                    ? post['title'].toString().substring(0, math.min(8, post['title'].toString().length))
+                    : 'Post',
+                style: const TextStyle(fontSize: 10, color: Colors.black54),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 } 
