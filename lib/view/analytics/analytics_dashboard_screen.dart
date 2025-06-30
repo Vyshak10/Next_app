@@ -23,7 +23,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   bool _isLoading = true;
   String _errorMessage = '';
 
-  String baseUrl = 'https://yourdomain.com/backend2/api'; // Replace with your Laravel API base URL
+  String baseUrl = 'https://indianrupeeservices.in/NEXT/backend'; // Use your actual backend URL
 
   @override
   void initState() {
@@ -134,7 +134,9 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage.isNotEmpty
-              ? Center(child: Text('Error: $_errorMessage'))
+              ? Center(child: Text(_errorMessage.contains('XMLHttpRequest')
+                  ? 'Network error: Please check your internet connection or backend CORS settings.'
+                  : 'Error: $_errorMessage'))
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
