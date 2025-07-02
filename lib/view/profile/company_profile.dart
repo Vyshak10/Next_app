@@ -296,13 +296,18 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
       
       setState(() => isUploadingAvatar = true);
       
+      final storage = FlutterSecureStorage();
+      final token = await storage.read(key: 'auth_token');
+      
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('https://indianrupeeservices.in/NEXT/backend/upload_avatar.php'),
       );
-      
       request.fields['user_id'] = widget.userId ?? '';
       request.files.add(await http.MultipartFile.fromPath('avatar', image.path));
+      if (token != null) {
+        request.headers['Authorization'] = 'Bearer $token';
+      }
       
       var response = await request.send();
       var responseData = await response.stream.toBytes();
@@ -317,13 +322,17 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
             await fetchProfileData(_resolvedUserId!);
           }
           _showSuccessSnackBar('Avatar updated successfully');
+          widget.onBackTap(); // Trigger refresh in parent
         } else {
+          print('Upload failed: ' + responseString);
           _showErrorSnackBar('Failed to upload avatar');
         }
       } else {
+        print('Upload failed: HTTP ${response.statusCode} - ' + responseString);
         _showErrorSnackBar('Upload failed');
       }
     } catch (e) {
+      print('Upload exception: $e');
       _showErrorSnackBar('Error uploading avatar: $e');
     } finally {
       setState(() => isUploadingAvatar = false);
@@ -821,6 +830,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   Widget _buildProfileHeader() {
     final avatarUrl = profile?['avatar_url'];
     final hasAvatar = avatarUrl != null && avatarUrl.toString().isNotEmpty;
+    final cacheBustedUrl = hasAvatar ? avatarUrl + '?t=' + DateTime.now().millisecondsSinceEpoch.toString() : null;
     final name = profile?['name'] ?? 'Unknown Company';
     final role = profile?['role'] ?? '';
     final userType = profile?['user_type'] ?? '';
@@ -867,7 +877,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                       child: CircleAvatar(
                         radius: 52,
                         backgroundColor: Colors.grey[300],
-                        backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+                        backgroundImage: hasAvatar ? NetworkImage(cacheBustedUrl!) : null,
                         child: !hasAvatar 
                           ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
                           : null,
@@ -891,7 +901,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                       child: CircleAvatar(
                         radius: 52,
                         backgroundColor: Colors.grey[300],
-                        backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+                        backgroundImage: hasAvatar ? NetworkImage(cacheBustedUrl!) : null,
                         child: !hasAvatar 
                           ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
                           : null,

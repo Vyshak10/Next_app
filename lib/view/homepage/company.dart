@@ -50,11 +50,21 @@ class _CompanyScreenState extends State<CompanyScreen>
     _controller.forward();
   }
 
-  void _onItemTapped(int index) {
+  void _onItemTapped(int index) async {
     HapticFeedback.lightImpact();
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index == 2) {
+      // Profile tab tapped, reload profile after returning
+      setState(() {
+        _selectedIndex = index;
+      });
+      // Wait for a frame to ensure the profile screen is built
+      await Future.delayed(const Duration(milliseconds: 100));
+      setState(() {}); // Triggers a rebuild after avatar update
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   void _toggleFab() {
@@ -411,6 +421,13 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
     _loadData();
   }
 
+  @override
+  void didUpdateWidget(covariant CompanyHomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload profile if the widget is rebuilt (e.g., after avatar update)
+    _fetchCompanyProfile();
+  }
+
   Future<void> _loadData() async {
     await Future.wait([
       _loadPosts(),
@@ -722,6 +739,9 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
       child: AnimatedBuilder(
         animation: Listenable.merge([gradientAnimationController, _pulseController]),
         builder: (context, child) {
+          final String? cacheBustedAvatarUrl = (avatarUrl != null && avatarUrl!.isNotEmpty)
+              ? avatarUrl! + '?t=' + DateTime.now().millisecondsSinceEpoch.toString()
+              : null;
           return Opacity(
             opacity: ((0.97 + 0.03 * _pulseAnimation.value).clamp(0.0, 1.0)) as double,
             child: Transform.scale(
@@ -753,10 +773,10 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                       child: CircleAvatar(
                         radius: 35,
                         backgroundColor: Colors.white,
-                        backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
-                            ? NetworkImage(avatarUrl!)
+                        backgroundImage: (cacheBustedAvatarUrl != null)
+                            ? NetworkImage(cacheBustedAvatarUrl)
                             : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
-                        child: (avatarUrl == null || avatarUrl!.isEmpty)
+                        child: (cacheBustedAvatarUrl == null)
                             ? Icon(Icons.person, size: 35, color: Colors.grey[400])
                             : null,
                       ),
