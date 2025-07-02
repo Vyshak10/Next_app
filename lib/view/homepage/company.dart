@@ -75,6 +75,8 @@ class _CompanyScreenState extends State<CompanyScreen>
         return const MessagesPage();
       case 2:
         return company_profile.CompanyProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0));
+      case 3:
+        return AnalyticsDashboardScreen(userId: userId);
       default:
         return const Center(child: Text('Invalid tab index'));
     }
@@ -131,11 +133,11 @@ class _CompanyScreenState extends State<CompanyScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildEnhancedNavItem(Icons.home_rounded, 'Home', 0),
-              _buildEnhancedNavItem(Icons.chat_bubble_rounded, 'Messages', 1),
-              const SizedBox(width: 60), // Space for FAB
-              _buildEnhancedNavItem(Icons.analytics_rounded, 'Analytics', 3),
-              _buildEnhancedNavItem(Icons.account_circle_rounded, 'Profile', 2),
+              Expanded(child: _buildEnhancedNavItem(Icons.home_rounded, '', 0)),
+              Expanded(child: _buildEnhancedNavItem(Icons.chat_bubble_rounded, '', 1)),
+              Flexible(flex: 1, child: SizedBox()), // Flexible space for FAB
+              Expanded(child: _buildEnhancedNavItem(Icons.analytics_rounded, '', 3)),
+              Expanded(child: _buildEnhancedNavItem(Icons.account_circle_rounded, '', 2)),
             ],
           ),
         ),
@@ -147,7 +149,7 @@ class _CompanyScreenState extends State<CompanyScreen>
     final isSelected = _selectedIndex == index;
     return Expanded(
       child: GestureDetector(
-        onTap: () => index == 3 ? _navigateToAnalytics() : _onItemTapped(index),
+        onTap: () => _onItemTapped(index),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
@@ -166,15 +168,6 @@ class _CompanyScreenState extends State<CompanyScreen>
                   icon,
                   color: isSelected ? Colors.blueAccent : Colors.grey[600],
                   size: isSelected ? 26 : 24,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.blueAccent : Colors.grey[600],
-                  fontSize: 10,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ],
@@ -322,15 +315,6 @@ class _CompanyScreenState extends State<CompanyScreen>
         _showMarketTrendsModal();
         break;
     }
-  }
-
-  void _navigateToAnalytics() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AnalyticsDashboardScreen(userId: userId),
-      ),
-    );
   }
 
   void _showCreatePostDialog() {
@@ -576,16 +560,18 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           SliverToBoxAdapter(
             child: RefreshIndicator(
               onRefresh: _loadData,
-              child: Column(
-                children: [
-                  _buildEnhancedGreetingCard(),
-                  _buildQuickInsightsGrid(),
-                  _buildTrendingSection(),
-                  _buildRecentActivityCard(),
-                  _buildStartupsSection(),
-                  _buildPostsSection(),
-                  const SizedBox(height: 100), // Space for FAB
-                ],
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _buildEnhancedGreetingCard(),
+                    _buildQuickInsightsGrid(),
+                    _buildTrendingSection(),
+                    _buildRecentActivityCard(),
+                    _buildStartupsSection(),
+                    _buildPostsSection(),
+                    const SizedBox(height: 100), // Space for FAB
+                  ],
+                ),
               ),
             ),
           ),
@@ -638,26 +624,14 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                   ),
                   const SizedBox(width: 15),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Company Dashboard',
-                          style: TextStyle(
-                            color: Colors.blueAccent,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        Text(
-                          'Discover & Connect',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      'N.E.X.T.',
+                      style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        letterSpacing: 2,
+                      ),
                     ),
                   ),
                   _buildNotificationBell(),
@@ -739,7 +713,10 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                     backgroundColor: Colors.white,
                     backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
                         ? NetworkImage(avatarUrl!)
-                        : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                        : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
+                    child: (avatarUrl == null || avatarUrl!.isEmpty)
+                        ? Icon(Icons.person, size: 35, color: Colors.grey[400])
+                        : null,
                   ),
                 ),
                 const SizedBox(width: 20),
@@ -776,14 +753,14 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
 
   Widget _buildQuickInsightsGrid() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       child: GridView.count(
         crossAxisCount: 2,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        crossAxisSpacing: 15,
-        mainAxisSpacing: 15,
-        childAspectRatio: 1.5,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 10,
+        childAspectRatio: 1.8,
         children: [
           _buildInsightCard('Active Startups', '${_startups.length}', Icons.business, Colors.blue),
           _buildInsightCard('Total Posts', '${_posts.length}', Icons.article, Colors.green),
@@ -796,45 +773,54 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
 
   Widget _buildInsightCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: color.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(7),
+                ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
           ),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
+          const SizedBox(height: 6),
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               color: Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -927,7 +913,7 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                                     child: CircleAvatar(
                                       backgroundImage: (s['logo'] != null && s['logo'] != '')
                                           ? NetworkImage(s['logo'])
-                                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                                          : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
                                       radius: 18,
                                       backgroundColor: Colors.white,
                                     ),
@@ -1014,18 +1000,17 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
 
   Widget _buildRecentActivityCard() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const
-Offset(0, 5),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -1035,21 +1020,23 @@ Offset(0, 5),
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
                     color: Colors.blueAccent.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(7),
                   ),
-                  child: const Icon(Icons.history, color: Colors.blueAccent, size: 20),
+                  child: const Icon(Icons.history, color: Colors.blueAccent, size: 18),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  'Recent Activity',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Recent Activity',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Spacer(),
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -1059,48 +1046,51 @@ Offset(0, 5),
                       ),
                     );
                   },
-                  child: const Text('View All'),
+                  child: const Text('View All', style: TextStyle(fontSize: 12)),
                 ),
               ],
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 10),
             ..._recentActivities.map((activity) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
                       color: _getActivityColor(activity['type']).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(7),
                     ),
                     child: Icon(
                       activity['icon'],
                       color: _getActivityColor(activity['type']),
-                      size: 16,
+                      size: 14,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           activity['company'],
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           activity['type'] == 'investment' 
                             ? 'Investment: \$${activity['amount']}'
                             : 'Meeting ${activity['status']}',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                          style: TextStyle(color: Colors.grey[600], fontSize: 10),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
                   Text(
                     activity['time'],
-                    style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                    style: TextStyle(color: Colors.grey[500], fontSize: 9),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -1124,47 +1114,49 @@ Offset(0, 5),
 
   Widget _buildStartupsSection() {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [Colors.purple, Colors.blue]),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(7),
                 ),
-                child: const Icon(Icons.rocket_launch, color: Colors.white, size: 20),
+                child: const Icon(Icons.rocket_launch, color: Colors.white, size: 18),
               ),
-              const SizedBox(width: 10),
-              Text(
-                'Featured Startups',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Featured Startups',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
               TextButton(
                 onPressed: () {},
-                child: const Text('See All'),
+                child: const Text('See All', style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 10),
           _isLoadingStartups
               ? _buildStartupsShimmer()
               : SizedBox(
-                  height: 280,
+                  height: 250,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: _startups.length,
                     itemBuilder: (context, index) {
                       final startup = _startups[index];
                       return Container(
-                        width: 200,
-                        margin: const EdgeInsets.only(right: 15),
+                        width: 170,
+                        margin: const EdgeInsets.only(right: 10),
                         child: StartupCard(
                           startup: startup,
                           onTap: () => _navigateToStartupDetail(startup),
@@ -1336,7 +1328,7 @@ class StartupCard extends StatelessWidget {
                   backgroundColor: Colors.white,
                   backgroundImage: startup['logo'].isNotEmpty
                       ? NetworkImage(startup['logo'])
-                      : const AssetImage('assets/default_company.png') as ImageProvider,
+                      : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
                 ),
               ),
             ),
@@ -1447,7 +1439,7 @@ class PostCard extends StatelessWidget {
                   radius: 20,
                   backgroundImage: post['author_avatar'] != null
                       ? NetworkImage(post['author_avatar'])
-                      : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                      : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
                 ),
                 const SizedBox(width: 12),
                 Expanded(

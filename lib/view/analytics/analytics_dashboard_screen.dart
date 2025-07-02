@@ -130,7 +130,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analytics Dashboard'),
+        title: null,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

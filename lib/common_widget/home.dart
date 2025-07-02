@@ -681,7 +681,7 @@ Future<void> fetchUserProfile() async {
                                       backgroundImage: widget.userProfile?['avatar_url'] != null &&
                                               widget.userProfile!['avatar_url'] != ''
                                           ? NetworkImage(widget.userProfile!['avatar_url'])
-                                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                                          : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
                                     ),
                                   ),
                                   const SizedBox(width: 20),
@@ -826,7 +826,7 @@ Future<void> fetchUserProfile() async {
                                                       backgroundColor: Colors.grey[200],
                                                       backgroundImage: (startup['avatar_url'] != null && startup['avatar_url'] != '')
                                                           ? NetworkImage(startup['avatar_url'])
-                                                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                                                          : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
                                                     ),
                                                     const SizedBox(width: 18),
                                                     Expanded(
@@ -912,7 +912,7 @@ Future<void> fetchUserProfile() async {
                                                       backgroundColor: Colors.grey[200],
                                                       backgroundImage: (startup['avatar_url'] != null && startup['avatar_url'] != '')
                                                           ? NetworkImage(startup['avatar_url'])
-                                                          : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                                                          : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
                                                     ),
                                                     const SizedBox(height: 10),
                                                     Text(

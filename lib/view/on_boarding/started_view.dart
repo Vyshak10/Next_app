@@ -133,29 +133,32 @@ class _AnimatedNextFullForm extends StatelessWidget {
       const Interval(0.6, 0.8, curve: Curves.easeIn),
       const Interval(0.8, 1.0, curve: Curves.easeIn),
     ];
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(words.length, (i) {
-        return AnimatedBuilder(
-          animation: controller,
-          builder: (context, child) {
-            return Opacity(
-              opacity: intervals[i].transform(controller.value).clamp(0.0, 1.0),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                child: Text(
-                  words[i],
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.blueGrey[800],
-                    fontWeight: FontWeight.w500,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(words.length, (i) {
+          return AnimatedBuilder(
+            animation: controller,
+            builder: (context, child) {
+              return Opacity(
+                opacity: intervals[i].transform(controller.value).clamp(0.0, 1.0),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                  child: Text(
+                    words[i],
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.blueGrey[800],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
-            );
-          },
-        );
-      }),
+              );
+            },
+          );
+        }),
+      ),
     );
   }
 }

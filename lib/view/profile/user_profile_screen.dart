@@ -90,14 +90,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Profile')),
+        appBar: AppBar(),
         body: Center(child: Text('Error: $_error')),
       );
     }
 
     if (_userProfile == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Profile')),
+        appBar: AppBar(),
         body: const Center(child: Text('User not found')),
       );
     }
@@ -105,7 +105,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     final isStartup = _userProfile!['user_type'] == 'startup';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),

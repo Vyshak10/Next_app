@@ -62,47 +62,51 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.blue.shade900,
-              Colors.blue.shade500,
-            ],
-          ),
-        ),
-        child: Center(
-          child: ScaleTransition(
-            scale: _animation,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Replace with your actual logo
-                Icon(
-                  Icons.rocket_launch,
-                  size: 100,
-                  color: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.blue.shade900,
+                  Colors.blue.shade500,
+                ],
+              ),
+            ),
+            child: Center(
+              child: ScaleTransition(
+                scale: _animation,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Replace with your actual logo
+                    Icon(
+                      Icons.rocket_launch,
+                      size: 100,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'NEXT',
+                      style: TextStyle(
+                        fontSize: 48,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Connect. Collaborate. Create.',
+                      style: TextStyle(
+                        fontSize: 18,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'NEXT',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Connect. Collaborate. Create.',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white70,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
