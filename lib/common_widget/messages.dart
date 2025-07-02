@@ -126,6 +126,7 @@ class _MessagesPageState extends State<MessagesPage> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('Messages'),
         actions: [
           if (_unreadCount > 0)
@@ -153,7 +154,7 @@ class _MessagesPageState extends State<MessagesPage> with SingleTickerProviderSt
             });
           }),
           Positioned(
-            top: 24,
+            bottom: 24,
             right: 24,
             child: FloatingActionButton(
               heroTag: 'users_fab',
