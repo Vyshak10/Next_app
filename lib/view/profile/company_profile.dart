@@ -10,6 +10,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 // If you need to use ChatListPage, use the correct import:
 // import '../views/messages/chat_list_page.dart';
 import '../../common_widget/animated_greeting_gradient_mixin.dart';
+import '../settings/settings_screen.dart';
 
 class CompanyProfileScreen extends StatefulWidget {
   final String? userId;
@@ -1601,27 +1602,43 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: widget.onBackTap,
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Company Profile'),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(0),
+        child: SizedBox.shrink(),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildProfileHeader(),
-                  _buildInfoSection(),
-                  _buildPitchVideoSection(),
-                  _buildPostsSection(),
-                  const SizedBox(height: 20),
-                ],
-              ),
+          : Stack(
+              children: [
+                SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildProfileHeader(),
+                      _buildInfoSection(),
+                      _buildPitchVideoSection(),
+                      _buildPostsSection(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + 12,
+                  right: 18,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: IconButton(
+                      icon: Icon(Icons.settings, color: Colors.white, size: 28),
+                      tooltip: 'Settings',
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
     );
   }
