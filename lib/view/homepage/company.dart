@@ -165,13 +165,13 @@ class _CompanyScreenState extends State<CompanyScreen>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          // padding: const EdgeInsets.symmetric(vertical: 6),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   color: isSelected ? Colors.blueAccent.withOpacity(0.15) : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
