@@ -141,33 +141,8 @@ class _ChatListPageState extends State<ChatListPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Messages'),
-        actions: [
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.mark_chat_unread),
-                onPressed: _loadUnreadCount,
-              ),
-              if (_unreadCount > 0)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '$_unreadCount',
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
+        automaticallyImplyLeading: false,
+        elevation: 0,
       ),
       body: RefreshIndicator(
         onRefresh: _loadChats,
@@ -203,11 +178,6 @@ class _ChatListPageState extends State<ChatListPage> {
                             : null,
                       ),
                       title: Text(user.name),
-                      subtitle: Text(
-                        lastMessage.content,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                       trailing: unread
                           ? Container(
                               width: 10,
@@ -234,20 +204,14 @@ class _ChatListPageState extends State<ChatListPage> {
                 },
               ),
       ),
-      floatingActionButton: Align(
-        alignment: Alignment.bottomLeft,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 32, bottom: 16),
-          child: FloatingActionButton(
-            onPressed: _showUserListAndStartChat,
-            backgroundColor: Colors.blueAccent,
-            child: const Icon(Icons.person_add_alt_1),
-            tooltip: 'Start New Conversation',
-            elevation: 2,
-          ),
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showUserListAndStartChat,
+        backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.person_add_alt_1),
+        tooltip: 'Start New Conversation',
+        elevation: 2,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.startDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 } 

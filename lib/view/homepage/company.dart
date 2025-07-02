@@ -13,6 +13,8 @@ import 'package:shimmer/shimmer.dart';
 import '../../view/analytics/analytics_dashboard_screen.dart';
 import 'dart:math' as math;
 import '../../view/profile/company_profile.dart' as company_profile;
+import '../../common_widget/post.dart';
+import '../../common_widget/NotificationsScreen.dart';
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({super.key});
@@ -381,12 +383,31 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    _pulseAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOutCubic),
     );
     
+    gradientAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    gradientBeginAnimation = Tween<AlignmentGeometry>(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ).animate(CurvedAnimation(
+      parent: gradientAnimationController,
+      curve: Curves.easeInOutCubic,
+    ));
+    gradientEndAnimation = Tween<AlignmentGeometry>(
+      begin: Alignment.bottomRight,
+      end: Alignment.topLeft,
+    ).animate(CurvedAnimation(
+      parent: gradientAnimationController,
+      curve: Curves.easeInOutCubic,
+    ));
+    gradientAnimationController.forward();
     _loadData();
   }
 
@@ -490,8 +511,26 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = jsonDecode(response.body);
         if (data['success'] == true && data['posts'] != null) {
+          List<Map<String, dynamic>> posts = List<Map<String, dynamic>>.from(data['posts']);
+          if (posts.isEmpty && _startups.isNotEmpty) {
+            // Add dummy posts from startups
+            posts = _startups.take(3).map((startup) => {
+              'id': UniqueKey().toString(),
+              'user_type': 'startup',
+              'author_name': startup['name'],
+              'avatar_url': startup['logo'],
+              'title': 'Welcome from ${startup['name']}',
+              'description': 'This is a featured post from ${startup['name']}.',
+              'image_urls': [],
+              'tags': ['startup'],
+              'isLiked': false,
+              'likeCount': 0,
+              'comments': [],
+              'created_at': DateTime.now().toIso8601String(),
+            }).toList();
+          }
           setState(() {
-            _posts = List<Map<String, dynamic>>.from(data['posts']);
+            _posts = posts;
           });
         }
       }
@@ -582,168 +621,173 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
 
   Widget _buildModernAppBar() {
     return SliverAppBar(
-      expandedHeight: 120,
+      expandedHeight: 80,
       floating: true,
       pinned: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
       elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.blueAccent.withOpacity(0.1),
-                Colors.white.withOpacity(0.9),
-              ],
-            ),
-          ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Row(
+      flexibleSpace: SafeArea(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
                 children: [
-                  ScaleTransition(
-                    scale: _pulseAnimation,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blueAccent.withOpacity(0.2),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Image.asset('assets/img/Icon.png', height: 32),
+                  Image.asset('assets/img/Icon.png', height: 36),
+                  const SizedBox(width: 12),
+                  Text(
+                    'N.E.X.T.',
+                    style: TextStyle(
+                      color: Colors.blueAccent,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 28,
+                      letterSpacing: 4,
                     ),
                   ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Text(
-                      'N.E.X.T.',
-                      style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 22,
-                        letterSpacing: 2,
-                      ),
-                    ),
+                ],
+              ),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.search, color: Colors.blueAccent, size: 26),
+                    onPressed: () {
+                      // TODO: Implement search action
+                    },
                   ),
+                  const SizedBox(width: 4),
                   _buildNotificationBell(),
                 ],
               ),
-            ),
+            ],
           ),
+        ),
+      ),
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          color: Colors.grey[200],
+          height: 1,
         ),
       ),
     );
   }
 
   Widget _buildNotificationBell() {
-    return Stack(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.notifications_outlined, color: Colors.blueAccent),
-        ),
-        Positioned(
-          right: 8,
-          top: 8,
-          child: Container(
-            width: 8,
-            height: 8,
-            decoration: const BoxDecoration(
-              color: Colors.red,
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MeetingScreen()),
+        );
+      },
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.notifications_outlined, color: Colors.blueAccent),
+          ),
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
   Widget _buildEnhancedGreetingCard() {
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
       child: AnimatedBuilder(
-        animation: gradientAnimationController,
+        animation: Listenable.merge([gradientAnimationController, _pulseController]),
         builder: (context, child) {
-          return Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: getGreetingGradient(
-                gradientBeginAnimation.value,
-                gradientEndAnimation.value,
+          return Opacity(
+            opacity: ((0.97 + 0.03 * _pulseAnimation.value).clamp(0.0, 1.0)) as double,
+            child: Transform.scale(
+              scale: _pulseAnimation.value,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: getGreetingGradient(
+                    gradientBeginAnimation.value,
+                    gradientEndAnimation.value,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blueAccent.withOpacity(0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: CircleAvatar(
+                        radius: 35,
+                        backgroundColor: Colors.white,
+                        backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
+                            ? NetworkImage(avatarUrl!)
+                            : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
+                        child: (avatarUrl == null || avatarUrl!.isEmpty)
+                            ? Icon(Icons.person, size: 35, color: Colors.grey[400])
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            userName.isNotEmpty ? '${getGreeting()}, $userName' : getGreeting(),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Ready to discover innovation?',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.blueAccent.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: CircleAvatar(
-                    radius: 35,
-                    backgroundColor: Colors.white,
-                    backgroundImage: (avatarUrl != null && avatarUrl!.isNotEmpty)
-                        ? NetworkImage(avatarUrl!)
-                        : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
-                    child: (avatarUrl == null || avatarUrl!.isEmpty)
-                        ? Icon(Icons.person, size: 35, color: Colors.grey[400])
-                        : null,
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        userName.isNotEmpty ? '${getGreeting()}, $userName' : getGreeting(),
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Ready to discover innovation?',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ),
           );
         },
@@ -858,138 +902,135 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           ),
           const SizedBox(height: 15),
           if (trendingStartups.isNotEmpty) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Trending Startups in $companySector', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 110,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: trendingStartups.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        final s = trendingStartups[index];
-                        return InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CompanyDetailScreen(
-                                  companyData: s,
-                                  userId: widget.userId,
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            width: 130,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              gradient: LinearGradient(
-                                colors: [Colors.blue.shade50, Colors.white],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(5),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Center(
-                                    child: CircleAvatar(
-                                      backgroundImage: (s['logo'] != null && s['logo'] != '')
-                                          ? NetworkImage(s['logo'])
-                                          : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
-                                      radius: 18,
-                                      backgroundColor: Colors.white,
-                                    ),
-                                  ),
-                                  Text(
-                                    s['name'] ?? 'Startup',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 10,
-                                      letterSpacing: 0.1,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blueAccent.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      s['sector'] ?? '',
-                                      style: const TextStyle(
-                                        color: Colors.blueAccent,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 8,
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    s['tagline'] ?? '',
-                                    style: const TextStyle(
-                                      color: Colors.grey,
-                                      fontStyle: FontStyle.italic,
-                                      fontSize: 8,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    height: 18,
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blueAccent,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                        elevation: 0,
-                                      ),
-                                      onPressed: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => CompanyDetailScreen(
-                                              companyData: s,
-                                              userId: widget.userId,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      child: const Text(
-                                        'View',
-                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 9),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+            Container(
+              decoration: BoxDecoration(
+                color: Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: SizedBox(
+                height: 120,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: trendingStartups.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final s = trendingStartups[index];
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CompanyDetailScreen(
+                              companyData: s,
+                              userId: widget.userId,
                             ),
                           ),
                         );
                       },
-                    ),
-                  ),
-                ],
+                      child: Container(
+                        width: 130,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          gradient: LinearGradient(
+                            colors: [Colors.blue.shade50, Colors.white],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.13),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(5),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Center(
+                                child: CircleAvatar(
+                                  backgroundImage: (s['logo'] != null && s['logo'] != '')
+                                      ? NetworkImage(s['logo'])
+                                      : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
+                                  radius: 18,
+                                  backgroundColor: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                s['name'] ?? 'Startup',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                  letterSpacing: 0.1,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.blueAccent.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  s['sector'] ?? '',
+                                  style: const TextStyle(
+                                    color: Colors.blueAccent,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 8,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                s['tagline'] ?? '',
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontStyle: FontStyle.italic,
+                                  fontSize: 8,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 18,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blueAccent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    elevation: 0,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => CompanyDetailScreen(
+                                          companyData: s,
+                                          userId: widget.userId,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: const Text(
+                                    'View',
+                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 9),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ],
@@ -1230,10 +1271,19 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                   itemCount: _posts.length,
                   itemBuilder: (context, index) {
                     final post = _posts[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 15),
-                      child: PostCard(post: post),
-                    );
+                    // Only show posts where user_type is 'startup'
+                    if (post['user_type'] != null && post['user_type'].toString().toLowerCase() == 'startup') {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 15),
+                        child: PostCard(
+                          post: post,
+                          onLikePressed: () => _toggleLike(index),
+                          onCommentPressed: () => _showCommentsBottomSheet(post),
+                        ),
+                      );
+                    } else {
+                      return const SizedBox.shrink();
+                    }
                   },
                 ),
         ],
@@ -1262,6 +1312,34 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           ),
         );
       },
+    );
+  }
+
+  void _toggleLike(int index) {
+    setState(() {
+      _posts[index]['isLiked'] = !(_posts[index]['isLiked'] ?? false);
+      if (_posts[index]['isLiked']) {
+        _posts[index]['likeCount'] = (_posts[index]['likeCount'] ?? 0) + 1;
+      } else {
+        _posts[index]['likeCount'] = (_posts[index]['likeCount'] ?? 1) - 1;
+      }
+    });
+    // TODO: Call API to update like status
+  }
+
+  void _showCommentsBottomSheet(Map<String, dynamic> post) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => CommentsBottomSheet(
+        postId: post['id'].toString(),
+        comments: post['comments'] ?? [],
+        onCommentAdded: (newComment) {
+          setState(() {
+            post['comments'] = [...(post['comments'] ?? []), newComment];
+          });
+        },
+      ),
     );
   }
 
@@ -1411,8 +1489,15 @@ class StartupCard extends StatelessWidget {
 // Custom Post Card Widget
 class PostCard extends StatelessWidget {
   final Map<String, dynamic> post;
+  final VoidCallback onLikePressed;
+  final VoidCallback onCommentPressed;
 
-  const PostCard({Key? key, required this.post}) : super(key: key);
+  const PostCard({
+    Key? key,
+    required this.post,
+    required this.onLikePressed,
+    required this.onCommentPressed,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -1464,8 +1549,8 @@ class PostCard extends StatelessWidget {
                   ),
                 ),
                 IconButton(
-                  onPressed: () {},
-                  icon: Icon(Icons.more_horiz, color: Colors.grey[600]),
+                  onPressed: onLikePressed,
+                  icon: Icon(Icons.favorite_border, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -1696,6 +1781,51 @@ class MarketTrendsModal extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+LinearGradient getGreetingGradient(AlignmentGeometry begin, AlignmentGeometry end) {
+  final hour = DateTime.now().hour;
+  if (hour >= 5 && hour < 12) {
+    // Morning: very light to light blue
+    return LinearGradient(
+      begin: begin,
+      end: end,
+      colors: [
+        const Color(0xFFE3F0FF), // very light blue
+        const Color(0xFFB3D8FF), // light blue
+      ],
+    );
+  } else if (hour >= 12 && hour < 17) {
+    // Afternoon: light blue to blue
+    return LinearGradient(
+      begin: begin,
+      end: end,
+      colors: [
+        const Color(0xFFB3D8FF), // light blue
+        const Color(0xFF4F8CFF), // blue
+      ],
+    );
+  } else if (hour >= 17 && hour < 21) {
+    // Evening: blue to deep blue
+    return LinearGradient(
+      begin: begin,
+      end: end,
+      colors: [
+        const Color(0xFF4F8CFF), // blue
+        const Color(0xFF1A3A6B), // deep blue
+      ],
+    );
+  } else {
+    // Night: deep blue to navy
+    return LinearGradient(
+      begin: begin,
+      end: end,
+      colors: [
+        const Color(0xFF1A3A6B), // deep blue
+        const Color(0xFF0A1A2F), // navy
+      ],
     );
   }
 }

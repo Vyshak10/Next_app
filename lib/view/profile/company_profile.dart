@@ -1615,4 +1615,50 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
             ),
     );
   }
+
+  // Add blue gradient greeting logic
+  LinearGradient getGreetingGradient(AlignmentGeometry begin, AlignmentGeometry end) {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      // Morning: very light to light blue
+      return LinearGradient(
+        begin: begin,
+        end: end,
+        colors: [
+          const Color(0xFFE3F0FF), // very light blue
+          const Color(0xFFB3D8FF), // light blue
+        ],
+      );
+    } else if (hour >= 12 && hour < 17) {
+      // Afternoon: light blue to blue
+      return LinearGradient(
+        begin: begin,
+        end: end,
+        colors: [
+          const Color(0xFFB3D8FF), // light blue
+          const Color(0xFF4F8CFF), // blue
+        ],
+      );
+    } else if (hour >= 17 && hour < 21) {
+      // Evening: blue to deep blue
+      return LinearGradient(
+        begin: begin,
+        end: end,
+        colors: [
+          const Color(0xFF4F8CFF), // blue
+          const Color(0xFF1A3A6B), // deep blue
+        ],
+      );
+    } else {
+      // Night: deep blue to navy
+      return LinearGradient(
+        begin: begin,
+        end: end,
+        colors: [
+          const Color(0xFF1A3A6B), // deep blue
+          const Color(0xFF0A1A2F), // navy
+        ],
+      );
+    }
+  }
 }
