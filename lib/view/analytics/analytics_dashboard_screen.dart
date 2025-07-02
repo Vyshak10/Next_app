@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:math' as math;
+import 'package:fl_chart/fl_chart.dart';
 
 class AnalyticsDashboardScreen extends StatefulWidget {
   final String userId;
@@ -29,7 +30,24 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadAllAnalytics();
+    // Inject dummy data for demo/professional look
+    totalProfileViews = 1240;
+    totalPostLikes = 320;
+    totalConnections = 87;
+    userPosts = [
+      {'title': 'AI Launch', 'likes': 120, 'views': 400, 'date': '2024-06-01'},
+      {'title': 'Funding Secured', 'likes': 80, 'views': 300, 'date': '2024-05-25'},
+      {'title': 'New Partnership', 'likes': 60, 'views': 220, 'date': '2024-05-20'},
+      {'title': 'Product Update', 'likes': 40, 'views': 180, 'date': '2024-05-15'},
+      {'title': 'Team Expansion', 'likes': 20, 'views': 140, 'date': '2024-05-10'},
+    ];
+    recentConnections = [
+      {'name': 'Alice', 'type': 'Connection', 'date': '2024-06-01'},
+      {'name': 'Bob', 'type': 'Like', 'date': '2024-05-30'},
+      {'name': 'Charlie', 'type': 'View', 'date': '2024-05-29'},
+      {'name': 'Diana', 'type': 'Connection', 'date': '2024-05-28'},
+    ];
+    _isLoading = false;
   }
 
   Future<String?> _getToken() async {
@@ -189,17 +207,151 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                               const SizedBox(height: 12),
                               SizedBox(
                                 height: 180,
-                                child: _SimpleBarChart(posts: userPosts),
+                                child: BarChart(
+                                  BarChartData(
+                                    alignment: BarChartAlignment.spaceAround,
+                                    maxY: 140,
+                                    barTouchData: BarTouchData(enabled: true),
+                                    titlesData: FlTitlesData(
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(showTitles: true, reservedSize: 28),
+                                      ),
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) {
+                                            final idx = value.toInt();
+                                            if (idx < 0 || idx >= userPosts.length) return Container();
+                                            return Text(userPosts[idx]['title'].toString().split(' ')[0], style: TextStyle(fontSize: 10));
+                                          },
+                                          reservedSize: 32,
+                                        ),
+                                      ),
+                                    ),
+                                    borderData: FlBorderData(show: false),
+                                    barGroups: [
+                                      for (int i = 0; i < userPosts.length; i++)
+                                        BarChartGroupData(x: i, barRods: [
+                                          BarChartRodData(toY: (userPosts[i]['likes'] as int).toDouble(), color: Colors.blueAccent, width: 18),
+                                        ]),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ],
                           ),
+                        const SizedBox(height: 24.0),
+                        // Line chart for post views
+                        if (userPosts.isNotEmpty)
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text('Post Views Trend', style: Theme.of(context).textTheme.titleLarge),
+                                  const SizedBox(width: 8),
+                                  Tooltip(
+                                    message: 'Views trend for your recent posts',
+                                    child: const Icon(Icons.show_chart, size: 18, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                height: 180,
+                                child: LineChart(
+                                  LineChartData(
+                                    lineBarsData: [
+                                      LineChartBarData(
+                                        spots: [
+                                          for (int i = 0; i < userPosts.length; i++)
+                                            FlSpot(i.toDouble(), (userPosts[i]['views'] as int).toDouble()),
+                                        ],
+                                        isCurved: true,
+                                        color: Colors.green,
+                                        barWidth: 4,
+                                        dotData: FlDotData(show: true),
+                                      ),
+                                    ],
+                                    titlesData: FlTitlesData(
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(showTitles: true, reservedSize: 28),
+                                      ),
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (value, meta) {
+                                            final idx = value.toInt();
+                                            if (idx < 0 || idx >= userPosts.length) return Container();
+                                            return Text(userPosts[idx]['title'].toString().split(' ')[0], style: TextStyle(fontSize: 10));
+                                          },
+                                          reservedSize: 32,
+                                        ),
+                                      ),
+                                    ),
+                                    borderData: FlBorderData(show: false),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        const SizedBox(height: 24.0),
+                        // Pie chart for engagement
+                        Text('Engagement Breakdown', style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 180,
+                          child: PieChart(
+                            PieChartData(
+                              sections: [
+                                PieChartSectionData(
+                                  value: totalProfileViews.toDouble(),
+                                  color: Colors.blue,
+                                  title: 'Views',
+                                  radius: 50,
+                                  titleStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                PieChartSectionData(
+                                  value: totalPostLikes.toDouble(),
+                                  color: Colors.orange,
+                                  title: 'Likes',
+                                  radius: 45,
+                                  titleStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                PieChartSectionData(
+                                  value: totalConnections.toDouble(),
+                                  color: Colors.green,
+                                  title: 'Connections',
+                                  radius: 40,
+                                  titleStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                              ],
+                              sectionsSpace: 4,
+                              centerSpaceRadius: 30,
+                            ),
+                          ),
+                        ),
                         const SizedBox(height: 24.0),
                         // Recent activity timeline
                         Text('Recent Activity', style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 12),
                         if (recentConnections.isEmpty)
-                          const Text('No recent activity.', style: TextStyle(color: Colors.grey)),
-                        ...recentConnections.map((activity) => _buildActivityTile(activity)).toList(),
+                          Text('No recent activity.', style: TextStyle(color: Colors.grey[600])),
+                        if (recentConnections.isNotEmpty)
+                          Column(
+                            children: recentConnections.map((activity) => ListTile(
+                              leading: Icon(
+                                activity['type'] == 'Connection' ? Icons.person_add :
+                                activity['type'] == 'Like' ? Icons.thumb_up :
+                                Icons.visibility,
+                                color: activity['type'] == 'Connection' ? Colors.green :
+                                       activity['type'] == 'Like' ? Colors.orange :
+                                       Colors.blue,
+                              ),
+                              title: Text(activity['name']),
+                              subtitle: Text('${activity['type']} • ${activity['date']}'),
+                            )).toList(),
+                          ),
                         const SizedBox(height: 32),
                         // Post Engagement List
                         Text('Post Engagement', style: Theme.of(context).textTheme.titleLarge),
@@ -260,34 +412,6 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
         Text('$value', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
       ],
-    );
-  }
-
-  Widget _buildActivityTile(Map<String, dynamic> activity) {
-    final type = activity['type'] ?? 'connection';
-    final icon = type == 'investment'
-        ? Icons.trending_up
-        : type == 'meeting'
-            ? Icons.video_call
-            : Icons.person_add_alt_1;
-    final color = type == 'investment'
-        ? Colors.green
-        : type == 'meeting'
-            ? Colors.blue
-            : Colors.orange;
-    final description = type == 'investment'
-        ? 'Investment: ₹${activity['amount']}'
-        : type == 'meeting'
-            ? 'Meeting ${activity['status']}'
-            : 'Connected with ${activity['other_user_name'] ?? 'User'}';
-    final time = activity['created_at'] ?? '';
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: color.withOpacity(0.15),
-        child: Icon(icon, color: color),
-      ),
-      title: Text(description, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(time, style: const TextStyle(fontSize: 12)),
     );
   }
 }
