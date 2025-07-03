@@ -6,59 +6,50 @@ class AuthService {
   final String baseUrl = kBackendBaseUrl;
 
   /// SIGN UP
-  Future<Map<String, dynamic>> signUp({
-    required String email,
-    required String password,
-    required String userType,
-    required String name,
-    String? companyName,
-    String? industry,
-    String? startupName,
-    String? stage,
-    String? fullName,
-    String? skills,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/signup.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'email': email,
-          'password': password,
-          'userType': userType,
-          'name': name,
-          'companyName': companyName,
-          'industry': industry,
-          'startupName': startupName,
-          'stage': stage,
-          'fullName': fullName,
-          'skills': skills,
-        }),
-      );
+ // Update your AuthService.signUp() method to match PHP expectations
+Future<Map<String, dynamic>> signUp({
+  required String email,
+  required String password,
+  required String userType,
+  required String name,
+  required String phone,  // This should be the main name field
+  String? companyName,
+  String? industry,
+  String? startupName,
+  String? stage,
+  String? fullName,
+  String? skills,
 
-      final data = json.decode(response.body);
-      
-      if (response.statusCode == 200) {
-        return {
-          'success': data['success'] ?? false,
-          'message': data['message'] ?? 'Signup failed',
-          'error': data['error'],
-        };
-      } else {
-        return {
-          'success': false,
-          'message': 'Server error: ${response.statusCode}',
-          'error': 'Server error',
-        };
-      }
-    } catch (e) {
-      return {
-        'success': false,
-        'message': 'Network error occurred',
-        'error': e.toString(),
-      };
+}) async {
+  try {
+    final response = await http.post(
+      Uri.parse('${baseUrl}/signup.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': email,
+        'password': password,
+        'userType': userType,
+        'name': name, // Make sure this matches what PHP expects
+        'phone': phone,
+        // Add other fields as needed
+        'companyName': companyName,
+        'industry': industry,
+        'startupName': startupName,
+        'stage': stage,
+        'fullName': fullName,
+        'skills': skills,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      return {'success': false, 'message': 'Server error: ${response.statusCode}'};
     }
+  } catch (e) {
+    return {'success': false, 'message': 'Network error: $e'};
   }
+}
 
   /// LOGIN
   Future<Map<String, dynamic>> login({

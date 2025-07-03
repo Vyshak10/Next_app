@@ -3,6 +3,7 @@ import 'package:next_app/services/auth_service.dart';
 import 'package:next_app/views/signup_view.dart';
 import 'package:next_app/views/forgot_password_view.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -42,12 +43,18 @@ class _LoginViewState extends State<LoginView> {
         password: _passwordController.text,
         userType: 'seeker', // Default to seeker for now
       );
+      print('DEBUG: Login result: ' + result.toString());
       
       if (result['success']) {
         // Store user ID in secure storage
         final userId = result['userData']?['id']?.toString();
         if (userId != null && userId.isNotEmpty) {
+          print('DEBUG: About to save user_id: ' + userId);
           await _storage.write(key: 'user_id', value: userId);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_id', userId);
+          String? testId = prefs.getString('user_id');
+          print('DEBUG: Immediately read user_id from shared_preferences: ' + (testId ?? 'null'));
         }
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');

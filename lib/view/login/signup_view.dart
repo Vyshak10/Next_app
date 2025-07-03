@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:next_app/services/auth_service.dart';
 import '../../common_widget/animated_greeting_gradient_mixin.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -69,30 +71,35 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
     try {
       final authService = AuthService();
       final result = await authService.signUp(
-  email: email,
-  password: password,
-  userType: userType,
-  name: userType == 'Established Company'
-      ? companyNameController.text.trim()
-      : userType == 'Startup'
-          ? startupNameController.text.trim()
-          : fullNameController.text.trim(),
-  companyName: companyNameController.text.trim(),
-  industry: industryController.text.trim(),
-  startupName: startupNameController.text.trim(),
-  stage: stageController.text.trim(),
-  fullName: fullNameController.text.trim(),
-  skills: skillsController.text.trim(),
-  // phone: phone,
-);
+        email: email,
+        password: password,
+        userType: userType,
+        name: userType == 'Established Company'
+            ? companyNameController.text.trim()
+            : userType == 'Startup'
+                ? startupNameController.text.trim()
+                : fullNameController.text.trim(),
+        companyName: companyNameController.text.trim(),
+        industry: industryController.text.trim(),
+        startupName: startupNameController.text.trim(),
+        stage: stageController.text.trim(),
+        fullName: fullNameController.text.trim(),
+        skills: skillsController.text.trim(),
+        phone: phoneController.text.trim(),
+      );
 
-
-      if (result['success'] == true) {
-        _showSnackBar('Signup successful! Please check your email for verification.');
-        Navigator.pushReplacementNamed(context, '/login', arguments: {'userType': userType});
-      } else {
-        _showSnackBar(result['message'] ?? 'Signup failed');
+      print('DEBUG: Signup result: ' + result.toString());
+      if (result['userId'] != null) {
+        print('DEBUG: About to save user_id: ' + result['userId'].toString());
+        final storage = FlutterSecureStorage();
+        await storage.write(key: 'user_id', value: result['userId'].toString());
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_id', result['userId'].toString());
+        String? testId = prefs.getString('user_id');
+        print('DEBUG: Immediately read user_id from shared_preferences: ' + (testId ?? 'null'));
       }
+      _showSnackBar('Signup successful! Please check your email for verification.');
+      Navigator.pushReplacementNamed(context, '/login', arguments: {'userType': userType});
     } catch (e) {
       _showSnackBar('An error occurred: ${e.toString()}');
     } finally {
@@ -500,14 +507,7 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
             border: OutlineInputBorder(),
           ),
         ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: fullNameController,
-          decoration: const InputDecoration(
-            labelText: 'Founder Name',
-            border: OutlineInputBorder(),
-          ),
-        ),
+    
       ],
     );
   }

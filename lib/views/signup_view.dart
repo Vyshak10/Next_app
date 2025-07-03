@@ -24,6 +24,7 @@ class _SignupViewState extends State<SignupView> {
   final _stageController = TextEditingController();
   final _fullNameController = TextEditingController();
   final _skillsController = TextEditingController();
+  final _phoneController = TextEditingController();
 
   @override
   void dispose() {
@@ -36,6 +37,7 @@ class _SignupViewState extends State<SignupView> {
     _stageController.dispose();
     _fullNameController.dispose();
     _skillsController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -71,6 +73,7 @@ class _SignupViewState extends State<SignupView> {
   skills: _selectedUserType == 'seeker'
       ? _skillsController.text
       : null,
+  phone: _phoneController.text,
 );
 
 
@@ -318,6 +321,21 @@ class _SignupViewState extends State<SignupView> {
                   ),
                   const SizedBox(height: 16),
                   _buildUserTypeFields(),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration: const InputDecoration(
+                      labelText: 'Phone Number',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.phone),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your phone number';
+                      }
+                      return null;
+                    },
+                  ),
                   if (_errorMessage != null) ...[
                     const SizedBox(height: 16),
                     Text(

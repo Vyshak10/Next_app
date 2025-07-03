@@ -86,7 +86,7 @@ class _CompanyScreenState extends State<CompanyScreen>
       case 1:
         return const MessagesPage();
       case 2:
-        return company_profile.CompanyProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0));
+        return company_profile.CompanyProfileScreen(onBackTap: () => _onItemTapped(0));
       case 3:
         return AnalyticsDashboardScreen(userId: userId);
       default:
@@ -1291,19 +1291,14 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                   itemCount: _posts.length,
                   itemBuilder: (context, index) {
                     final post = _posts[index];
-                    // Only show posts where user_type is 'startup'
-                    if (post['user_type'] != null && post['user_type'].toString().toLowerCase() == 'startup') {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 15),
-                        child: PostCard(
-                          post: post,
-                          onLikePressed: () => _toggleLike(index),
-                          onCommentPressed: () => _showCommentsBottomSheet(post),
-                        ),
-                      );
-                    } else {
-                      return const SizedBox.shrink();
-                    }
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 15),
+                      child: PostCard(
+                        post: post,
+                        onLikePressed: () => _toggleLike(index),
+                        onCommentPressed: () => _showCommentsBottomSheet(post),
+                      ),
+                    );
                   },
                 ),
         ],

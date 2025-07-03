@@ -10,12 +10,13 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 // If you need to use ChatListPage, use the correct import:
 // import '../views/messages/chat_list_page.dart';
 import 'animated_greeting_gradient_mixin.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
-  final String userId;
+  final String? userId;
   final VoidCallback onBackTap;
 
-  const ProfileScreen({Key? key, required this.userId, required this.onBackTap}) : super(key: key);
+  const ProfileScreen({Key? key, this.userId, required this.onBackTap}) : super(key: key);
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -45,11 +46,12 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   final _videoController = TextEditingController();
   final _fundingGoalController = TextEditingController();
   final _fundingDescriptionController = TextEditingController();
+  String? _resolvedUserId;
 
   @override
   void initState() {
     super.initState();
-    fetchProfileData();
+    _resolveUserIdAndFetch();
     _initializeRazorpay();
   }
 
@@ -183,8 +185,34 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
-  Future<void> fetchProfileData() async {
-    final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=${widget.userId}');
+  Future<void> _resolveUserIdAndFetch() async {
+    String? id = widget.userId;
+    if (id == null) {
+      id = await storage.read(key: 'user_id');
+      print('DEBUG: Read user_id from FlutterSecureStorage: ' + (id ?? 'null'));
+      if (id == null) {
+        final prefs = await SharedPreferences.getInstance();
+        id = prefs.getString('user_id');
+        print('DEBUG: Read user_id from shared_preferences: ' + (id ?? 'null'));
+      }
+      if (id == null) {
+        id = '6852';
+        print('DEBUG: Forcing user_id to 6852 as backup');
+      }
+    } else {
+      print('DEBUG: Using widget.userId: ' + id);
+    }
+    setState(() => _resolvedUserId = id);
+    if (id != null) {
+      await fetchProfileData(id);
+    } else {
+      setState(() => isLoading = false);
+      _showErrorSnackBar('No user ID found');
+    }
+  }
+
+  Future<void> fetchProfileData(String userId) async {
+    final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=$userId');
     try {
       final response = await http.get(uri);
       if (response.statusCode == 200) {
@@ -293,7 +321,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         Uri.parse('https://indianrupeeservices.in/NEXT/backend/upload_avatar.php'),
       );
       
-      request.fields['user_id'] = widget.userId;
+      request.fields['user_id'] = _resolvedUserId ?? '';
       request.files.add(await http.MultipartFile.fromPath('avatar', image.path));
       
       var response = await request.send();
@@ -303,7 +331,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       if (response.statusCode == 200) {
         var jsonResponse = jsonDecode(responseString);
         if (jsonResponse['success'] == true) {
-          await fetchProfileData(); // Refresh profile data
+          if (_resolvedUserId != null) {
+            await fetchProfileData(_resolvedUserId!); // Refresh profile data
+          }
           _showSuccessSnackBar('Avatar updated successfully');
         } else {
           _showErrorSnackBar('Failed to upload avatar');

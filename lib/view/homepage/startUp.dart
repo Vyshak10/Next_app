@@ -52,7 +52,6 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
         return const MessagesPage();
       case 3:
         return ProfileScreen(
-          userId: userId,
           onBackTap: () => _onItemTapped(0),
         );
       default:
