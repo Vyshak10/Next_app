@@ -11,6 +11,8 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 // import '../views/messages/chat_list_page.dart';
 import '../../common_widget/animated_greeting_gradient_mixin.dart';
 import '../settings/settings_screen.dart';
+import '../../../services/image_picker_service.dart';
+import 'dart:typed_data';
 
 class CompanyProfileScreen extends StatefulWidget {
   final String? userId;
@@ -47,6 +49,8 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   final _videoController = TextEditingController();
   final _fundingGoalController = TextEditingController();
   final _fundingDescriptionController = TextEditingController();
+
+  Uint8List? _pickedAvatarBytes;
 
   @override
   void initState() {
@@ -286,34 +290,25 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
 
   Future<void> _uploadAvatar() async {
     try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 80,
-      );
-      
-      if (image == null) return;
-      
+      final bytes = await pickImage();
+      if (bytes == null) return;
       setState(() => isUploadingAvatar = true);
-      
       final storage = FlutterSecureStorage();
       final token = await storage.read(key: 'auth_token');
-      
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('https://indianrupeeservices.in/NEXT/backend/upload_avatar.php'),
       );
       request.fields['user_id'] = widget.userId ?? '';
-      request.files.add(await http.MultipartFile.fromPath('avatar', image.path));
+      request.files.add(
+        http.MultipartFile.fromBytes('avatar', bytes, filename: 'avatar.png'),
+      );
       if (token != null) {
         request.headers['Authorization'] = 'Bearer $token';
       }
-      
       var response = await request.send();
       var responseData = await response.stream.toBytes();
       var responseString = String.fromCharCodes(responseData);
-      
       if (response.statusCode == 200) {
         var jsonResponse = jsonDecode(responseString);
         if (jsonResponse['success'] == true) {
@@ -323,13 +318,13 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
             await fetchProfileData(_resolvedUserId!);
           }
           _showSuccessSnackBar('Avatar updated successfully');
-          widget.onBackTap(); // Trigger refresh in parent
+          widget.onBackTap();
         } else {
           print('Upload failed: ' + responseString);
           _showErrorSnackBar('Failed to upload avatar');
         }
       } else {
-        print('Upload failed: HTTP ${response.statusCode} - ' + responseString);
+        print('Upload failed: HTTP ${response.statusCode} - ' + responseString);
         _showErrorSnackBar('Upload failed');
       }
     } catch (e) {
@@ -878,7 +873,9 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                       child: CircleAvatar(
                         radius: 52,
                         backgroundColor: Colors.grey[300],
-                        backgroundImage: hasAvatar ? NetworkImage(cacheBustedUrl!) : null,
+                        backgroundImage: _pickedAvatarBytes != null
+                            ? MemoryImage(_pickedAvatarBytes!)
+                            : (hasAvatar ? NetworkImage(cacheBustedUrl!) : null),
                         child: !hasAvatar 
                           ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
                           : null,
@@ -902,7 +899,9 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                       child: CircleAvatar(
                         radius: 52,
                         backgroundColor: Colors.grey[300],
-                        backgroundImage: hasAvatar ? NetworkImage(cacheBustedUrl!) : null,
+                        backgroundImage: _pickedAvatarBytes != null
+                            ? MemoryImage(_pickedAvatarBytes!)
+                            : (hasAvatar ? NetworkImage(cacheBustedUrl!) : null),
                         child: !hasAvatar 
                           ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
                           : null,

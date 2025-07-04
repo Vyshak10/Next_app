@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import '../../services/image_picker_service.dart';
+import 'dart:typed_data';
 
 class PostScreen extends StatefulWidget {
   const PostScreen({super.key});
@@ -16,6 +18,7 @@ class _PostScreenState extends State<PostScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoading = false;
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  List<Uint8List> _selectedImages = [];
 
   @override
   void initState() {
@@ -238,7 +241,7 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
   final TextEditingController _tagsController = TextEditingController();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   final ImagePicker _picker = ImagePicker();
-  List<File> _selectedImages = [];
+  List<Uint8List> _selectedImages = [];
   bool _isLoading = false;
 
   Future<String?> getAuthToken() async {
@@ -247,10 +250,10 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
 
   Future<void> _pickImages() async {
     try {
-      final List<XFile> images = await _picker.pickMultiImage();
-      if (images.isNotEmpty) {
+      final List<Uint8List>? images = await pickImages();
+      if (images != null && images.isNotEmpty) {
         setState(() {
-          _selectedImages = images.map((xfile) => File(xfile.path)).toList();
+          _selectedImages = images;
         });
       }
     } catch (e) {
@@ -302,9 +305,10 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
       // Add images
       for (int i = 0; i < _selectedImages.length; i++) {
         request.files.add(
-          await http.MultipartFile.fromPath(
+          http.MultipartFile.fromBytes(
             'images[]',
-            _selectedImages[i].path,
+            _selectedImages[i],
+            filename: 'image_$i.png',
           ),
         );
       }
@@ -471,7 +475,7 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(8),
                                     image: DecorationImage(
-                                      image: FileImage(_selectedImages[index]),
+                                      image: MemoryImage(_selectedImages[index]),
                                       fit: BoxFit.cover,
                                     ),
                                   ),

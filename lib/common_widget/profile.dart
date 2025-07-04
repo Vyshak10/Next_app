@@ -11,6 +11,9 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 // import '../views/messages/chat_list_page.dart';
 import 'animated_greeting_gradient_mixin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../view/settings/settings_screen.dart';
+import '../services/image_picker_service.dart';
+import 'dart:typed_data';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -47,6 +50,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   final _fundingGoalController = TextEditingController();
   final _fundingDescriptionController = TextEditingController();
   String? _resolvedUserId;
+  Uint8List? _pickedAvatarBytes;
 
   @override
   void initState() {
@@ -303,43 +307,43 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     }
   }
 
+  Future<void> _pickAvatar() async {
+    final bytes = await pickImage();
+    if (bytes != null) {
+      setState(() => _pickedAvatarBytes = bytes);
+    }
+  }
+
   Future<void> _uploadAvatar() async {
     try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 800,
-        maxHeight: 800,
-        imageQuality: 80,
-      );
-      
-      if (image == null) return;
-      
-      setState(() => isUploadingAvatar = true);
-      
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/upload_avatar.php'),
-      );
-      
-      request.fields['user_id'] = _resolvedUserId ?? '';
-      request.files.add(await http.MultipartFile.fromPath('avatar', image.path));
-      
-      var response = await request.send();
-      var responseData = await response.stream.toBytes();
-      var responseString = String.fromCharCodes(responseData);
-      
-      if (response.statusCode == 200) {
-        var jsonResponse = jsonDecode(responseString);
-        if (jsonResponse['success'] == true) {
-          if (_resolvedUserId != null) {
-            await fetchProfileData(_resolvedUserId!); // Refresh profile data
+      if (_pickedAvatarBytes != null) {
+        var request = http.MultipartRequest(
+          'POST',
+          Uri.parse('https://indianrupeeservices.in/NEXT/backend/upload_avatar.php'),
+        );
+        
+        request.fields['user_id'] = _resolvedUserId ?? '';
+        request.files.add(
+          http.MultipartFile.fromBytes('avatar', _pickedAvatarBytes!, filename: 'avatar.png'),
+        );
+        
+        var response = await request.send();
+        var responseData = await response.stream.toBytes();
+        var responseString = String.fromCharCodes(responseData);
+        
+        if (response.statusCode == 200) {
+          var jsonResponse = jsonDecode(responseString);
+          if (jsonResponse['success'] == true) {
+            if (_resolvedUserId != null) {
+              await fetchProfileData(_resolvedUserId!); // Refresh profile data
+            }
+            _showSuccessSnackBar('Avatar updated successfully');
+          } else {
+            _showErrorSnackBar('Failed to upload avatar');
           }
-          _showSuccessSnackBar('Avatar updated successfully');
         } else {
-          _showErrorSnackBar('Failed to upload avatar');
+          _showErrorSnackBar('Upload failed');
         }
-      } else {
-        _showErrorSnackBar('Upload failed');
       }
     } catch (e) {
       _showErrorSnackBar('Error uploading avatar: $e');
@@ -885,7 +889,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       child: CircleAvatar(
                         radius: 52,
                         backgroundColor: Colors.grey[300],
-                        backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+                        backgroundImage: _pickedAvatarBytes != null
+                            ? MemoryImage(_pickedAvatarBytes!)
+                            : (hasAvatar ? NetworkImage(avatarUrl) : null),
                         child: !hasAvatar 
                           ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
                           : null,
@@ -909,7 +915,9 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                       child: CircleAvatar(
                         radius: 52,
                         backgroundColor: Colors.grey[300],
-                        backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+                        backgroundImage: _pickedAvatarBytes != null
+                            ? MemoryImage(_pickedAvatarBytes!)
+                            : (hasAvatar ? NetworkImage(avatarUrl) : null),
                         child: !hasAvatar 
                           ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
                           : null,
@@ -944,7 +952,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
                               )
                             : IconButton(
                                 icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                                onPressed: _uploadAvatar,
+                                onPressed: _pickAvatar,
                               ),
                       ),
                     ),
@@ -1593,19 +1601,47 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                children: [
-                  _buildProfileHeader(),
-                  _buildInfoSection(),
-                  _buildPitchVideoSection(),
-                  _buildPostsSection(),
-                  const SizedBox(height: 20),
-                ],
-              ),
+      body: Stack(
+        children: [
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildProfileHeader(),
+                      _buildInfoSection(),
+                      _buildPitchVideoSection(),
+                      _buildPostsSection(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+          // Add settings button in the profile header
+          Positioned(
+            top: 32,
+            right: 24,
+            child: IconButton(
+              icon: Icon(Icons.settings, color: Colors.grey[800], size: 28),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => Container(
+                    height: MediaQuery.of(context).size.height * 0.92,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                    child: const SettingsScreen(),
+                  ),
+                );
+              },
+              tooltip: 'Settings',
             ),
+          ),
+        ],
+      ),
     );
   }
 }
