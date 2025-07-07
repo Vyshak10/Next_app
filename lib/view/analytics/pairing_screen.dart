@@ -35,7 +35,6 @@ class _PairingScreenState extends State<PairingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pair with Startup')),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -53,11 +52,6 @@ class _PairingScreenState extends State<PairingScreen> {
       children: [
         Icon(Icons.link, size: 64, color: Colors.blueAccent),
         const SizedBox(height: 16),
-        Text(
-          'Pair with a Startup',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
         Text(
           'Enter the 8-character pairing code provided by the startup to monitor their analytics.',
           style: TextStyle(fontSize: 16, color: Colors.grey[700]),
