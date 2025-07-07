@@ -1,465 +1,484 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 
 class AnalyticsDashboardScreen extends StatefulWidget {
   final String userId;
-
   const AnalyticsDashboardScreen({Key? key, required this.userId}) : super(key: key);
 
   @override
-  _AnalyticsDashboardScreenState createState() => _AnalyticsDashboardScreenState();
+  State<AnalyticsDashboardScreen> createState() => _AnalyticsDashboardScreenState();
 }
 
 class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
-  final storage = const FlutterSecureStorage();
+  int _selectedStartupIndex = 0;
+  String _growthView = 'Month'; // 'Month', '6 Months', 'Year'
 
-  int totalProfileViews = 0;
-  int totalPostLikes = 0;
-  int totalConnections = 0;
-  List<Map<String, dynamic>> userPosts = [];
-  List<Map<String, dynamic>> recentConnections = [];
-  bool _isLoading = true;
-  String _errorMessage = '';
-
-  String baseUrl = 'https://indianrupeeservices.in/NEXT/backend'; // Use your actual backend URL
-
-  @override
-  void initState() {
-    super.initState();
-    // Inject dummy data for demo/professional look
-    totalProfileViews = 1240;
-    totalPostLikes = 320;
-    totalConnections = 87;
-    userPosts = [
-      {'title': 'AI Launch', 'likes': 120, 'views': 400, 'date': '2024-06-01'},
-      {'title': 'Funding Secured', 'likes': 80, 'views': 300, 'date': '2024-05-25'},
-      {'title': 'New Partnership', 'likes': 60, 'views': 220, 'date': '2024-05-20'},
-      {'title': 'Product Update', 'likes': 40, 'views': 180, 'date': '2024-05-15'},
-      {'title': 'Team Expansion', 'likes': 20, 'views': 140, 'date': '2024-05-10'},
-    ];
-    recentConnections = [
-      {'name': 'Alice', 'type': 'Connection', 'date': '2024-06-01'},
-      {'name': 'Bob', 'type': 'Like', 'date': '2024-05-30'},
-      {'name': 'Charlie', 'type': 'View', 'date': '2024-05-29'},
-      {'name': 'Diana', 'type': 'Connection', 'date': '2024-05-28'},
-    ];
-    _isLoading = false;
-  }
-
-  Future<String?> _getToken() async {
-    return await storage.read(key: 'auth_token');
-  }
-
-  Future<void> _loadAllAnalytics() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = '';
-    });
-
-    try {
-      await Future.wait([
-        _loadProfileViews(),
-        _loadPostLikes(),
-        _loadConnections(),
-        _loadUserPostsAnalytics(),
-        _loadConnectionActivity(),
-      ]);
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Failed to load analytics: $e';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _loadProfileViews() async {
-    final token = await _getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/analytics/profile-views?user_id=${widget.userId}'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      totalProfileViews = data['count'] ?? 0;
-    }
-  }
-
-  Future<void> _loadPostLikes() async {
-    final token = await _getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/analytics/post-likes?user_id=${widget.userId}'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      totalPostLikes = data['count'] ?? 0;
-    }
-  }
-
-  Future<void> _loadConnections() async {
-    final token = await _getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/analytics/connections?user_id=${widget.userId}'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      totalConnections = data['count'] ?? 0;
-    }
-  }
-
-  Future<void> _loadUserPostsAnalytics() async {
-    final token = await _getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/analytics/posts?user_id=${widget.userId}'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      userPosts = List<Map<String, dynamic>>.from(data['posts']);
-    }
-  }
-
-  Future<void> _loadConnectionActivity() async {
-    final token = await _getToken();
-    final response = await http.get(
-      Uri.parse('$baseUrl/analytics/recent-connections?user_id=${widget.userId}'),
-      headers: {'Authorization': 'Bearer $token'},
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      recentConnections = List<Map<String, dynamic>>.from(data['connections']);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: null,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadAllAnalytics,
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _errorMessage.isNotEmpty
-              ? Center(child: Text(_errorMessage.contains('XMLHttpRequest')
-                  ? 'Network error: Please check your internet connection or backend CORS settings.'
-                  : 'Error: $_errorMessage'))
-              : RefreshIndicator(
-                  onRefresh: _loadAllAnalytics,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Summary metrics card
-                        Card(
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          color: Colors.blue.shade50,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceAround,
-                              children: [
-                                _buildSummaryMetric(Icons.visibility, 'Views', totalProfileViews, Colors.blue),
-                                _buildSummaryMetric(Icons.thumb_up, 'Likes', totalPostLikes, Colors.orange),
-                                _buildSummaryMetric(Icons.people, 'Connections', totalConnections, Colors.green),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24.0),
-                        // Bar chart for post likes
-                        if (userPosts.isNotEmpty)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text('Post Likes Overview', style: Theme.of(context).textTheme.titleLarge),
-                                  const SizedBox(width: 8),
-                                  Tooltip(
-                                    message: 'Shows likes for your recent posts',
-                                    child: const Icon(Icons.info_outline, size: 18, color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                height: 180,
-                                child: BarChart(
-                                  BarChartData(
-                                    alignment: BarChartAlignment.spaceAround,
-                                    maxY: 140,
-                                    barTouchData: BarTouchData(enabled: true),
-                                    titlesData: FlTitlesData(
-                                      leftTitles: AxisTitles(
-                                        sideTitles: SideTitles(showTitles: true, reservedSize: 28),
-                                      ),
-                                      bottomTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          getTitlesWidget: (value, meta) {
-                                            final idx = value.toInt();
-                                            if (idx < 0 || idx >= userPosts.length) return Container();
-                                            return Text(userPosts[idx]['title'].toString().split(' ')[0], style: TextStyle(fontSize: 10));
-                                          },
-                                          reservedSize: 32,
-                                        ),
-                                      ),
-                                    ),
-                                    borderData: FlBorderData(show: false),
-                                    barGroups: [
-                                      for (int i = 0; i < userPosts.length; i++)
-                                        BarChartGroupData(x: i, barRods: [
-                                          BarChartRodData(toY: (userPosts[i]['likes'] as int).toDouble(), color: Colors.blueAccent, width: 18),
-                                        ]),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        const SizedBox(height: 24.0),
-                        // Line chart for post views
-                        if (userPosts.isNotEmpty)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Text('Post Views Trend', style: Theme.of(context).textTheme.titleLarge),
-                                  const SizedBox(width: 8),
-                                  Tooltip(
-                                    message: 'Views trend for your recent posts',
-                                    child: const Icon(Icons.show_chart, size: 18, color: Colors.grey),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                height: 180,
-                                child: LineChart(
-                                  LineChartData(
-                                    lineBarsData: [
-                                      LineChartBarData(
-                                        spots: [
-                                          for (int i = 0; i < userPosts.length; i++)
-                                            FlSpot(i.toDouble(), (userPosts[i]['views'] as int).toDouble()),
-                                        ],
-                                        isCurved: true,
-                                        color: Colors.green,
-                                        barWidth: 4,
-                                        dotData: FlDotData(show: true),
-                                      ),
-                                    ],
-                                    titlesData: FlTitlesData(
-                                      leftTitles: AxisTitles(
-                                        sideTitles: SideTitles(showTitles: true, reservedSize: 28),
-                                      ),
-                                      bottomTitles: AxisTitles(
-                                        sideTitles: SideTitles(
-                                          showTitles: true,
-                                          getTitlesWidget: (value, meta) {
-                                            final idx = value.toInt();
-                                            if (idx < 0 || idx >= userPosts.length) return Container();
-                                            return Text(userPosts[idx]['title'].toString().split(' ')[0], style: TextStyle(fontSize: 10));
-                                          },
-                                          reservedSize: 32,
-                                        ),
-                                      ),
-                                    ),
-                                    borderData: FlBorderData(show: false),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        const SizedBox(height: 24.0),
-                        // Pie chart for engagement
-                        Text('Engagement Breakdown', style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 180,
-                          child: PieChart(
-                            PieChartData(
-                              sections: [
-                                PieChartSectionData(
-                                  value: totalProfileViews.toDouble(),
-                                  color: Colors.blue,
-                                  title: 'Views',
-                                  radius: 50,
-                                  titleStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                                PieChartSectionData(
-                                  value: totalPostLikes.toDouble(),
-                                  color: Colors.orange,
-                                  title: 'Likes',
-                                  radius: 45,
-                                  titleStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                                PieChartSectionData(
-                                  value: totalConnections.toDouble(),
-                                  color: Colors.green,
-                                  title: 'Connections',
-                                  radius: 40,
-                                  titleStyle: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                              ],
-                              sectionsSpace: 4,
-                              centerSpaceRadius: 30,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24.0),
-                        // Recent activity timeline
-                        Text('Recent Activity', style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 12),
-                        if (recentConnections.isEmpty)
-                          Text('No recent activity.', style: TextStyle(color: Colors.grey[600])),
-                        if (recentConnections.isNotEmpty)
-                          Column(
-                            children: recentConnections.map((activity) => ListTile(
-                              leading: Icon(
-                                activity['type'] == 'Connection' ? Icons.person_add :
-                                activity['type'] == 'Like' ? Icons.thumb_up :
-                                Icons.visibility,
-                                color: activity['type'] == 'Connection' ? Colors.green :
-                                       activity['type'] == 'Like' ? Colors.orange :
-                                       Colors.blue,
-                              ),
-                              title: Text(activity['name']),
-                              subtitle: Text('${activity['type']} • ${activity['date']}'),
-                            )).toList(),
-                          ),
-                        const SizedBox(height: 32),
-                        // Post Engagement List
-                        Text('Post Engagement', style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 16.0),
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: userPosts.length,
-                          itemBuilder: (context, index) {
-                            final post = userPosts[index];
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 4.0),
-                              elevation: 1.0,
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        post['title'] ?? 'Untitled Post',
-                                        style: Theme.of(context).textTheme.titleMedium,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.rocket_launch_rounded, size: 18.0, color: Colors.orange[700]),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          post['like_count'].toString(),
-                                          style: Theme.of(context).textTheme.titleMedium,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-    );
-  }
-
-  Widget _buildSummaryMetric(IconData icon, String label, int value, Color color) {
-    return Column(
-      children: [
-        CircleAvatar(
-          backgroundColor: color.withOpacity(0.15),
-          child: Icon(icon, color: color, size: 28),
-          radius: 28,
-        ),
-        const SizedBox(height: 8),
-        Text('$value', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+  final List<Map<String, dynamic>> _dummyStartups = [
+    {
+      'startupName': 'TechNova',
+      'startupCode': 'ABCD1234',
+      'totalInvestment': 150000.00,
+      'postReach': 12000,
+      'postImpressions': 45000,
+      'companies': [
+        {'name': 'Alpha Ventures', 'amount': 100000},
+        {'name': 'Beta Capital', 'amount': 50000},
       ],
-    );
-  }
-}
+      'numPosts': 24,
+      'avgEngagementRate': 7.2, // percent
+      'lastPaired': '2024-06-10',
+      'activityTimeline': [
+        {'date': '2024-06-10', 'event': 'Paired with TechNova'},
+        {'date': '2024-06-09', 'event': 'Investment increased by ₹50,000'},
+        {'date': '2024-06-08', 'event': 'New post published'},
+        {'date': '2024-06-07', 'event': 'Impressions milestone reached'},
+      ],
+      'growth': {
+        'Month': [100, 120, 150, 180, 210, 250, 300, 350, 400, 470, 540, 600],
+        '6 Months': [100, 180, 300, 400, 540, 600],
+        'Year': [100, 180, 250, 320, 400, 480, 600, 700, 800, 900, 1000, 1200],
+        'labels': {
+          'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+          '6 Months': ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'],
+          'Year': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        },
+      },
+    },
+    {
+      'startupName': 'GreenSpark',
+      'startupCode': 'EFGH5678',
+      'totalInvestment': 90000.00,
+      'postReach': 8000,
+      'postImpressions': 22000,
+      'companies': [
+        {'name': 'Eco Investors', 'amount': 60000},
+        {'name': 'Future Fund', 'amount': 30000},
+      ],
+      'numPosts': 15,
+      'avgEngagementRate': 5.8, // percent
+      'lastPaired': '2024-06-09',
+      'activityTimeline': [
+        {'date': '2024-06-09', 'event': 'Paired with GreenSpark'},
+        {'date': '2024-06-08', 'event': 'Investment increased by ₹30,000'},
+        {'date': '2024-06-07', 'event': 'New post published'},
+        {'date': '2024-06-06', 'event': 'Reached 20,000 impressions'},
+      ],
+      'growth': {
+        'Month': [80, 100, 120, 140, 160, 180, 210, 230, 250, 270, 300, 340],
+        '6 Months': [80, 120, 180, 230, 270, 340],
+        'Year': [80, 120, 160, 200, 240, 280, 320, 360, 400, 440, 480, 520],
+        'labels': {
+          'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+          '6 Months': ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'],
+          'Year': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        },
+      },
+    },
+    {
+      'startupName': 'MedixFlow',
+      'startupCode': 'IJKL9012',
+      'totalInvestment': 200000.00,
+      'postReach': 18000,
+      'postImpressions': 60000,
+      'companies': [
+        {'name': 'Health Angels', 'amount': 120000},
+        {'name': 'Venture Med', 'amount': 80000},
+      ],
+      'numPosts': 32,
+      'avgEngagementRate': 8.5, // percent
+      'lastPaired': '2024-06-11',
+      'activityTimeline': [
+        {'date': '2024-06-11', 'event': 'Paired with MedixFlow'},
+        {'date': '2024-06-10', 'event': 'Investment increased by ₹80,000'},
+        {'date': '2024-06-09', 'event': 'New post published'},
+        {'date': '2024-06-08', 'event': 'Reached 60,000 impressions'},
+      ],
+      'growth': {
+        'Month': [150, 180, 210, 250, 300, 370, 450, 520, 600, 700, 820, 950],
+        '6 Months': [150, 250, 370, 520, 700, 950],
+        'Year': [150, 250, 370, 520, 700, 820, 950, 1100, 1300, 1500, 1700, 2000],
+        'labels': {
+          'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+          '6 Months': ['Jan', 'Mar', 'May', 'Jul', 'Sep', 'Nov'],
+          'Year': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        },
+      },
+    },
+  ];
 
-// Simple bar chart for post likes (no external package)
-class _SimpleBarChart extends StatelessWidget {
-  final List<Map<String, dynamic>> posts;
-  const _SimpleBarChart({required this.posts});
-
-  @override
-  Widget build(BuildContext context) {
-    final maxLikes = posts.map((p) => (p['like_count'] ?? 0) as int).fold<int>(0, (a, b) => a > b ? a : b);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: posts.map((post) {
-        final likes = (post['like_count'] ?? 0) as int;
-        final barHeight = maxLikes > 0 ? (likes / maxLikes) * 120 : 10;
-        return Expanded(
+  void _showStartupSwitcher() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return SafeArea(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
-                height: barHeight + 10,
-                width: 18,
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Center(
-                  child: Text(
-                    likes.toString(),
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 16),
+              const Text('Switch Startup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 8),
-              Text(
-                post['title'] != null && post['title'].toString().isNotEmpty
-                    ? post['title'].toString().substring(0, math.min(8, post['title'].toString().length))
-                    : 'Post',
-                style: const TextStyle(fontSize: 10, color: Colors.black54),
-                overflow: TextOverflow.ellipsis,
-              ),
+              ...List.generate(_dummyStartups.length, (i) {
+                final s = _dummyStartups[i];
+                return ListTile(
+                  leading: Icon(Icons.business, color: i == _selectedStartupIndex ? Colors.blueAccent : Colors.grey),
+                  title: Text(s['startupName'] as String),
+                  subtitle: Text('Code: ${s['startupCode']}'),
+                  trailing: i == _selectedStartupIndex ? const Icon(Icons.check, color: Colors.green) : null,
+                  onTap: () {
+                    setState(() {
+                      _selectedStartupIndex = i;
+                    });
+                    Navigator.pop(context);
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
             ],
           ),
         );
-      }).toList(),
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dummyAnalytics = _dummyStartups[_selectedStartupIndex];
+    final String startupName = dummyAnalytics['startupName'] as String;
+    final String startupCode = dummyAnalytics['startupCode'] as String;
+    final double totalInvestment = dummyAnalytics['totalInvestment'] as double;
+    final int postReach = dummyAnalytics['postReach'] as int;
+    final int postImpressions = dummyAnalytics['postImpressions'] as int;
+    final List<dynamic> companies = dummyAnalytics['companies'] as List<dynamic>;
+    final int numPosts = dummyAnalytics['numPosts'] as int;
+    final double avgEngagementRate = dummyAnalytics['avgEngagementRate'] as double;
+    final String lastPaired = dummyAnalytics['lastPaired'] as String;
+    final List<dynamic> activityTimeline = dummyAnalytics['activityTimeline'] as List<dynamic>;
+    final Map<String, dynamic>? growth = dummyAnalytics['growth'] as Map<String, dynamic>?;
+    if (growth == null) {
+      return Scaffold(
+        body: Center(child: Text('Growth data not available', style: TextStyle(color: Colors.red, fontSize: 18))),
+      );
+    }
+    final List<int> growthData = List<int>.from(growth[_growthView] as List? ?? []);
+    final List<String> growthLabels = List<String>.from(growth['labels'][_growthView] as List? ?? []);
+
+    return Scaffold(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isWide = constraints.maxWidth > 600;
+          final double chartHeight = (MediaQuery.of(context).size.height * 0.22).clamp(120, 180);
+          final double verticalPadding = MediaQuery.of(context).size.height < 700 ? 10 : 24;
+          return SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: verticalPadding),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Top Row: Pair More Startup and Switch Startup buttons
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Tooltip(
+                            message: 'Switch Startup',
+                            child: IconButton(
+                              icon: const Icon(Icons.swap_horiz_rounded, color: Colors.deepPurple, size: 28),
+                              onPressed: _showStartupSwitcher,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Tooltip(
+                            message: 'Pair More Startup',
+                            child: IconButton(
+                              icon: const Icon(Icons.link_rounded, color: Colors.blueAccent, size: 28),
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Pair More Startup clicked!')),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Startup Info Card
+                      Card(
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 28,
+                                    backgroundColor: Colors.blue.shade50,
+                                    child: const Icon(Icons.business, color: Colors.blueAccent, size: 32),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          startupName,
+                                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.code, size: 18, color: Colors.grey),
+                                            const SizedBox(width: 4),
+                                            Flexible(
+                                              child: Text('Code: $startupCode', style: const TextStyle(color: Colors.grey), overflow: TextOverflow.ellipsis),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              // Responsive chips using Wrap
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 8,
+                                children: [
+                                  _buildInfoChip(Icons.calendar_today, 'Last Paired: $lastPaired'),
+                                  _buildInfoChip(Icons.post_add, 'Posts: $numPosts'),
+                                  _buildInfoChip(Icons.percent, 'Engagement: ${avgEngagementRate.toStringAsFixed(1)}%'),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Growth Overview Section
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0, left: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Growth Overview', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 8),
+                            ToggleButtons(
+                              isSelected: [
+                                _growthView == 'Month',
+                                _growthView == '6 Months',
+                                _growthView == 'Year',
+                              ],
+                              borderRadius: BorderRadius.circular(8),
+                              selectedColor: Colors.white,
+                              fillColor: Colors.blueAccent,
+                              color: Colors.blueAccent,
+                              constraints: const BoxConstraints(minWidth: 60, minHeight: 32),
+                              onPressed: (index) {
+                                setState(() {
+                                  _growthView = ['Month', '6 Months', 'Year'][index];
+                                });
+                              },
+                              children: const [
+                                Text('Month'),
+                                Text('6M'),
+                                Text('Year'),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        margin: const EdgeInsets.only(bottom: 24),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: SizedBox(
+                            height: chartHeight,
+                            child: LineChart(
+                              LineChartData(
+                                gridData: FlGridData(show: true, drawVerticalLine: false, horizontalInterval: 50),
+                                titlesData: FlTitlesData(
+                                  leftTitles: AxisTitles(
+                                    sideTitles: SideTitles(showTitles: true, reservedSize: 36, getTitlesWidget: (value, meta) {
+                                      return Text(value.toInt().toString(), style: const TextStyle(fontSize: 11));
+                                    }),
+                                  ),
+                                  bottomTitles: AxisTitles(
+                                    sideTitles: SideTitles(
+                                      showTitles: true,
+                                      getTitlesWidget: (value, meta) {
+                                        final idx = value.toInt();
+                                        if (idx < 0 || idx >= growthLabels.length) return const SizedBox.shrink();
+                                        return Padding(
+                                          padding: const EdgeInsets.only(top: 6.0),
+                                          child: Text(growthLabels[idx], style: const TextStyle(fontSize: 11)),
+                                        );
+                                      },
+                                      reservedSize: 32,
+                                    ),
+                                  ),
+                                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                ),
+                                borderData: FlBorderData(show: true, border: Border.all(color: Colors.grey.shade300)),
+                                minX: 0,
+                                maxX: (growthData.length - 1).toDouble(),
+                                minY: 0,
+                                maxY: (growthData.reduce((a, b) => a > b ? a : b) * 1.2).toDouble(),
+                                lineBarsData: [
+                                  LineChartBarData(
+                                    spots: [
+                                      for (int i = 0; i < growthData.length; i++)
+                                        FlSpot(i.toDouble(), growthData[i].toDouble()),
+                                    ],
+                                    isCurved: true,
+                                    color: Colors.blueAccent,
+                                    barWidth: 4,
+                                    dotData: FlDotData(show: true),
+                                    belowBarData: BarAreaData(show: true, color: Colors.blueAccent.withOpacity(0.15)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Section: Key Stats
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0, left: 4),
+                        child: Text('Key Stats', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      ),
+                      Row(
+                        children: [
+                          Expanded(child: _buildStatCard('Total Investment', '₹${totalInvestment.toStringAsFixed(2)}', Icons.attach_money, Colors.green)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildStatCard('Post Reach', postReach.toString(), Icons.visibility, Colors.blue)),
+                          const SizedBox(width: 12),
+                          Expanded(child: _buildStatCard('Impressions', postImpressions.toString(), Icons.trending_up, Colors.orange)),
+                        ],
+                      ),
+                      const SizedBox(height: 28),
+                      // Section: Invested Companies
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0, left: 4),
+                        child: Text('Invested Companies', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      ),
+                      Card(
+                        elevation: 3,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ...List.generate(companies.length, (i) {
+                                final company = companies[i] as Map<String, dynamic>;
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.business, color: Colors.indigo, size: 22),
+                                          const SizedBox(width: 8),
+                                          Text(company['name'] as String, style: const TextStyle(fontSize: 16)),
+                                        ],
+                                      ),
+                                      Text('₹${company['amount']}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+                      // Section: Activity Timeline
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0, left: 4),
+                        child: Text('Activity Timeline', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      ),
+                      Card(
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        margin: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ...activityTimeline.map((item) {
+                                final map = item as Map<String, dynamic>;
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.circle, size: 10, color: Colors.blueAccent),
+                                      const SizedBox(width: 10),
+                                      Text(map['date'], style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                                      const SizedBox(width: 10),
+                                      Expanded(child: Text(map['event'], style: const TextStyle(fontSize: 15))),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 8),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 4),
+            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String label) {
+    return Chip(
+      avatar: Icon(icon, size: 16, color: Colors.blueAccent),
+      label: Text(label, style: const TextStyle(fontSize: 13)),
+      backgroundColor: Colors.blue.shade50,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
     );
   }
 } 

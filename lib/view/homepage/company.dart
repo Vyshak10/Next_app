@@ -15,6 +15,7 @@ import 'dart:math' as math;
 import '../../view/profile/company_profile.dart' as company_profile;
 import '../../common_widget/post.dart';
 import '../../common_widget/NotificationsScreen.dart';
+import '../analytics/pairing_screen.dart';
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({super.key});
@@ -52,7 +53,42 @@ class _CompanyScreenState extends State<CompanyScreen>
 
   void _onItemTapped(int index) async {
     HapticFeedback.lightImpact();
-    if (index == 2) {
+    if (index == 3) {
+      // Analytics tab tapped
+      bool isPaired = await _checkIfCompanyPaired(userId); // Implement this check
+      if (isPaired) {
+        setState(() {
+          _selectedIndex = index;
+        });
+      } else {
+        // Show PairingScreen as a modal bottom sheet so nav bar remains visible
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (context) => Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: SizedBox(
+              height: 480,
+              child: PairingScreen(
+                companyId: int.parse(userId),
+                onGoToAnalytics: () {
+                  Navigator.pop(context); // Close the sheet
+                  setState(() {
+                    _selectedIndex = 3;
+                  });
+                },
+              ),
+            ),
+          ),
+        );
+        return;
+      }
+    } else if (index == 2) {
       // Profile tab tapped, reload profile after returning
       setState(() {
         _selectedIndex = index;
@@ -65,6 +101,13 @@ class _CompanyScreenState extends State<CompanyScreen>
         _selectedIndex = index;
       });
     }
+  }
+
+  Future<bool> _checkIfCompanyPaired(String userId) async {
+    // TODO: Replace with actual API call to check pairing status
+    // For now, return false to always show pairing screen
+    await Future.delayed(Duration(milliseconds: 300));
+    return false;
   }
 
   void _toggleFab() {
