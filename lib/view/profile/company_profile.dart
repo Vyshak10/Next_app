@@ -52,11 +52,92 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
 
   Uint8List? _pickedAvatarBytes;
 
+  // Dummy data for demonstration
+  final List<Map<String, String>> teamMembers = [
+    {
+      'name': 'Alice Johnson',
+      'role': 'CEO',
+      'photo': 'https://randomuser.me/api/portraits/women/44.jpg',
+      'linkedin': 'https://linkedin.com/in/alicejohnson',
+    },
+    {
+      'name': 'Bob Smith',
+      'role': 'CTO',
+      'photo': 'https://randomuser.me/api/portraits/men/32.jpg',
+      'linkedin': 'https://linkedin.com/in/bobsmith',
+    },
+    {
+      'name': 'Carol Lee',
+      'role': 'CFO',
+      'photo': 'https://randomuser.me/api/portraits/women/65.jpg',
+      'linkedin': 'https://linkedin.com/in/carollee',
+    },
+  ];
+
+  final List<Map<String, dynamic>> portfolio = [
+    {
+      'name': 'TechNova',
+      'logo': 'assets/img/default_logo.png',
+      'amount': '₹1,00,000',
+      'date': '2023-11-10',
+    },
+    {
+      'name': 'GreenSpark',
+      'logo': 'assets/img/default_logo.png',
+      'amount': '₹50,000',
+      'date': '2024-01-15',
+    },
+    {
+      'name': 'MedixFlow',
+      'logo': 'assets/img/default_logo.png',
+      'amount': '₹2,00,000',
+      'date': '2024-03-22',
+    },
+  ];
+
+  final List<Map<String, String>> achievements = [
+    {
+      'title': 'Best Startup Investor 2023',
+      'icon': 'emoji_events',
+      'desc': 'Awarded by Startup India',
+    },
+    {
+      'title': 'ISO 9001 Certified',
+      'icon': 'verified',
+      'desc': 'Quality Management Certification',
+    },
+    {
+      'title': 'Top 10 VC Firms',
+      'icon': 'star',
+      'desc': 'Recognized by VC Magazine',
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
     _resolveUserIdAndFetch();
     _initializeRazorpay();
+    // Smoother gradient animation
+    gradientAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat(reverse: true);
+    gradientBeginAnimation = Tween<AlignmentGeometry>(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ).animate(CurvedAnimation(
+      parent: gradientAnimationController,
+      curve: Curves.easeInOutCubicEmphasized,
+    ));
+    gradientEndAnimation = Tween<AlignmentGeometry>(
+      begin: Alignment.bottomRight,
+      end: Alignment.topLeft,
+    ).animate(CurvedAnimation(
+      parent: gradientAnimationController,
+      curve: Curves.easeInOutCubicEmphasized,
+    ));
+    gradientAnimationController.forward();
   }
 
   void _initializeRazorpay() {
@@ -1213,7 +1294,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
               children: [
                 Icon(Icons.ondemand_video, color: Colors.blueAccent, size: 28),
                 const SizedBox(width: 10),
-                const Text('Pitch Video', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text('Introduction Video', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 16),
@@ -1232,7 +1313,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
             else
               OutlinedButton.icon(
                 icon: const Icon(Icons.upload_file),
-                label: const Text('Add Pitch Video'),
+                label: const Text('Add Introduction Video'),
                 onPressed: () {
                   // TODO: Implement upload or link input
                   _showAddPitchVideoDialog();
@@ -1249,7 +1330,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Pitch Video'),
+        title: const Text('Add Introduction Video'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(hintText: 'Enter YouTube link or video URL'),
@@ -1285,180 +1366,13 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
         setState(() {
           profile?['pitch_video_url'] = url;
         });
-        _showSuccessSnackBar('Pitch video updated!');
+        _showSuccessSnackBar('Introduction video updated!');
       } else {
-        _showErrorSnackBar('Failed to update pitch video');
+        _showErrorSnackBar('Failed to update introduction video');
       }
     } catch (e) {
       _showErrorSnackBar('Network error occurred');
     }
-  }
-
-  Widget _buildPostsSection() {
-    return Card(
-      margin: const EdgeInsets.all(16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.purple.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.photo_library,
-                        color: Colors.purple.shade600,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Posts',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    '${posts.length} posts',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            posts.isEmpty
-                ? Container(
-                    height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.photo_library_outlined, size: 48, color: Colors.grey),
-                          SizedBox(height: 8),
-                          Text(
-                            'No posts yet',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          Text(
-                            'Share your first post to get started',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: posts.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemBuilder: (context, index) {
-                      final post = posts[index];
-                      final imageUrls = post['image_urls'] ?? [];
-                      final firstImage = imageUrls.isNotEmpty ? imageUrls[0] : null;
-                      
-                      return GestureDetector(
-                        onTap: () => _showPostDetails(post),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 5,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                firstImage != null
-                                    ? Image.network(
-                                        firstImage,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Container(
-                                            color: Colors.grey[200],
-                                            child: const Icon(Icons.broken_image, color: Colors.grey),
-                                          );
-                                        },
-                                      )
-                                    : Container(
-                                        color: Colors.grey[200],
-                                        child: const Icon(Icons.image, color: Colors.grey),
-                                      ),
-                                if (imageUrls.length > 1)
-                                  Positioned(
-                                    top: 8,
-                                    right: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.7),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.photo_library, color: Colors.white, size: 12),
-                                          const SizedBox(width: 2),
-                                          Text(
-                                            '${imageUrls.length}',
-                                            style: const TextStyle(color: Colors.white, fontSize: 10),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showFundingSettings() {
@@ -1615,8 +1529,11 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                       _buildProfileHeader(),
                       _buildInfoSection(),
                       _buildPitchVideoSection(),
-                      _buildPostsSection(),
-                      const SizedBox(height: 20),
+                      _buildKeyMetrics(),
+                      _buildTeamSection(),
+                      _buildPortfolioSection(),
+                      _buildContactActions(),
+                      _buildAchievementsSection(),
                     ],
                   ),
                 ),
@@ -1626,7 +1543,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                   child: Material(
                     color: Colors.transparent,
                     child: IconButton(
-                      icon: Icon(Icons.settings, color: Colors.white, size: 28),
+                      icon: Icon(Icons.settings, color: Colors.black, size: 28),
                       tooltip: 'Settings',
                       onPressed: () {
                         Navigator.push(
@@ -1686,5 +1603,230 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
         ],
       );
     }
+  }
+
+  Widget _buildKeyMetrics() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildMetric('Investments', '8', Icons.trending_up, Colors.blue),
+            _buildMetric('Total Invested', '₹3,50,000', Icons.attach_money, Colors.green),
+            _buildMetric('Startups', '3', Icons.business, Colors.purple),
+            _buildMetric('Years Active', '5', Icons.calendar_today, Colors.orange),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetric(String label, String value, IconData icon, Color color) {
+    return Column(
+      children: [
+        CircleAvatar(
+          backgroundColor: color.withOpacity(0.15),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        const SizedBox(height: 8),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      ],
+    );
+  }
+
+  Widget _buildTeamSection() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isNarrow = constraints.maxWidth < 400;
+                if (isNarrow) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.group, color: Colors.blueAccent),
+                          const SizedBox(width: 8),
+                          Text('Team Members', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Add Team Member'),
+                        onPressed: () {},
+                      ),
+                    ],
+                  );
+                } else {
+                  return Row(
+                    children: [
+                      const Icon(Icons.group, color: Colors.blueAccent),
+                      const SizedBox(width: 8),
+                      Text('Team Members', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.person_add),
+                        label: const Text('Add Team Member'),
+                        onPressed: () {},
+                      ),
+                    ],
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: teamMembers.map((member) => ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 120, minWidth: 80),
+                child: _buildTeamMemberCard(member),
+              )).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeamMemberCard(Map<String, String> member) {
+    return Column(
+      children: [
+        CircleAvatar(
+          radius: 32,
+          backgroundImage: NetworkImage(member['photo']!),
+          onBackgroundImageError: (_, __) {
+            // fallback to asset
+          },
+          child: Icon(Icons.person, size: 32, color: Colors.grey[400]),
+        ),
+        const SizedBox(height: 8),
+        Text(member['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+        Text(member['role']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        IconButton(
+          icon: const Icon(Icons.linked_camera, color: Colors.blueAccent),
+          onPressed: () {
+            // Open LinkedIn
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPortfolioSection() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.work, color: Colors.purple),
+                const SizedBox(width: 8),
+                Text('Portfolio', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...portfolio.map((startup) => ListTile(
+              leading: CircleAvatar(backgroundImage: AssetImage(startup['logo'])),
+              title: Text(startup['name']),
+              subtitle: Text('Invested: ${startup['amount']} on ${startup['date']}'),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          OutlinedButton.icon(
+            icon: const Icon(Icons.email),
+            label: const Text('Contact Us'),
+            onPressed: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementsSection() {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.emoji_events, color: Colors.amber),
+                const SizedBox(width: 8),
+                Text('Achievements', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: achievements.map((ach) => _buildAchievementCard(ach)).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementCard(Map<String, String> ach) {
+    IconData icon = Icons.emoji_events;
+    if (ach['icon'] == 'verified') icon = Icons.verified;
+    if (ach['icon'] == 'star') icon = Icons.star;
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.amber, size: 32),
+          const SizedBox(height: 8),
+          Text(ach['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(ach['desc']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        ],
+      ),
+    );
   }
 }

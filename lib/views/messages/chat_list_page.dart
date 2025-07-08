@@ -143,6 +143,7 @@ class _ChatListPageState extends State<ChatListPage> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         elevation: 0,
+        title: null,
       ),
       body: RefreshIndicator(
         onRefresh: _loadChats,
