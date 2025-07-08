@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:typed_data';
 
 class CreatePostPage extends StatefulWidget {
   const CreatePostPage({Key? key}) : super(key: key);
@@ -29,20 +31,47 @@ class _CreatePostPageState extends State<CreatePostPage> {
     }
   }
 
+  Future<String?> uploadPostImageToSupabase(Uint8List imageBytes, String fileName) async {
+    print('Uploading to Supabase: $fileName, bytes: ${imageBytes.length}');
+    final storage = Supabase.instance.client.storage;
+    final bucket = storage.from('post-images');
+    try {
+      await bucket.uploadBinary(fileName, imageBytes, fileOptions: FileOptions(upsert: true));
+      final url = bucket.getPublicUrl(fileName);
+      print('Supabase upload success, url: $url');
+      return url;
+    } catch (e) {
+      print('Supabase upload error: $e');
+      return null;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Supabase (safe to call multiple times)
+    Supabase.initialize(
+      url: 'https://mcwngfebeexcugypioey.supabase.co',
+      anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1jd25nZmViZWV4Y3VneXBpb2V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0ODk5NDgsImV4cCI6MjA2MzA2NTk0OH0.bgMmfmoZtYhUSTXTHafDNhzupfredSV0GvD5-drNgoQ',
+    );
+  }
+
   Future<void> _createPost() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
     try {
-      // Upload images first
+      // Upload images to Supabase Storage
       final List<String> imageUrls = [];
       for (var image in _selectedImages) {
         final imageBytes = await image.readAsBytes();
-        final response = await _apiService.multipartRequest(
-          'upload_post_image.php',
-          {},
-          {'image': imageBytes},
-        );
-        imageUrls.add(response['image_url']);
+        final fileName = 'post_${DateTime.now().millisecondsSinceEpoch}_${image.name}';
+        print('Calling uploadPostImageToSupabase for $fileName');
+        final supabaseUrl = await uploadPostImageToSupabase(imageBytes, fileName);
+        if (supabaseUrl != null) {
+          imageUrls.add(supabaseUrl);
+        } else {
+          print('Failed to upload image to Supabase');
+        }
       }
       // Get user_id from arguments or set a placeholder
       String userId = '';
@@ -60,6 +89,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
         'tags': _tags,
         'image_urls': imageUrls,
       };
+      print('Post data being sent: $postData');
       await _apiService.createPost(postData);
       if (mounted) {
         Navigator.pop(context, true); // Signal success

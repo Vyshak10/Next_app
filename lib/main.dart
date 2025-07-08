@@ -4,9 +4,14 @@ import 'package:next_app/views/login_view.dart';
 import 'package:next_app/views/reset_password_view.dart';
 import 'package:app_links/app_links.dart';
 import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: 'https://mcwngfebeexcugypioey.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1jd25nZmViZWV4Y3VneXBpb2V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0ODk5NDgsImV4cCI6MjA2MzA2NTk0OH0.bgMmfmoZtYhUSTXTHafDNhzupfredSV0GvD5-drNgoQ',
+  );
   runApp(const MyApp());
 }
 

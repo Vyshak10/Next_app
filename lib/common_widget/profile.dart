@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../view/settings/settings_screen.dart';
 import '../services/image_picker_service.dart';
 import 'dart:typed_data';
+import 'post.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -315,40 +316,33 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   Future<void> _uploadAvatar() async {
-    try {
-      if (_pickedAvatarBytes != null) {
-        var request = http.MultipartRequest(
-          'POST',
-          Uri.parse('https://indianrupeeservices.in/NEXT/backend/upload_avatar.php'),
-        );
-        
-        request.fields['user_id'] = _resolvedUserId ?? '';
-        request.files.add(
-          http.MultipartFile.fromBytes('avatar', _pickedAvatarBytes!, filename: 'avatar.png'),
-        );
-        
-        var response = await request.send();
-        var responseData = await response.stream.toBytes();
-        var responseString = String.fromCharCodes(responseData);
-        
-        if (response.statusCode == 200) {
-          var jsonResponse = jsonDecode(responseString);
-          if (jsonResponse['success'] == true) {
-            if (_resolvedUserId != null) {
-              await fetchProfileData(_resolvedUserId!); // Refresh profile data
-            }
-            _showSuccessSnackBar('Avatar updated successfully');
-          } else {
-            _showErrorSnackBar('Failed to upload avatar');
-          }
-        } else {
-          _showErrorSnackBar('Upload failed');
-        }
+    if (_pickedAvatarBytes == null) return;
+
+    var request = http.MultipartRequest(
+      'POST',
+      Uri.parse('https://indianrupeeservices.in/NEXT/backend/upload_avatar.php'),
+    );
+    request.fields['user_id'] = _resolvedUserId ?? '';
+    request.files.add(
+      http.MultipartFile.fromBytes('avatar', _pickedAvatarBytes!, filename: 'avatar.png'),
+    );
+
+    var response = await request.send();
+    var responseBody = await response.stream.bytesToString();
+
+    if (response.statusCode == 200) {
+      final responseData = jsonDecode(responseBody);
+      if (responseData['success'] == true) {
+        setState(() {
+          profile?['avatar_url'] = responseData['avatar_url'];
+          _pickedAvatarBytes = null;
+        });
+        _showSuccessSnackBar('Avatar updated successfully');
+      } else {
+        _showErrorSnackBar('Failed to upload avatar');
       }
-    } catch (e) {
-      _showErrorSnackBar('Error uploading avatar: $e');
-    } finally {
-      setState(() => isUploadingAvatar = false);
+    } else {
+      _showErrorSnackBar('Upload failed');
     }
   }
 
@@ -1589,6 +1583,26 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
+  void _handlePostCreated(Map<String, dynamic> newPost) async {
+    if (_resolvedUserId != null) {
+      await fetchProfileData(_resolvedUserId!);
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _showCreatePostBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => CreatePostBottomSheet(
+        onPostCreated: _handlePostCreated,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1641,6 +1655,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showCreatePostBottomSheet,
+        backgroundColor: Colors.blue,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

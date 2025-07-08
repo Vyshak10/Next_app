@@ -586,16 +586,30 @@ class PostCard extends StatelessWidget {
               child: PageView.builder(
                 itemCount: (post['image_urls'] as List).length,
                 itemBuilder: (context, imgIndex) {
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      image: DecorationImage(
-                        image: NetworkImage((post['image_urls'] as List)[imgIndex]),
-                        fit: BoxFit.cover,
+                  final url = (post['image_urls'] as List)[imgIndex];
+                  if (url != null && url.toString().isNotEmpty) {
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                    ),
-                  );
+                      child: Image.network(
+                        url,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Image.asset('assets/img/default_post.png', fit: BoxFit.cover);
+                        },
+                      ),
+                    );
+                  } else {
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Image.asset('assets/img/default_post.png', fit: BoxFit.cover),
+                    );
+                  }
                 },
               ),
             ),

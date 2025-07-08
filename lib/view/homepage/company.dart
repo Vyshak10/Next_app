@@ -15,6 +15,7 @@ import 'dart:math' as math;
 import '../../view/profile/company_profile.dart' as company_profile;
 import '../../common_widget/post.dart';
 import '../../common_widget/NotificationsScreen.dart';
+import '../../common_widget/company_post.dart' as company_post;
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({super.key});
@@ -119,8 +120,6 @@ class _CompanyScreenState extends State<CompanyScreen>
           child: _buildScreenWidget(_selectedIndex),
         ),
         bottomNavigationBar: _buildEnhancedBottomNavBar(),
-        floatingActionButton: _buildFloatingActionMenu(),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       ),
     );
   }
@@ -186,180 +185,6 @@ class _CompanyScreenState extends State<CompanyScreen>
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildFloatingActionMenu() {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        // Background overlay
-        if (_isFabOpen)
-          GestureDetector(
-            onTap: _toggleFab,
-            child: Container(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              color: Colors.black.withOpacity(0.3),
-            ),
-          ),
-        // Menu items
-        ..._buildFabMenuItems(),
-        // Main FAB
-        ScaleTransition(
-          scale: _fabAnimation,
-          child: FloatingActionButton(
-            onPressed: _toggleFab,
-            backgroundColor: Colors.blueAccent,
-            elevation: 8,
-            child: AnimatedRotation(
-              turns: _isFabOpen ? 0.125 : 0,
-              duration: const Duration(milliseconds: 300),
-              child: Icon(
-                _isFabOpen ? Icons.close : Icons.add,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  List<Widget> _buildFabMenuItems() {
-    if (!_isFabOpen) return [];
-
-    final items = [
-      {'icon': Icons.campaign, 'label': 'Create Post', 'color': Colors.orange},
-      {'icon': Icons.video_call, 'label': 'Schedule Meet', 'color': Colors.green},
-      {'icon': Icons.search, 'label': 'Discover', 'color': Colors.purple},
-      {'icon': Icons.trending_up, 'label': 'Market Trends', 'color': Colors.red},
-    ];
-
-    return items.asMap().entries.map((entry) {
-      final index = entry.key;
-      final item = entry.value;
-      final angle = (index * 45 - 90) * math.pi / 180;
-      final radius = 80.0;
-
-      return AnimatedBuilder(
-        animation: _fabAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(
-              radius * math.cos(angle) * _fabAnimation.value,
-              radius * math.sin(angle) * _fabAnimation.value,
-            ),
-            child: ScaleTransition(
-              scale: _fabAnimation,
-              child: _buildFabMenuItem(
-                item['icon'] as IconData,
-                item['label'] as String,
-                item['color'] as Color,
-              ),
-            ),
-          );
-        },
-      );
-    }).toList();
-  }
-
-  Widget _buildFabMenuItem(IconData icon, String label, Color color) {
-    return GestureDetector(
-      onTap: () {
-        _toggleFab();
-        _handleFabAction(label);
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.black87,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _handleFabAction(String action) {
-    HapticFeedback.lightImpact();
-    switch (action) {
-      case 'Create Post':
-        _showCreatePostDialog();
-        break;
-      case 'Schedule Meet':
-        _showScheduleMeetDialog();
-        break;
-      case 'Discover':
-        _showDiscoverModal();
-        break;
-      case 'Market Trends':
-        _showMarketTrendsModal();
-        break;
-    }
-  }
-
-  void _showCreatePostDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const CreatePostModal(),
-    );
-  }
-
-  void _showScheduleMeetDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => const ScheduleMeetDialog(),
-    );
-  }
-
-  void _showDiscoverModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const DiscoverModal(),
-    );
-  }
-
-  void _showMarketTrendsModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const MarketTrendsModal(),
     );
   }
 }
@@ -632,6 +457,23 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => company_post.CreatePostBottomSheet(
+              onPostCreated: (newPost) {
+                setState(() {
+                  _posts.insert(0, newPost);
+                });
+              },
+            ),
+          );
+        },
+        backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -1346,7 +1188,7 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => CommentsBottomSheet(
+      builder: (context) => company_post.CommentsBottomSheet(
         postId: post['id'].toString(),
         comments: post['comments'] ?? [],
         onCommentAdded: (newComment) {

@@ -3,6 +3,9 @@ import '../../common_widget/home.dart';
 import '../../common_widget/post.dart'; // This should contain your PostScreen class
 import '../../common_widget/profile.dart';
 import '../../common_widget/messages.dart';
+import '../../common_widget/post.dart';
+import '../../services/api_service.dart';
+import '../../common_widget/company_post.dart' as company_post;
 
 class Startup extends StatefulWidget {
   const Startup({super.key});
@@ -17,6 +20,9 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
   // 👇 Hardcoded userId for demo
   final String userId = '6852';
 
+  // Add this list to store posts
+  List<Map<String, dynamic>> _posts = [];
+
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
 
@@ -29,12 +35,39 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
+    _fetchPosts();
+  }
+
+  Future<void> _fetchPosts() async {
+    final api = ApiService();
+    final posts = await api.getPosts();
+    setState(() {
+      _posts = List<Map<String, dynamic>>.from(posts.map((post) {
+        post['image_urls'] = List<String>.from(post['image_urls'] ?? []);
+        post['tags'] = List<String>.from(post['tags'] ?? []);
+        return post;
+      }));
+    });
   }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  void _showCreatePostBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => CreatePostBottomSheet(
+        onPostCreated: (newPost) {
+          setState(() {
+            _posts.insert(0, newPost);
+          });
+        },
+      ),
+    );
   }
 
   Widget _buildScreenWidget(int index) {
@@ -46,8 +79,40 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
           verticalList: true, // Show vertical list for startups
         );
       case 1:
-        // 👇 Updated to use PostScreen instead of PostsPage
-        return const PostScreen();
+        return ListView.builder(
+          itemCount: _posts.length,
+          itemBuilder: (context, index) {
+            final post = _posts[index];
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              child: company_post.PostCard(
+                post: post,
+                onLikePressed: () async {
+                  setState(() {
+                    post['isLiked'] = !(post['isLiked'] ?? false);
+                    post['likeCount'] = (post['likeCount'] ?? 0) + (post['isLiked'] ? 1 : -1);
+                  });
+                  // Optionally, call backend to update like
+                },
+                onCommentPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (context) => company_post.CommentsBottomSheet(
+                      postId: post['id'].toString(),
+                      comments: post['comments'] ?? [],
+                      onCommentAdded: (newComment) {
+                        setState(() {
+                          post['comments'] = [...(post['comments'] ?? []), newComment];
+                        });
+                      },
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        );
       case 2:
         return const MessagesPage();
       case 3:
@@ -83,6 +148,13 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
           child: _buildScreenWidget(_selectedIndex),
         ),
         bottomNavigationBar: _buildBottomNavBar(),
+        floatingActionButton: _selectedIndex == 1
+            ? FloatingActionButton(
+                onPressed: _showCreatePostBottomSheet,
+                backgroundColor: Colors.blue,
+                child: const Icon(Icons.add, color: Colors.white),
+              )
+            : null,
       ),
     );
   }
