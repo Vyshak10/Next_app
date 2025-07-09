@@ -15,6 +15,7 @@ import '../view/settings/settings_screen.dart';
 import '../services/image_picker_service.dart';
 import 'dart:typed_data';
 import 'post.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -309,42 +310,56 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   Future<void> _pickAvatar() async {
+    print('DEBUG: _pickAvatar called');
     final bytes = await pickImage();
+    print('DEBUG: pickImage returned: ' + (bytes != null ? 'bytes length ${bytes.length}' : 'null'));
     if (bytes != null) {
       setState(() => _pickedAvatarBytes = bytes);
+      await _uploadAvatar();
     }
   }
 
-  Future<void> _uploadAvatar() async {
-    if (_pickedAvatarBytes == null) return;
+Future<void> _uploadAvatar() async {
+  print('DEBUG: _uploadAvatar called');
+  if (_pickedAvatarBytes == null) { print('DEBUG: _pickedAvatarBytes is null'); return; }
+  if (_resolvedUserId == null) { print('DEBUG: _resolvedUserId is null'); return; }
 
-    var request = http.MultipartRequest(
-      'POST',
+  final fileName = '${_resolvedUserId}_avatar.png';
+  final storage = Supabase.instance.client.storage;
+  try {
+    print('DEBUG: Uploading to Supabase Storage...');
+    await storage.from('avatars').uploadBinary(fileName, _pickedAvatarBytes!);
+    final publicUrl = storage.from('avatars').getPublicUrl(fileName);
+    print('DEBUG: Supabase publicUrl: ' + publicUrl);
+
+    // Update backend with the new public URL
+    final response = await http.post(
       Uri.parse('https://indianrupeeservices.in/NEXT/backend/upload_avatar.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': _resolvedUserId,
+        'avatar_url': publicUrl,
+      }),
     );
-    request.fields['user_id'] = _resolvedUserId ?? '';
-    request.files.add(
-      http.MultipartFile.fromBytes('avatar', _pickedAvatarBytes!, filename: 'avatar.png'),
-    );
+    print('DEBUG: Backend response status: ' + response.statusCode.toString());
+    print('DEBUG: Backend response body: ' + response.body);
 
-    var response = await request.send();
-    var responseBody = await response.stream.bytesToString();
-
-    if (response.statusCode == 200) {
-      final responseData = jsonDecode(responseBody);
-      if (responseData['success'] == true) {
-        setState(() {
-          profile?['avatar_url'] = responseData['avatar_url'];
-          _pickedAvatarBytes = null;
-        });
-        _showSuccessSnackBar('Avatar updated successfully');
-      } else {
-        _showErrorSnackBar('Failed to upload avatar');
-      }
+    final responseBody = jsonDecode(response.body);
+    if (response.statusCode == 200 && responseBody['success']) {
+      setState(() {
+        profile?['avatar_url'] = responseBody['avatar_url'];
+        _pickedAvatarBytes = null;
+      });
+      _showSuccessSnackBar('Avatar updated successfully');
     } else {
-      _showErrorSnackBar('Upload failed');
+      _showErrorSnackBar(responseBody['error'] ?? 'Upload failed');
     }
+  } catch (e) {
+    print('DEBUG: Upload failed: $e');
+    _showErrorSnackBar('Upload failed: $e');
   }
+}
+
 
   Future<void> _launchYouTubeVideo(String videoId) async {
     final url = 'https://www.youtube.com/watch?v=$videoId';
