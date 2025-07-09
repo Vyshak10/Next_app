@@ -31,7 +31,11 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   final storage = const FlutterSecureStorage();
   final ImagePicker _picker = ImagePicker();
   late Razorpay _razorpay;
-  
+  int userPostsCount = 0;
+  int userFollowersCount = 0;
+  int userFollowingCount = 0;
+
+
   Map<String, dynamic>? profile;
   List<Map<String, dynamic>> posts = [];
   bool isLoading = true;
@@ -901,35 +905,9 @@ Future<void> _uploadAvatar() async {
                         backgroundImage: _pickedAvatarBytes != null
                             ? MemoryImage(_pickedAvatarBytes!)
                             : (hasAvatar ? NetworkImage(avatarUrl) : null),
-                        child: !hasAvatar 
-                          ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
-                          : null,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 55,
-                      backgroundColor: Colors.white,
-                      child: CircleAvatar(
-                        radius: 52,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage: _pickedAvatarBytes != null
-                            ? MemoryImage(_pickedAvatarBytes!)
-                            : (hasAvatar ? NetworkImage(avatarUrl) : null),
-                        child: !hasAvatar 
-                          ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
-                          : null,
+                        child: !hasAvatar
+                            ? Icon(Icons.person, size: 55, color: Colors.grey[600])
+                            : null,
                       ),
                     ),
                   ),
@@ -952,23 +930,24 @@ Future<void> _uploadAvatar() async {
                         backgroundColor: Colors.blue.shade600,
                         child: isUploadingAvatar
                             ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
                             : IconButton(
-                                icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                                onPressed: _pickAvatar,
-                              ),
+                          icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                          onPressed: _pickAvatar,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
               // Name and Role
               Text(
                 name,
@@ -987,7 +966,7 @@ Future<void> _uploadAvatar() async {
               ),
               if (role.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   child: Text(
                     role,
                     textAlign: TextAlign.center,
@@ -1000,7 +979,7 @@ Future<void> _uploadAvatar() async {
                 ),
               if (userType.isNotEmpty)
                 Container(
-                  margin: const EdgeInsets.only(top: 12),
+                  margin: const EdgeInsets.only(top: 8),
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
@@ -1017,13 +996,54 @@ Future<void> _uploadAvatar() async {
                     ),
                   ),
                 ),
+
+              const SizedBox(height: 18),
+
+              // Stats Row: Posts, Followers, Following
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildProfileStat("Posts", userPostsCount),
+                    _buildProfileStat("Followers", userFollowersCount),
+                    _buildProfileStat("Following", userFollowingCount),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 25),
             ],
           ),
         );
       },
+
     );
   }
+
+  Widget _buildProfileStat(String label, int count) {
+    return Column(
+      children: [
+        Text(
+          count.toString(),
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.white70,
+          ),
+        ),
+      ],
+    );
+  }
+
 
   Widget _buildInfoSection() {
     return Card(
@@ -1623,13 +1643,46 @@ Future<void> _uploadAvatar() async {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: widget.onBackTap,
-        ),
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: Row(
+          children: [
+            Image.asset('assets/img/Icon.png', height: 32, width: 32),
+            const SizedBox(width: 8),
+            const Text(
+              'N.E.X.T',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.settings, color: Colors.grey[800], size: 28),
+            tooltip: 'Settings',
+            onPressed: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => Container(
+                  height: MediaQuery.of(context).size.height * 0.92,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: const SettingsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
+
       body: Stack(
         children: [
           isLoading
@@ -1646,36 +1699,10 @@ Future<void> _uploadAvatar() async {
                   ),
                 ),
           // Add settings button in the profile header
-          Positioned(
-            top: 32,
-            right: 24,
-            child: IconButton(
-              icon: Icon(Icons.settings, color: Colors.grey[800], size: 28),
-              onPressed: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => Container(
-                    height: MediaQuery.of(context).size.height * 0.92,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                    ),
-                    child: const SettingsScreen(),
-                  ),
-                );
-              },
-              tooltip: 'Settings',
-            ),
-          ),
+
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCreatePostBottomSheet,
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+
     );
   }
 }
