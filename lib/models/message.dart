@@ -17,10 +17,10 @@ class Message {
 
   factory Message.fromJson(Map<String, dynamic> json) {
     return Message(
-      id: json['id'],
-      senderId: json['sender_id'],
-      receiverId: json['receiver_id'],
-      content: json['content'],
+      id: json['id'].toString(),
+      senderId: json['sender_id'].toString(),
+      receiverId: json['receiver_id'].toString(),
+      content: json['content']?.toString() ?? '',
       createdAt: DateTime.parse(json['created_at']),
       isRead: json['is_read'] ?? false,
     );

@@ -17,6 +17,7 @@ import '../../common_widget/post.dart';
 import '../../common_widget/NotificationsScreen.dart';
 import '../../common_widget/company_post.dart' as company_post;
 import '../analytics/pairing_screen.dart';
+import 'search_screen.dart';
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({super.key});
@@ -507,28 +508,30 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            builder: (context) => company_post.CreatePostBottomSheet(
-              onPostCreated: (newPost) {
-                setState(() {
-                  _posts.insert(0, newPost);
-                });
-              },
-            ),
-          );
-        },
-        backgroundColor: Colors.blueAccent,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      // Remove the floatingActionButton for create post
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     showModalBottomSheet(
+      //       context: context,
+      //       isScrollControlled: true,
+      //       builder: (context) => company_post.CreatePostBottomSheet(
+      //         onPostCreated: (newPost) {
+      //           setState(() {
+      //             _posts.insert(0, newPost);
+      //           });
+      //         },
+      //       ),
+      //     );
+      //   },
+      //   backgroundColor: Colors.blueAccent,
+      //   child: const Icon(Icons.add, color: Colors.white),
+      // ),
     );
   }
 
   Widget _buildModernAppBar() {
     return SliverAppBar(
+      automaticallyImplyLeading: false,
       expandedHeight: 80,
       floating: true,
       pinned: true,
@@ -541,27 +544,37 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                children: [
-                  Image.asset('assets/img/Icon.png', height: 36),
-                  const SizedBox(width: 12),
-                  Text(
-                    'N.E.X.T.',
-                    style: TextStyle(
-                      color: Colors.blueAccent,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 28,
-                      letterSpacing: 4,
+              GestureDetector(
+                onTap: () {
+                  // Refresh the CompanyHomeScreen by reloading data
+                  final state = context.findAncestorStateOfType<_CompanyHomeScreenState>();
+                  state?._loadData();
+                },
+                child: Row(
+                  children: [
+                    Image.asset('assets/img/Icon.png', height: 36),
+                    const SizedBox(width: 12),
+                    Text(
+                      'N.E.X.T.',
+                      style: TextStyle(
+                        color: Colors.blueAccent,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 28,
+                        letterSpacing: 4,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               Row(
                 children: [
                   IconButton(
                     icon: const Icon(Icons.search, color: Colors.blueAccent, size: 26),
                     onPressed: () {
-                      // TODO: Implement search action
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SearchScreen()),
+                      );
                     },
                   ),
                   const SizedBox(width: 4),
@@ -625,83 +638,106 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
   }
 
   Widget _buildEnhancedGreetingCard() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
-      child: AnimatedBuilder(
-        animation: Listenable.merge([gradientAnimationController, _pulseController]),
-        builder: (context, child) {
-          final String? cacheBustedAvatarUrl = (avatarUrl != null && avatarUrl!.isNotEmpty)
-              ? avatarUrl! + '?t=' + DateTime.now().millisecondsSinceEpoch.toString()
-              : null;
-          return Opacity(
-            opacity: ((0.97 + 0.03 * _pulseAnimation.value).clamp(0.0, 1.0)) as double,
-            child: Transform.scale(
-              scale: _pulseAnimation.value,
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: getGreetingGradient(
-                    gradientBeginAnimation.value,
-                    gradientEndAnimation.value,
+    return GestureDetector(
+      onTap: () {
+        // Switch to the profile tab instead of pushing a new route
+        final state = context.findAncestorStateOfType<_CompanyScreenState>();
+        state?.setState(() {
+          state._selectedIndex = 2;
+        });
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
+        child: AnimatedBuilder(
+          animation: Listenable.merge([gradientAnimationController, _pulseController]),
+          builder: (context, child) {
+            final String? cacheBustedAvatarUrl = (avatarUrl != null && avatarUrl!.isNotEmpty)
+                ? avatarUrl! + '?t=' + DateTime.now().millisecondsSinceEpoch.toString()
+                : null;
+            return Opacity(
+              opacity: ((0.97 + 0.03 * _pulseAnimation.value).clamp(0.0, 1.0)) as double,
+              child: Transform.scale(
+                scale: _pulseAnimation.value,
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: getGreetingGradient(
+                      gradientBeginAnimation.value,
+                      gradientEndAnimation.value,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blueAccent.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.blueAccent.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: CircleAvatar(
+                          radius: 35,
+                          backgroundColor: Colors.white,
+                          backgroundImage: (cacheBustedAvatarUrl != null)
+                              ? NetworkImage(cacheBustedAvatarUrl)
+                              : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
+                          child: (cacheBustedAvatarUrl == null)
+                              ? Icon(Icons.person, size: 35, color: Colors.grey[400])
+                              : null,
+                        ),
                       ),
-                      child: CircleAvatar(
-                        radius: 35,
-                        backgroundColor: Colors.white,
-                        backgroundImage: (cacheBustedAvatarUrl != null)
-                            ? NetworkImage(cacheBustedAvatarUrl)
-                            : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
-                        child: (cacheBustedAvatarUrl == null)
-                            ? Icon(Icons.person, size: 35, color: Colors.grey[400])
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            userName.isNotEmpty ? '${getGreeting()}, $userName' : getGreeting(),
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              userName.isNotEmpty
+                                  ? '${getGreeting()}, $userName'
+                                  : '${getGreeting()}, Azazle',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Ready to discover innovation?',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.white.withOpacity(0.9),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Ready to discover innovation?',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
                             ),
-                          ),
-                        ],
+                            if (userName.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  userName,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white.withOpacity(0.95),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

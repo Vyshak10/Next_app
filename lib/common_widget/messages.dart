@@ -395,7 +395,7 @@ class _ChatListTabState extends State<ChatListTab> {
                           MaterialPageRoute(
                             builder: (context) => ChatPage(
                               otherUser: user,
-                              conversationId: conversationId,
+                              conversationId: conversationId.toString(),
                             ),
                           ),
                         );

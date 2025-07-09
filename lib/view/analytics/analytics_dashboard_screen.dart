@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'pairing_screen.dart';
 
 class AnalyticsDashboardScreen extends StatefulWidget {
   final String userId;
@@ -198,8 +199,27 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                             child: IconButton(
                               icon: const Icon(Icons.link_rounded, color: Colors.blueAccent, size: 28),
                               onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Pair More Startup clicked!')),
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                  ),
+                                  builder: (context) => Padding(
+                                    padding: EdgeInsets.only(
+                                      bottom: MediaQuery.of(context).viewInsets.bottom,
+                                    ),
+                                    child: SizedBox(
+                                      height: 480,
+                                      child: PairingScreen(
+                                        companyId: int.parse(widget.userId),
+                                        onGoToAnalytics: () {
+                                          Navigator.pop(context); // Close the sheet
+                                          setState(() {}); // Optionally refresh analytics
+                                        },
+                                      ),
+                                    ),
+                                  ),
                                 );
                               },
                             ),

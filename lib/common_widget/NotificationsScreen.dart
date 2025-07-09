@@ -116,7 +116,11 @@ class _MeetingScreenState extends State<MeetingScreen> {
     }
   }
 
-  void _showScheduleMeetingDialog() {
+  void _showScheduleMeetingDialog() async {
+    // Ensure profiles are loaded before showing the dialog
+    if (profiles.isEmpty) {
+      await fetchProfiles();
+    }
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     DateTime selectedDateTime = _selectedDay;
@@ -196,7 +200,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                       items: profiles.map((profile) {
                         return DropdownMenuItem<String>(
                           value: profile['id'].toString(),
-                          child: Text(profile['name'] ?? profile['email']),
+                          child: Text(profile['name'] ?? profile['email'] ?? 'Unknown'),
                         );
                       }).toList(),
                       onChanged: (value) {

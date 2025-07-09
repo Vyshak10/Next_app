@@ -13,6 +13,7 @@ import '../../common_widget/animated_greeting_gradient_mixin.dart';
 import '../settings/settings_screen.dart';
 import '../../../services/image_picker_service.dart';
 import 'dart:typed_data';
+import 'dart:io'; // Added for File
 
 class CompanyProfileScreen extends StatefulWidget {
   final String? userId;
@@ -405,7 +406,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
           _showErrorSnackBar('Failed to upload avatar');
         }
       } else {
-        print('Upload failed: HTTP ${response.statusCode} - ' + responseString);
+        print('Upload failed: HTTP  ${response.statusCode} - ' + responseString);
         _showErrorSnackBar('Upload failed');
       }
     } catch (e) {
@@ -908,185 +909,207 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     final avatarUrl = profile?['avatar_url'];
     final hasAvatar = avatarUrl != null && avatarUrl.toString().isNotEmpty;
     final cacheBustedUrl = hasAvatar ? avatarUrl + '?t=' + DateTime.now().millisecondsSinceEpoch.toString() : null;
-    final name = profile?['name'] ?? 'Unknown Company';
+    final name = profile?['name'] ?? 'Azazle';
     final role = profile?['role'] ?? '';
     final userType = profile?['user_type'] ?? '';
 
-    return AnimatedBuilder(
-      animation: gradientAnimationController,
-      builder: (context, child) {
-        return Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: getGreetingGradient(
-              gradientBeginAnimation.value,
-              gradientEndAnimation.value,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.blue.shade200,
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              // Avatar
-              Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 55,
-                      backgroundColor: Colors.white,
-                      child: CircleAvatar(
-                        radius: 52,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage: _pickedAvatarBytes != null
-                            ? MemoryImage(_pickedAvatarBytes!)
-                            : (hasAvatar ? NetworkImage(cacheBustedUrl!) : null),
-                        child: !hasAvatar 
-                          ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
-                          : null,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 55,
-                      backgroundColor: Colors.white,
-                      child: CircleAvatar(
-                        radius: 52,
-                        backgroundColor: Colors.grey[300],
-                        backgroundImage: _pickedAvatarBytes != null
-                            ? MemoryImage(_pickedAvatarBytes!)
-                            : (hasAvatar ? NetworkImage(cacheBustedUrl!) : null),
-                        child: !hasAvatar 
-                          ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
-                          : null,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 5,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.white,
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Colors.blue.shade600,
-                        child: isUploadingAvatar
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : IconButton(
-                                icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                                onPressed: _uploadAvatar,
-                              ),
-                      ),
-                    ),
+    return Stack(
+      children: [
+        AnimatedBuilder(
+          animation: gradientAnimationController,
+          builder: (context, child) {
+            return Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: getGreetingGradient(
+                  gradientBeginAnimation.value,
+                  gradientEndAnimation.value,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.shade200,
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              // Name and Role
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black26,
-                      offset: Offset(0, 2),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
                 children: [
-                  ...List.generate(4, (i) => const Icon(Icons.star, color: Colors.amber, size: 22)),
-                  const Icon(Icons.star_half, color: Colors.amber, size: 22),
-                  const SizedBox(width: 6),
-                  const Text('4.5/5', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                ],
-              ),
-              if (role.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Text(
-                    role,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w400,
-                    ),
+                  const SizedBox(height: 20),
+                  // Avatar
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          radius: 55,
+                          backgroundColor: Colors.white,
+                          child: CircleAvatar(
+                            radius: 52,
+                            backgroundColor: Colors.grey[300],
+                            backgroundImage: _pickedAvatarBytes != null
+                                ? MemoryImage(_pickedAvatarBytes!)
+                                : (hasAvatar ? NetworkImage(cacheBustedUrl!) : null),
+                            child: !hasAvatar 
+                              ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
+                              : null,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          radius: 55,
+                          backgroundColor: Colors.white,
+                          child: CircleAvatar(
+                            radius: 52,
+                            backgroundColor: Colors.grey[300],
+                            backgroundImage: _pickedAvatarBytes != null
+                                ? MemoryImage(_pickedAvatarBytes!)
+                                : (hasAvatar ? NetworkImage(cacheBustedUrl!) : null),
+                            child: !hasAvatar 
+                              ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
+                              : null,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 5,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Colors.white,
+                          child: CircleAvatar(
+                            radius: 16,
+                            backgroundColor: Colors.blue.shade600,
+                            child: isUploadingAvatar
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : IconButton(
+                                    icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                                    onPressed: _uploadAvatar,
+                                  ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              if (userType.isNotEmpty)
-                Container(
-                  margin: const EdgeInsets.only(top: 12),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
-                  ),
-                  child: Text(
-                    userType.toUpperCase(),
+                  const SizedBox(height: 20),
+                  // Name and Role
+                  Text(
+                    name,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
-                      letterSpacing: 1,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black26,
+                          offset: Offset(0, 2),
+                          blurRadius: 4,
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              const SizedBox(height: 25),
-            ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ...List.generate(4, (i) => const Icon(Icons.star, color: Colors.amber, size: 22)),
+                      const Icon(Icons.star_half, color: Colors.amber, size: 22),
+                      const SizedBox(width: 6),
+                      const Text('4.5/5', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                    ],
+                  ),
+                  if (role.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Text(
+                        role,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  if (userType.isNotEmpty)
+                    Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        userType.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 25),
+                ],
+              ),
+            );
+          },
+        ),
+        // Place the settings icon in the header so it scrolls
+        Positioned(
+          top: 8,
+          right: 8,
+          child: Material(
+            color: Colors.transparent,
+            child: IconButton(
+              icon: Icon(Icons.settings, color: Colors.blueAccent),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                );
+              },
+              tooltip: 'Settings',
+            ),
           ),
-        );
-      },
+        ),
+      ],
     );
   }
 
@@ -1537,23 +1560,6 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                     ],
                   ),
                 ),
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + 12,
-                  right: 18,
-                  child: Material(
-                    color: Colors.transparent,
-                    child: IconButton(
-                      icon: Icon(Icons.settings, color: Colors.black, size: 28),
-                      tooltip: 'Settings',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                        );
-                      },
-                    ),
-                  ),
-                ),
               ],
             ),
     );
@@ -1652,6 +1658,68 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
             LayoutBuilder(
               builder: (context, constraints) {
                 final isNarrow = constraints.maxWidth < 400;
+                final addButton = OutlinedButton.icon(
+                  icon: const Icon(Icons.person_add),
+                  label: const Text('Add Team Member'),
+                  onPressed: () async {
+                    String name = '';
+                    String role = '';
+                    String? photoUrl;
+                    await showDialog(
+                      context: context,
+                      builder: (context) {
+                        return AlertDialog(
+                          title: const Text('Add Team Member'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextField(
+                                decoration: const InputDecoration(labelText: 'Name'),
+                                onChanged: (v) => name = v,
+                              ),
+                              TextField(
+                                decoration: const InputDecoration(labelText: 'Role'),
+                                onChanged: (v) => role = v,
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.camera_alt),
+                                label: const Text('Pick Photo'),
+                                onPressed: () async {
+                                  final picked = await _picker.pickImage(source: ImageSource.gallery);
+                                  if (picked != null) {
+                                    photoUrl = picked.path;
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                if (name.isNotEmpty && role.isNotEmpty) {
+                                  setState(() {
+                                    teamMembers.add({
+                                      'name': name,
+                                      'role': role,
+                                      'photo': photoUrl ?? 'https://randomuser.me/api/portraits/men/1.jpg',
+                                    });
+                                  });
+                                  Navigator.pop(context);
+                                }
+                              },
+                              child: const Text('Add'),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                );
                 if (isNarrow) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1664,11 +1732,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                         ],
                       ),
                       const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.person_add),
-                        label: const Text('Add Team Member'),
-                        onPressed: () {},
-                      ),
+                      addButton,
                     ],
                   );
                 } else {
@@ -1678,11 +1742,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                       const SizedBox(width: 8),
                       Text('Team Members', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                       const Spacer(),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.person_add),
-                        label: const Text('Add Team Member'),
-                        onPressed: () {},
-                      ),
+                      addButton,
                     ],
                   );
                 }
@@ -1706,21 +1766,36 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   Widget _buildTeamMemberCard(Map<String, String> member) {
     return Column(
       children: [
-        CircleAvatar(
-          radius: 32,
-          backgroundImage: NetworkImage(member['photo']!),
-          onBackgroundImageError: (_, __) {
-            // fallback to asset
+        GestureDetector(
+          onTap: () async {
+            // Pick new photo for this team member
+            final picked = await _picker.pickImage(source: ImageSource.gallery);
+            if (picked != null) {
+              setState(() {
+                member['photo'] = picked.path;
+              });
+            }
           },
-          child: Icon(Icons.person, size: 32, color: Colors.grey[400]),
+          child: CircleAvatar(
+            radius: 32,
+            backgroundImage: NetworkImage(member['photo']!),
+            onBackgroundImageError: (_, __) {},
+            child: Icon(Icons.person, size: 32, color: Colors.grey[400]),
+          ),
         ),
         const SizedBox(height: 8),
         Text(member['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
         Text(member['role']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         IconButton(
           icon: const Icon(Icons.linked_camera, color: Colors.blueAccent),
-          onPressed: () {
-            // Open LinkedIn
+          onPressed: () async {
+            // Pick new photo for this team member (camera icon)
+            final picked = await _picker.pickImage(source: ImageSource.gallery);
+            if (picked != null) {
+              setState(() {
+                member['photo'] = picked.path;
+              });
+            }
           },
         ),
       ],
@@ -1765,7 +1840,78 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
           OutlinedButton.icon(
             icon: const Icon(Icons.email),
             label: const Text('Contact Us'),
-            onPressed: () {},
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) {
+                  final email = profile?['email'] ?? 'Not provided';
+                  final phone = profile?['phone'] ?? 'Not provided';
+                  final website = profile?['website'] ?? 'Not provided';
+                  final linkedin = profile?['linkedin'] ?? 'Not provided';
+                  final twitter = profile?['twitter'] ?? 'Not provided';
+                  final facebook = profile?['facebook'] ?? 'Not provided';
+                  final instagram = profile?['instagram'] ?? 'Not provided';
+                  return AlertDialog(
+                    title: const Text('Contact Details & Social Media'),
+                    content: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.email),
+                            title: const Text('Email'),
+                            subtitle: Text(email),
+                            onTap: email != 'Not provided' ? () => launchUrl(Uri.parse('mailto:$email')) : null,
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.phone),
+                            title: const Text('Phone'),
+                            subtitle: Text(phone),
+                            onTap: phone != 'Not provided' ? () => launchUrl(Uri.parse('tel:$phone')) : null,
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.language),
+                            title: const Text('Website'),
+                            subtitle: Text(website),
+                            onTap: website != 'Not provided' ? () => launchUrl(Uri.parse(website.startsWith('http') ? website : 'https://$website')) : null,
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.business),
+                            title: const Text('LinkedIn'),
+                            subtitle: Text(linkedin),
+                            onTap: linkedin != 'Not provided' ? () => launchUrl(Uri.parse(linkedin)) : null,
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.alternate_email),
+                            title: const Text('Twitter'),
+                            subtitle: Text(twitter),
+                            onTap: twitter != 'Not provided' ? () => launchUrl(Uri.parse(twitter)) : null,
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.facebook),
+                            title: const Text('Facebook'),
+                            subtitle: Text(facebook),
+                            onTap: facebook != 'Not provided' ? () => launchUrl(Uri.parse(facebook)) : null,
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.camera_alt),
+                            title: const Text('Instagram'),
+                            subtitle: Text(instagram),
+                            onTap: instagram != 'Not provided' ? () => launchUrl(Uri.parse(instagram)) : null,
+                          ),
+                        ],
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
@@ -1787,6 +1933,60 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                 const Icon(Icons.emoji_events, color: Colors.amber),
                 const SizedBox(width: 8),
                 Text('Achievements', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.upload_file, color: Colors.blueAccent),
+                  tooltip: 'Upload Achievement',
+                  onPressed: () async {
+                    XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
+                    if (picked != null) {
+                      String? title;
+                      String? desc;
+                      await showDialog(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text('Add Achievement'),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextField(
+                                  decoration: const InputDecoration(labelText: 'Title'),
+                                  onChanged: (v) => title = v,
+                                ),
+                                TextField(
+                                  decoration: const InputDecoration(labelText: 'Description'),
+                                  onChanged: (v) => desc = v,
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  if (title != null && title!.isNotEmpty && desc != null && desc!.isNotEmpty) {
+                                    setState(() {
+                                      achievements.add({
+                                        'title': title!,
+                                        'desc': desc!,
+                                        'icon': picked.path, // Store local path as icon
+                                      });
+                                    });
+                                    Navigator.pop(context);
+                                  }
+                                },
+                                child: const Text('Add'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
+                  },
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -1802,9 +2002,21 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   }
 
   Widget _buildAchievementCard(Map<String, String> ach) {
-    IconData icon = Icons.emoji_events;
-    if (ach['icon'] == 'verified') icon = Icons.verified;
-    if (ach['icon'] == 'star') icon = Icons.star;
+    Widget iconWidget;
+    if (ach['icon'] != null && ach['icon']!.endsWith('.jpg') || ach['icon']!.endsWith('.png')) {
+      iconWidget = Image.file(
+        File(ach['icon']!),
+        width: 32,
+        height: 32,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(Icons.emoji_events, color: Colors.amber, size: 32),
+      );
+    } else {
+      IconData icon = Icons.emoji_events;
+      if (ach['icon'] == 'verified') icon = Icons.verified;
+      if (ach['icon'] == 'star') icon = Icons.star;
+      iconWidget = Icon(icon, color: Colors.amber, size: 32);
+    }
     return Container(
       width: 140,
       padding: const EdgeInsets.all(12),
@@ -1821,10 +2033,10 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
       ),
       child: Column(
         children: [
-          Icon(icon, color: Colors.amber, size: 32),
+          iconWidget,
           const SizedBox(height: 8),
-          Text(ach['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(ach['desc']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(ach['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(ach['desc'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
         ],
       ),
     );

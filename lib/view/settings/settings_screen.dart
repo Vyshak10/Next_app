@@ -21,6 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String? _userId;
   String? _authToken;
+  String? _userType;
 
   @override
   void initState() {
@@ -31,11 +32,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _initialize() async {
     final token = await storage.read(key: 'auth_token');
     final userId = await storage.read(key: 'user_id');
+    final userType = await storage.read(key: 'user_type');
 
     if (token != null && userId != null) {
       setState(() {
         _authToken = token;
         _userId = userId;
+        _userType = userType;
       });
       _loadNotificationSettings();
     }
@@ -198,6 +201,93 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
 
           const SizedBox(height: 24),
+
+          // Company-specific options
+          if (_userType == 'company' || _userType == 'Established Company') ...[
+            sectionHeader('Company Settings'),
+            settingsCard(
+              Column(
+                children: [
+                  ListTile(
+                    title: const Text('Edit Company Profile'),
+                    leading: const Icon(Icons.business),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                    onTap: () {
+                      // Navigate to company profile edit screen
+                      Navigator.pushNamed(context, '/edit-company-profile');
+                    },
+                  ),
+                  const Divider(height: 0, indent: 16, endIndent: 16),
+                  ListTile(
+                    title: const Text('Manage Team Members'),
+                    leading: const Icon(Icons.group),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/manage-team');
+                    },
+                  ),
+                  const Divider(height: 0, indent: 16, endIndent: 16),
+                  ListTile(
+                    title: const Text('Upload/Change Company Logo'),
+                    leading: const Icon(Icons.image),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/upload-company-logo');
+                    },
+                  ),
+                  const Divider(height: 0, indent: 16, endIndent: 16),
+                  ListTile(
+                    title: const Text('Manage Achievements'),
+                    leading: const Icon(Icons.emoji_events),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/manage-achievements');
+                    },
+                  ),
+                  const Divider(height: 0, indent: 16, endIndent: 16),
+                  ListTile(
+                    title: const Text('Request Company Verification'),
+                    leading: const Icon(Icons.verified),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Request Verification'),
+                          content: const Text('Your request for company verification will be reviewed by our team.'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('OK'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 0, indent: 16, endIndent: 16),
+                  ListTile(
+                    title: const Text('Company Analytics'),
+                    leading: const Icon(Icons.analytics),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/company-analytics');
+                    },
+                  ),
+                  const Divider(height: 0, indent: 16, endIndent: 16),
+                  ListTile(
+                    title: const Text('Manage Portfolio'),
+                    leading: const Icon(Icons.work),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/manage-portfolio');
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
 
           // Privacy & Security
           sectionHeader('Privacy & Security'),

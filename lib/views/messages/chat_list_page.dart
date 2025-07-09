@@ -21,6 +21,9 @@ class _ChatListPageState extends State<ChatListPage> {
   bool _isLoading = true;
   List<Map<String, dynamic>> _chats = [];
   int _unreadCount = 0;
+  bool _showSearch = false;
+  String _searchQuery = '';
+  String _filter = 'All';
 
   @override
   void initState() {
@@ -43,9 +46,18 @@ class _ChatListPageState extends State<ChatListPage> {
       setState(() {
         _chats = chats.map((chat) {
           return {
-            'user': UserProfile.fromJson(chat['user']),
+            'user': UserProfile(
+              id: chat['user']['id'].toString(),
+              userId: chat['user']['user_id'].toString(),
+              userType: chat['user']['user_type']?.toString() ?? '',
+              name: chat['user']['name']?.toString() ?? '',
+              skills: chat['user']['skills'] is List ? List<String>.from(chat['user']['skills']) : [],
+              avatarUrl: chat['user']['avatar_url']?.toString(),
+              description: chat['user']['description']?.toString(),
+              notifyEnabled: chat['user']['notify_enabled'] is bool ? chat['user']['notify_enabled'] : true,
+            ),
             'lastMessage': Message.fromJson(chat['last_message']),
-            'conversationId': chat['conversation_id'],
+            'conversationId': chat['conversation_id'].toString(),
             'unread': chat['unread'] ?? false,
           };
         }).toList();
@@ -133,6 +145,15 @@ class _ChatListPageState extends State<ChatListPage> {
     _loadChats();
   }
 
+  List<Map<String, dynamic>> get _filteredChats {
+    return _chats.where((chat) {
+      final user = chat['user'] as UserProfile;
+      final matchesQuery = _searchQuery.isEmpty || user.name.toLowerCase().contains(_searchQuery.toLowerCase());
+      final matchesType = _filter == 'All' || user.userType.toLowerCase() == _filter.toLowerCase();
+      return matchesQuery && matchesType;
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -144,75 +165,128 @@ class _ChatListPageState extends State<ChatListPage> {
         automaticallyImplyLeading: false,
         elevation: 0,
         title: null,
+        actions: [
+          IconButton(
+            icon: Icon(_showSearch ? Icons.close : Icons.search, color: Colors.blueAccent),
+            onPressed: () {
+              setState(() {
+                _showSearch = !_showSearch;
+                if (!_showSearch) _searchQuery = '';
+              });
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.group_add, color: Colors.blueAccent),
+            tooltip: 'Start New Chat',
+            onPressed: _showUserListAndStartChat,
+          ),
+        ],
+        backgroundColor: Colors.white,
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadChats,
-        child: _chats.isEmpty
-            ? const Center(
-                child: Text('No messages yet'),
-              )
-            : ListView.builder(
-                itemCount: _chats.length,
-                itemBuilder: (context, index) {
-                  final chat = _chats[index];
-                  final user = chat['user'] as UserProfile;
-                  final lastMessage = chat['lastMessage'] as Message;
-                  final conversationId = chat['conversationId'];
-                  final unread = chat['unread'] ?? false;
-                  return Dismissible(
-                    key: ValueKey(conversationId),
-                    direction: DismissDirection.endToStart,
-                    background: Container(
-                      color: Colors.red,
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: const Icon(Icons.delete, color: Colors.white),
-                    ),
-                    onDismissed: (_) => _deleteConversation(conversationId),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundImage: user.avatarUrl != null
-                            ? CachedNetworkImageProvider(user.avatarUrl!)
-                            : null,
-                        child: user.avatarUrl == null
-                            ? Text(user.name[0].toUpperCase())
-                            : null,
+      body: Column(
+        children: [
+          if (_showSearch)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search by name...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                       ),
-                      title: Text(user.name),
-                      trailing: unread
-                          ? Container(
-                              width: 10,
-                              height: 10,
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
+                      onChanged: (v) => setState(() => _searchQuery = v),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  DropdownButton<String>(
+                    value: _filter,
+                    items: const [
+                      DropdownMenuItem(value: 'All', child: Text('All')),
+                      DropdownMenuItem(value: 'Company', child: Text('Company')),
+                      DropdownMenuItem(value: 'Startup', child: Text('Startup')),
+                    ],
+                    onChanged: (v) => setState(() => _filter = v!),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: _loadChats,
+              child: _filteredChats.isEmpty
+                  ? const Center(child: Text('No messages yet'))
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                      itemCount: _filteredChats.length,
+                      itemBuilder: (context, index) {
+                        final chat = _filteredChats[index];
+                        final user = chat['user'] as UserProfile;
+                        final lastMessage = chat['lastMessage'] as Message;
+                        final conversationId = chat['conversationId'];
+                        final unread = chat['unread'] ?? false;
+                        return Dismissible(
+                          key: ValueKey(conversationId),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: const Icon(Icons.delete, color: Colors.white),
+                          ),
+                          onDismissed: (_) => _deleteConversation(conversationId),
+                          child: Card(
+                            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: unread ? 4 : 1,
+                            color: unread ? Colors.blue.shade50 : Colors.white,
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.blue.shade100,
+                                backgroundImage: user.avatarUrl != null
+                                    ? CachedNetworkImageProvider(user.avatarUrl!)
+                                    : null,
+                                child: user.avatarUrl == null
+                                    ? Text(user.name[0].toUpperCase())
+                                    : null,
                               ),
-                            )
-                          : null,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ChatPage(
-                              otherUser: user,
-                              conversationId: conversationId,
+                              title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              subtitle: lastMessage.content.isNotEmpty
+                                  ? Text(lastMessage.content, maxLines: 1, overflow: TextOverflow.ellipsis)
+                                  : const Text('No messages yet', style: TextStyle(color: Colors.grey)),
+                              trailing: unread
+                                  ? Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    )
+                                  : null,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ChatPage(
+                                      otherUser: user,
+                                      conversationId: conversationId,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         );
                       },
                     ),
-                  );
-                },
-              ),
+            ),
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showUserListAndStartChat,
-        backgroundColor: Colors.blueAccent,
-        child: const Icon(Icons.person_add_alt_1),
-        tooltip: 'Start New Conversation',
-        elevation: 2,
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 } 

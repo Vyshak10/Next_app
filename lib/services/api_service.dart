@@ -185,4 +185,13 @@ class ApiService {
     final response = await get('get_meetings.php');
     return response['meetings'] ?? [];
   }
+
+  // Search users by username and type
+  Future<List<Map<String, dynamic>>> searchUser(String username, String type) async {
+    final response = await get('search_user.php?username=$username&type=$type');
+    if (response['success'] == true && response['results'] != null) {
+      return List<Map<String, dynamic>>.from(response['results']);
+    }
+    return [];
+  }
 } 

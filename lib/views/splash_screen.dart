@@ -61,51 +61,57 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmall = size.height < 600;
+    final logoSize = isSmall ? 60.0 : size.width * 0.22;
+    final titleFont = isSmall ? 32.0 : size.width * 0.11;
+    final subtitleFont = isSmall ? 14.0 : size.width * 0.045;
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.blue.shade900,
-                  Colors.blue.shade500,
-                ],
-              ),
+        child: Container(
+          height: size.height,
+          width: size.width,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.blue.shade900,
+                Colors.blue.shade500,
+              ],
             ),
-            child: Center(
-              child: ScaleTransition(
-                scale: _animation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Replace with your actual logo
-                    Icon(
-                      Icons.rocket_launch,
-                      size: 100,
+          ),
+          child: Center(
+            child: ScaleTransition(
+              scale: _animation,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(height: size.height * 0.18),
+                  Icon(
+                    Icons.rocket_launch,
+                    size: logoSize,
+                    color: Colors.white,
+                  ),
+                  SizedBox(height: size.height * 0.04),
+                  Text(
+                    'NEXT',
+                    style: TextStyle(
+                      fontSize: titleFont,
+                      fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'NEXT',
-                      style: TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                  ),
+                  SizedBox(height: size.height * 0.02),
+                  Text(
+                    'Connect. Collaborate. Create.',
+                    style: TextStyle(
+                      fontSize: subtitleFont,
+                      color: Colors.white70,
                     ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Connect. Collaborate. Create.',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                  SizedBox(height: size.height * 0.3),
+                ],
               ),
             ),
           ),
