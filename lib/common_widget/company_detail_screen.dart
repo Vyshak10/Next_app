@@ -609,7 +609,9 @@ class CompanyDetailScreen extends StatelessWidget {
             width: double.infinity,
             height: 52,
             child: OutlinedButton.icon(
-              onPressed: () => _showProfessionalPaymentPage(context),
+              onPressed: () {
+                _showMouDialog(context, () => _showProfessionalPaymentPage(context));
+              },
               icon: Icon(Icons.favorite, color: Colors.green.shade600),
               label: Text(
                 'Support Company',
@@ -689,6 +691,76 @@ class CompanyDetailScreen extends StatelessWidget {
           userId: userId,
         ),
       ),
+    );
+  }
+
+  void _showMouDialog(BuildContext context, VoidCallback onAgreed) {
+    final companyName = companyData['name'] ?? 'Partner';
+    final today = DateTime.now();
+    final dateStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+    bool agreed = false;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('📄 Memorandum of Understanding (MoU)'),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Between Xpress AI and $companyName', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Dated: $dateStr'),
+                    const SizedBox(height: 12),
+                    Text('This MoU outlines a mutual understanding between Xpress AI, developers of the Next.js application "N.E.X.T", and $companyName, regarding collaboration in the use, testing, and enhancement of the platform.'),
+                    const SizedBox(height: 12),
+                    const Text('1. Purpose', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('To collaborate on the use and/or testing of "N.E.X.T", a web application developed in Next.js for startup and innovation management.'),
+                    const SizedBox(height: 8),
+                    const Text('2. Responsibilities', style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Xpress AI will provide platform access, updates, and technical support.\n$companyName agrees to use the platform, provide feedback, and maintain confidentiality.'),
+                    const SizedBox(height: 8),
+                    const Text('3. Confidentiality', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('Both parties will keep any shared technical or business information confidential.'),
+                    const SizedBox(height: 8),
+                    const Text('4. Duration & Termination', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text('This MoU is valid for 3 months from the signing date and may be ended by either party with written notice.'),
+                    const SizedBox(height: 16),
+                    Text('Signed by:'),
+                    const SizedBox(height: 8),
+                    Text('Xpress AI\nRole: Developer / Owner\nDate: _____________'),
+                    Text('$companyName\nRole: Startup\nDate: _____________'),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: agreed,
+                          onChanged: (v) => setState(() => agreed = v ?? false),
+                        ),
+                        const Expanded(child: Text('I agree to the terms above.')),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: agreed ? () {
+                    Navigator.pop(context);
+                    onAgreed();
+                  } : null,
+                  child: const Text('OK / Proceed'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

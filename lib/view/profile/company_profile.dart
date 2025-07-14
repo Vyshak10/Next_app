@@ -276,6 +276,10 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     if (id == null) {
       id = await storage.read(key: 'user_id');
     }
+    // If still null, use hardcoded company id
+    if (id == null) {
+      id = '685322';
+    }
     setState(() => _resolvedUserId = id);
     if (id != null) {
       await fetchProfileData(id);

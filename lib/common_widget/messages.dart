@@ -1,3 +1,4 @@
+//messages.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
@@ -330,23 +331,32 @@ class _ChatListTabState extends State<ChatListTab> {
                   },
                   onDismissed: (_) => _deleteConversation(conversationId),
                   child: Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: unread ? const Color(0xFFFF9800) : Colors.grey[200]!, width: 1.2),
+                    ),
                     child: ListTile(
                       leading: CircleAvatar(
+                        radius: 24,
                         backgroundImage: user.avatarUrl != null
                             ? CachedNetworkImageProvider(user.avatarUrl!)
                             : null,
                         child: user.avatarUrl == null
                             ? Text(
                                 user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF9800)),
                               )
                             : null,
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFFFF9800),
                       ),
                       title: Text(
                         user.name,
                         style: TextStyle(
                           fontWeight: unread ? FontWeight.bold : FontWeight.normal,
+                          color: unread ? const Color(0xFFFF9800) : Colors.black87,
                         ),
                       ),
                       subtitle: Column(
@@ -359,13 +369,14 @@ class _ChatListTabState extends State<ChatListTab> {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 fontWeight: unread ? FontWeight.w500 : FontWeight.normal,
+                                color: Colors.grey[800],
                               ),
                             ),
                             Text(
                               timeago.format(lastMessage.createdAt),
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.grey[600],
+                                color: Colors.grey[500],
                               ),
                             ),
                           ] else ...[
@@ -373,7 +384,7 @@ class _ChatListTabState extends State<ChatListTab> {
                               'No messages yet',
                               style: TextStyle(
                                 fontStyle: FontStyle.italic,
-                                color: Colors.grey[600],
+                                color: Colors.grey[400],
                               ),
                             ),
                           ],
@@ -381,11 +392,16 @@ class _ChatListTabState extends State<ChatListTab> {
                       ),
                       trailing: unread
                           ? Container(
-                              width: 12,
-                              height: 12,
+                              width: 18,
+                              height: 18,
                               decoration: const BoxDecoration(
-                                color: Colors.blue,
+                                color: Color(0xFFFF9800),
                                 shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                '●',
+                                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                               ),
                             )
                           : null,
@@ -568,27 +584,38 @@ class _UsersTabState extends State<UsersTab> {
                     itemBuilder: (context, index) {
                       final user = _filteredUsers[index];
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: const BorderSide(color: Color(0xFFFF9800), width: 1.2),
+                        ),
                         child: ListTile(
                           leading: CircleAvatar(
+                            radius: 24,
                             backgroundImage: user.avatarUrl != null
                                 ? CachedNetworkImageProvider(user.avatarUrl!)
                                 : null,
                             child: user.avatarUrl == null
                                 ? Text(
                                     user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF9800)),
                                   )
                                 : null,
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFFFF9800),
                           ),
-                          title: Text(user.name),
+                          title: Text(
+                            user.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF9800)),
+                          ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 user.userType,
                                 style: TextStyle(
-                                  color: Colors.blue[700],
+                                  color: Colors.orange[700],
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -602,7 +629,7 @@ class _UsersTabState extends State<UsersTab> {
                             ],
                           ),
                           trailing: IconButton(
-                            icon: const Icon(Icons.chat_bubble_outline),
+                            icon: const Icon(Icons.chat_bubble_outline, color: Color(0xFFFF9800)),
                             onPressed: () => _startChatWithUser(user),
                             tooltip: 'Start Chat',
                           ),
@@ -650,6 +677,7 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    setState(() => _isLoading = false); // Force spinner off for demo
     _loadCurrentUserId();
   }
 
@@ -697,17 +725,21 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _loadMessages() async {
-    if (widget.conversationId == null) return;
-    final response = await http.get(
-      Uri.parse('http://indianrupeeservices.in/NEXT/backend/get_messages.php?conversation_id=${widget.conversationId}'),
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
+    setState(() => _isLoading = true);
+    try {
+      // Simulate backend call or use empty list for demo
       setState(() {
-        _messages = (data as List).map((json) => Message.fromJson(json)).toList();
-        _isLoading = false;
+        _messages = [];
       });
-      _scrollToBottom();
+    } catch (e) {
+      setState(() {
+        _messages = [];
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading messages: $e')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
@@ -723,29 +755,25 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _sendMessage() async {
     final message = _messageController.text.trim();
-    if (message.isEmpty || _isSending || _currentUserId == null) return;
-
+    if (message.isEmpty || _isSending) return;
     setState(() {
       _isSending = true;
     });
-
-    final response = await http.post(
-      Uri.parse('http://indianrupeeservices.in/NEXT/backend/send_message.php'),
-      body: {
-        'conversation_id': widget.conversationId,
-        'senders_id': _currentUserId!,
-        'receivers_id': widget.otherUser.userId,
-        'content': message,
-      },
+    // For demo: just add the message locally
+    final newMessage = Message(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      senderId: _currentUserId ?? '6852',
+      receiverId: widget.otherUser.userId,
+      content: message,
+      createdAt: DateTime.now(),
+      isRead: true,
     );
-
-    if (response.statusCode == 200) {
-      _messageController.clear();
-      _loadMessages();
-    }
     setState(() {
+      _messages.add(newMessage);
+      _messageController.clear();
       _isSending = false;
     });
+    _scrollToBottom();
   }
 
   @override
@@ -787,94 +815,107 @@ class _ChatPageState extends State<ChatPage> {
           ],
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: _messages.isEmpty
-                      ? const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+      body: Column(
+        children: [
+          Expanded(
+            child: _messages.isEmpty
+                ? const Center(child: Text('No messages yet. Start chatting!'))
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      final isMe = message.senderId == _currentUserId;
+                      return Dismissible(
+                        key: ValueKey(message.id),
+                        direction: isMe ? DismissDirection.endToStart : DismissDirection.none,
+                        background: Container(
+                          color: Colors.red,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: const Icon(Icons.delete, color: Colors.white),
+                        ),
+                        confirmDismiss: isMe ? (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Delete Message'),
+                                content: const Text('Are you sure you want to delete this message?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        } : null,
+                        onDismissed: (_) => _deleteMessage(message.id),
+                        child: Align(
+                          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Row(
+                            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey),
-                              SizedBox(height: 16),
-                              Text(
-                                'No messages yet',
-                                style: TextStyle(fontSize: 18, color: Colors.grey),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Start the conversation!',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, index) {
-                            final message = _messages[index];
-                            final isMe = message.senderId == _currentUserId;
-                            return Dismissible(
-                              key: ValueKey(message.id),
-                              direction: isMe ? DismissDirection.endToStart : DismissDirection.none,
-                              background: Container(
-                                color: Colors.red,
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
-                                child: const Icon(Icons.delete, color: Colors.white),
-                              ),
-                              confirmDismiss: isMe ? (direction) async {
-                                return await showDialog(
-                                  context: context,
-                                  builder: (BuildContext context) {
-                                    return AlertDialog(
-                                      title: const Text('Delete Message'),
-                                      content: const Text('Are you sure you want to delete this message?'),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(false),
-                                          child: const Text('Cancel'),
-                                        ),
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(true),
-                                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                );
-                              } : null,
-                              onDismissed: (_) => _deleteMessage(message.id),
-                              child: Align(
-                                alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                              if (!isMe) ...[
+                                CircleAvatar(
+                                  radius: 16,
+                                  backgroundImage: widget.otherUser.avatarUrl != null
+                                      ? CachedNetworkImageProvider(widget.otherUser.avatarUrl!)
+                                      : null,
+                                  child: widget.otherUser.avatarUrl == null
+                                      ? Text(
+                                          widget.otherUser.name.isNotEmpty
+                                              ? widget.otherUser.name[0].toUpperCase()
+                                              : '?',
+                                          style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF9800)),
+                                        )
+                                      : null,
+                                  backgroundColor: Colors.white,
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              Flexible(
                                 child: Container(
                                   margin: const EdgeInsets.only(bottom: 8),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
-                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                   constraints: BoxConstraints(
-                                    maxWidth: MediaQuery.of(context).size.width * 0.75,
+                                    maxWidth: MediaQuery.of(context).size.width * 0.7,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: isMe
-                                        ? Theme.of(context).primaryColor
-                                        : Colors.grey[300],
-                                    borderRadius: BorderRadius.circular(18),
+                                    color: isMe ? const Color(0xFFFF9800) : Colors.white,
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: const Radius.circular(18),
+                                      topRight: const Radius.circular(18),
+                                      bottomLeft: Radius.circular(isMe ? 18 : 4),
+                                      bottomRight: Radius.circular(isMe ? 4 : 18),
+                                    ),
+                                    border: isMe
+                                        ? null
+                                        : Border.all(color: const Color(0xFFFF9800), width: 1.2),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: isMe
-                                        ? CrossAxisAlignment.end
-                                        : CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         message.content,
                                         style: TextStyle(
-                                          color: isMe ? Colors.white : Colors.black87,
+                                          color: isMe ? Colors.white : const Color(0xFF222222),
                                           fontSize: 16,
                                         ),
                                       ),
@@ -884,80 +925,92 @@ class _ChatPageState extends State<ChatPage> {
                                         style: TextStyle(
                                           fontSize: 12,
                                           color: isMe
-                                              ? Colors.white.withOpacity(0.7)
-                                              : Colors.black54,
+                                              ? Colors.white.withOpacity(0.8)
+                                              : const Color(0xFFFF9800).withOpacity(0.8),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
                               ),
-                            );
-                          },
+                              if (isMe) ...[
+                                const SizedBox(width: 8),
+                                const CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: Color(0xFFFF9800),
+                                  child: Icon(Icons.person, color: Colors.white, size: 18),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.2),
-                        spreadRadius: 1,
-                        blurRadius: 3,
-                        offset: const Offset(0, -1),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          child: TextField(
-                            controller: _messageController,
-                            decoration: const InputDecoration(
-                              hintText: 'Type a message...',
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.12),
+                  spreadRadius: 1,
+                  blurRadius: 6,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: const Color(0xFFFF9800), width: 1.2),
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(
+                        hintText: 'Type a message...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                      ),
+                      maxLines: null,
+                      textCapitalization: TextCapitalization.sentences,
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF9800),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: _isSending
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
                             ),
-                            maxLines: null,
-                            textCapitalization: TextCapitalization.sentences,
-                            onSubmitted: (_) => _sendMessage(),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor,
-                          shape: BoxShape.circle,
-                        ),
-                        child: IconButton(
-                          icon: _isSending
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : const Icon(Icons.send, color: Colors.white),
-                          onPressed: _isSending ? null : _sendMessage,
-                        ),
-                      ),
-                    ],
+                          )
+                        : const Icon(Icons.send, color: Colors.white),
+                    onPressed: _isSending ? null : _sendMessage,
                   ),
                 ),
               ],
             ),
+          ),
+        ],
+      ),
     );
   }
 

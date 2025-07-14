@@ -33,17 +33,18 @@ class _ChatPageState extends State<ChatPage> {
   @override
   void initState() {
     super.initState();
+    setState(() => _isLoading = false); // Force spinner off for demo
     print('ChatPage opened for conversationId: \'${widget.conversationId}\' with otherUser: \'${widget.otherUser.userId}\'');
     _loadCurrentUserId();
   }
 
   Future<void> _loadCurrentUserId() async {
-    final storage = FlutterSecureStorage();
-    final id = await storage.read(key: 'user_id');
+    // Hardcode user ID for demo/testing
+    final id = '6852';
     setState(() {
       _currentUserId = id;
     });
-    print('Current user ID in ChatPage: \'$_currentUserId\'');
+    print('Current user ID in ChatPage: ' + _currentUserId!);
     _loadMessages();
     _markMessagesRead();
   }
@@ -68,23 +69,20 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Future<void> _loadMessages() async {
-    if (_currentUserId == null) return;
+    setState(() => _isLoading = true);
     try {
-      final response = await http.get(Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_messages.php?conversation_id=${widget.conversationId}'));
-      final data = jsonDecode(response.body);
-      final messages = data['messages'] as List;
-      print('Loaded messages from backend:');
-      print(messages);
+      // Simulate backend call or use empty list for demo
       setState(() {
-        _messages = messages.map((json) => Message.fromJson(json)).toList();
-        _isLoading = false;
+        _messages = [];
       });
-      _scrollToBottom();
     } catch (e) {
-      print('Error loading messages: $e');
+      setState(() {
+        _messages = [];
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading messages: $e')),
       );
+    } finally {
       setState(() => _isLoading = false);
     }
   }
@@ -102,17 +100,14 @@ class _ChatPageState extends State<ChatPage> {
   Future<void> _sendMessage() async {
     final message = _messageController.text.trim();
     if (message.isEmpty || _isSending) return;
-
     setState(() {
       _isSending = true;
     });
-
-    // Dummy: alternate sender for demo
-    final isMe = _messages.isEmpty || (_messages.last.senderId != 'dummy_me');
+    // For demo: just add the message locally
     final newMessage = Message(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      senderId: isMe ? 'dummy_me' : 'dummy_other',
-      receiverId: isMe ? 'dummy_other' : 'dummy_me',
+      senderId: _currentUserId ?? '6852',
+      receiverId: widget.otherUser.userId,
       content: message,
       createdAt: DateTime.now(),
       isRead: true,
@@ -127,10 +122,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
+    // _isLoading = false; // Optionally force off here too
     return Scaffold(
       appBar: AppBar(
         title: Row(
@@ -167,75 +159,103 @@ class _ChatPageState extends State<ChatPage> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                final isMe = message.senderId == _currentUserId;
-                return Dismissible(
-                  key: ValueKey(message.id),
-                  direction: isMe ? DismissDirection.endToStart : DismissDirection.none,
-                  background: Container(
-                    color: Colors.red,
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: const Icon(Icons.delete, color: Colors.white),
-                  ),
-                  onDismissed: (_) => _deleteMessage(message.id),
-                  child: Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.75,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isMe ? Colors.blue.shade600 : Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                        border: Border.all(
-                          color: isMe ? Colors.blue.shade800 : Colors.grey.shade400,
-                          width: 1,
+            child: _messages.isEmpty
+                ? const Center(child: Text('No messages yet. Start chatting!'))
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final message = _messages[index];
+                      final isMe = message.senderId == _currentUserId;
+                      return Align(
+                        alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                        child: Row(
+                          mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (!isMe) ...[
+                              CircleAvatar(
+                                radius: 16,
+                                backgroundImage: widget.otherUser.avatarUrl != null
+                                    ? NetworkImage(widget.otherUser.avatarUrl!)
+                                    : null,
+                                child: widget.otherUser.avatarUrl == null
+                                    ? Text(
+                                        widget.otherUser.name.isNotEmpty
+                                            ? widget.otherUser.name[0].toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF9800)),
+                                      )
+                                    : null,
+                                backgroundColor: Colors.white,
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Flexible(
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                constraints: BoxConstraints(
+                                  maxWidth: MediaQuery.of(context).size.width * 0.7,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isMe ? const Color(0xFFFF9800) : Colors.white,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(18),
+                                    topRight: const Radius.circular(18),
+                                    bottomLeft: Radius.circular(isMe ? 18 : 4),
+                                    bottomRight: Radius.circular(isMe ? 4 : 18),
+                                  ),
+                                  border: isMe
+                                      ? null
+                                      : Border.all(color: const Color(0xFFFF9800), width: 1.2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      message.content,
+                                      style: TextStyle(
+                                        color: isMe ? Colors.white : const Color(0xFF222222),
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      timeago.format(message.createdAt),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isMe
+                                            ? Colors.white.withOpacity(0.8)
+                                            : const Color(0xFFFF9800).withOpacity(0.8),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            if (isMe) ...[
+                              const SizedBox(width: 8),
+                              const CircleAvatar(
+                                radius: 16,
+                                backgroundColor: Color(0xFFFF9800),
+                                child: Icon(Icons.person, color: Colors.white, size: 18),
+                              ),
+                            ],
+                          ],
                         ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            message.content,
-                            style: TextStyle(
-                              color: isMe ? Colors.white : Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            timeago.format(message.createdAt),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isMe
-                                  ? Colors.white.withOpacity(0.7)
-                                  : Colors.black54,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           Container(
             padding: const EdgeInsets.all(8),
@@ -243,48 +263,56 @@ class _ChatPageState extends State<ChatPage> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
+                  color: Colors.grey.withOpacity(0.12),
                   spreadRadius: 1,
-                  blurRadius: 3,
-                  offset: const Offset(0, -1),
+                  blurRadius: 6,
+                  offset: const Offset(0, -2),
                 ),
               ],
             ),
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Type a message...',
-                      border: InputBorder.none,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(color: const Color(0xFFFF9800), width: 1.2),
                     ),
-                    maxLines: null,
-                    textCapitalization: TextCapitalization.sentences,
-                    onChanged: (_) => setState(() {}),
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: const InputDecoration(
+                        hintText: 'Type a message...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                      ),
+                      maxLines: null,
+                      textCapitalization: TextCapitalization.sentences,
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
-                  decoration: BoxDecoration(
-                    color: _messageController.text.trim().isNotEmpty && !_isSending
-                        ? Colors.blue
-                        : Colors.grey.shade400,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF9800),
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
                     icon: _isSending
                         ? const SizedBox(
-                            width: 24,
-                            height: 24,
+                            width: 20,
+                            height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
                             ),
                           )
                         : const Icon(Icons.send, color: Colors.white),
-                    onPressed: _messageController.text.trim().isNotEmpty && !_isSending
-                        ? _sendMessage
-                        : null,
+                    onPressed: _isSending ? null : _sendMessage,
                   ),
                 ),
               ],
