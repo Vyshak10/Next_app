@@ -16,6 +16,10 @@ import '../services/image_picker_service.dart';
 import 'dart:typed_data';
 import 'post.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+// For web localStorage
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -198,16 +202,24 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   Future<void> _resolveUserIdAndFetch() async {
     String? id = widget.userId;
     if (id == null) {
-      id = await storage.read(key: 'user_id');
-      print('DEBUG: Read user_id from FlutterSecureStorage: ' + (id ?? 'null'));
-      if (id == null) {
-        final prefs = await SharedPreferences.getInstance();
-        id = prefs.getString('user_id');
-        print('DEBUG: Read user_id from shared_preferences: ' + (id ?? 'null'));
+      if (kIsWeb) {
+        id = html.window.localStorage['user_id'];
+        print('DEBUG: Read user_id from web localStorage: ' + (id ?? 'null'));
       }
       if (id == null) {
-        id = '6852';
-        print('DEBUG: Forcing user_id to 6852 as backup');
+        id = await storage.read(key: 'user_id');
+        print('DEBUG: Read user_id from FlutterSecureStorage: ' + (id ?? 'null'));
+        if (id == null) {
+          final prefs = await SharedPreferences.getInstance();
+          id = prefs.getString('user_id');
+          print('DEBUG: Read user_id from shared_preferences: ' + (id ?? 'null'));
+        }
+        if (id == null) {
+          id = '6852';
+          print('DEBUG: Forcing user_id to 6852 as backup');
+        }
+      } else {
+        print('DEBUG: Using widget.userId: ' + id);
       }
     } else {
       print('DEBUG: Using widget.userId: ' + id);

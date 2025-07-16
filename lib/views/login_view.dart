@@ -4,6 +4,10 @@ import 'package:next_app/views/signup_view.dart';
 import 'package:next_app/views/forgot_password_view.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+// For web localStorage
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:html' as html;
 
 class LoginView extends StatefulWidget {
   const LoginView({Key? key}) : super(key: key);
@@ -53,6 +57,10 @@ class _LoginViewState extends State<LoginView> {
           await _storage.write(key: 'user_id', value: userId);
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('user_id', userId);
+          if (kIsWeb) {
+            html.window.localStorage['user_id'] = userId;
+            print('DEBUG: Saved user_id to web localStorage: ' + userId);
+          }
           String? testId = prefs.getString('user_id');
           print('DEBUG: Immediately read user_id from shared_preferences: ' + (testId ?? 'null'));
         }
