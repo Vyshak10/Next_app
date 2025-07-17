@@ -58,7 +58,8 @@ class _LoginViewState extends State<LoginView> {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('user_id', userId);
           if (kIsWeb) {
-            html.window.localStorage['user_id'] = userId;
+            // ignore: avoid_web_libraries_in_flutter
+            (html.window as dynamic).localStorage['user_id'] = userId;
             print('DEBUG: Saved user_id to web localStorage: ' + userId);
           }
           String? testId = prefs.getString('user_id');

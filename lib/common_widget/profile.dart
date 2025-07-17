@@ -203,7 +203,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     String? id = widget.userId;
     if (id == null) {
       if (kIsWeb) {
-        id = html.window.localStorage['user_id'];
+        // ignore: avoid_web_libraries_in_flutter
+        id = (html.window as dynamic).localStorage['user_id'];
         print('DEBUG: Read user_id from web localStorage: ' + (id ?? 'null'));
       }
       if (id == null) {
@@ -221,8 +222,6 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
       } else {
         print('DEBUG: Using widget.userId: ' + id);
       }
-    } else {
-      print('DEBUG: Using widget.userId: ' + id);
     }
     setState(() => _resolvedUserId = id);
     if (id != null) {
