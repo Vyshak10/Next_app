@@ -17,9 +17,7 @@ import 'dart:typed_data';
 import 'post.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-// For web localStorage
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import '../common/user_id_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -131,8 +129,8 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   Future<String> _getCurrentUserId() async {
-    // Get current user ID from secure storage or your auth system
-    return await storage.read(key: 'user_id') ?? 'anonymous';
+    // Get current user ID from user_id_helper
+    return await getUserId() ?? 'anonymous';
   }
 
   Future<void> _createPaymentOrder(double amount, String currency) async {
@@ -202,26 +200,14 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   Future<void> _resolveUserIdAndFetch() async {
     String? id = widget.userId;
     if (id == null) {
-      if (kIsWeb) {
-        // ignore: avoid_web_libraries_in_flutter
-        id = (html.window as dynamic).localStorage['user_id'];
-        print('DEBUG: Read user_id from web localStorage: ' + (id ?? 'null'));
-      }
+      id = await getUserId();
+      print('DEBUG: Read user_id from user_id_helper: ' + (id ?? 'null'));
       if (id == null) {
-        id = await storage.read(key: 'user_id');
-        print('DEBUG: Read user_id from FlutterSecureStorage: ' + (id ?? 'null'));
-        if (id == null) {
-          final prefs = await SharedPreferences.getInstance();
-          id = prefs.getString('user_id');
-          print('DEBUG: Read user_id from shared_preferences: ' + (id ?? 'null'));
-        }
-        if (id == null) {
-          id = '6852';
-          print('DEBUG: Forcing user_id to 6852 as backup');
-        }
-      } else {
-        print('DEBUG: Using widget.userId: ' + id);
+        id = '6852';
+        print('DEBUG: Forcing user_id to 6852 as backup');
       }
+    } else {
+      print('DEBUG: Using widget.userId: ' + id);
     }
     setState(() => _resolvedUserId = id);
     if (id != null) {
