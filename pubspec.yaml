@@ -34,8 +34,10 @@ dependencies:
   font_awesome_flutter: ^10.5.0
   realtime_client: ^2.5.0
   http: ^1.2.1
+  fluttertoast: ^8.2.12
   
   fl_chart: ^0.64.0
+
 
   # Image Picker
   image_picker: ^1.0.4
