@@ -5,7 +5,7 @@ import '../profile/user_profile_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({Key? key}) : super(key: key);
+  const SearchScreen({super.key});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();

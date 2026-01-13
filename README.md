@@ -1,103 +1,117 @@
 # NEXT: Nurturing Entrepreneurs and eXeptional Talent
-https://next-app-lake-nu.vercel.app/
 
-> **"Your next opportunity awaits."**
+[![Web App](https://img.shields.io/badge/Web-App-blue?style=for-the-badge)](https://next-app-lake-nu.vercel.app/)
+[![Flutter](https://img.shields.io/badge/Built_with-Flutter-02569B?style=for-the-badge&logo=flutter)](https://flutter.dev/)
 
+**NEXT** is a premier B2B platform designed exclusively to bridge the gap between **Established Companies** and **High-Potential Startups**. We facilitate meaningful partnerships, investment opportunities, and strategic collaborations.
 
-NEXT is a comprehensive platform designed to revolutionize how established companies and innovative startups connect, collaborate, and grow. Whether you're an established business seeking exceptional talent or a startup in search of co-founders, resources, or exposure — **NEXT** is the bridge to your next opportunity.
-
----
-
-## ✨ Features
-
-### For Established Companies
-
-- **Talent Acquisition**: Hire from a curated pool of top-tier individuals and startups.
-- **Advanced Hiring Tools & Analytics**: Track engagement and gain insights into candidate profiles.
-- **Company Profile & Branding**: Build a compelling brand presence to attract talent.
-- **Direct Communication**: Seamless messaging with candidates.
-- **Team Management**: Organize your hiring pipeline and internal teams efficiently.
-
-#### Startup Monitoring & Analytics
-
-- **Pairing System**: Pair with startups via secure 8-character codes.
-- **Growth Overview**: Visualize metrics over time (Monthly, 6M, Yearly).
-- **Key Stats**: Monitor investments, reach, and impressions.
-- **Invested Companies Overview**: Track startups you’ve invested in.
-- **Activity Timeline**: View chronological milestones and events.
-- **Profile Management**: Edit company info, showcase achievements, and manage your team.
+> **Note:** This platform focuses strictly on business-to-business (B2B) interactions. Individual job seeker features have been streamlined out to focus on organizational growth.
 
 ---
 
-### For Startups
+## 🌟 Key Features
 
-- **Co-founder & Team Search**: Build your founding team with skilled collaborators.
-- **Resource Access**: Get tools and content to help you grow.
-- **Investor Network**: Connect with investors aligned with your vision.
-- **Company Profiles**: Share your mission, funding status, and tech stack.
-- **Job Opportunities**: Apply for roles at forward-thinking companies.
-- **Direct Messaging**: Communicate with potential partners and investors.
-- **Meeting Scheduling**: Coordinate collaborations effortlessly.
-- **Career Growth Tools**: Access skills, insights, and networking opportunities.
-- **Community Engagement**: Connect with a thriving startup community.
-- **Personalized Matching**: Set preferences and let NEXT connect you smartly.
+### 🏢 For Established Companies
+*   **Startup Discovery**: Browse and filter a curated list of startups by sector (Fintech, AI, Healthtech, etc.).
+*   **Investment & Funding**: View funding goals and support startups directly via integrated payment gateways.
+*   **Pairing & Analytics**: Connect with startups using secure pairing codes and monitor their growth KPIs (Monthly/Yearly metrics).
+*   **Direct Communication**: Real-time messaging with startup founders.
+*   **Portfolio Management**: Track invested companies and their activity timelines.
+
+### 🚀 For Startups
+*   **Visibility**: Create comprehensive profiles showcasing your mission, tech stack, and funding stage.
+*   **Funding Opportunities**: Display funding requirements and accept support from established industry players.
+*   **Networking**: Connect directly with industry leaders and potential acquirers/investors.
+*   **Meeting Scheduler**: Organize pitch meetings and collaboration discussions.
+*   **Resource Access**: Tools and insights to accelerate growth.
+
+---
+
+## 🛠️ Technology Stack
+
+*   **Frontend**: [Flutter](https://flutter.dev/) (Web, Android, iOS)
+*   **Backend**: PHP (RESTful API)
+*   **Database**: MySQL
+*   **Realtime/Storage**: [Supabase](https://supabase.com/) & Integrated PHP APIs
+*   **Payments**: Razorpay / UPI Integration
+*   **State Management**: `setState` & `Provider` patterns
+*   **Local Storage**: `flutter_secure_storage` & `shared_preferences`
 
 ---
 
 ## 🚀 Getting Started
 
-To get a local copy up and running, follow these steps:
+Follow these instructions to get a copy of the project up and running on your local machine.
 
 ### Prerequisites
+*   [Flutter SDK](https://flutter.dev/docs/get-started/install) (Version 3.7.0 or higher)
+*   [Git](https://git-scm.com/)
+*   A browser (Chrome/Edge) for web debugging or an Android Emulator/Device.
 
-- **Flutter SDK** – For building and running the mobile app.
-- **PHP Environment** – Apache/Nginx with PHP (commonly available on cPanel hosting).
-- **MySQL/MariaDB** – For database management (also available via cPanel).
+### Installation
 
----
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/Vyshak10/Next_app.git
+    cd Next_app
+    ```
 
-## 🛠️ Built With
+2.  **Install Dependencies**
+    ```bash
+    flutter pub get
+    ```
 
-- **Flutter** – Cross-platform mobile development.
-- **Dart** – Flutter’s core language.
-- **PHP** – Backend logic and APIs.
-- **MySQL/MariaDB** – Relational database management.
-- **RESTful APIs** – For frontend–backend communication.
-- [Chart Library: `fl_chart`] *(Used for data visualization)*
-- [Payment Gateway Integration: `Razorpay`, `Stripe`] *(If applicable)*
+3.  **Run the Application**
+    *   **For Web:**
+        ```bash
+        flutter run -d chrome
+        ```
+    *   **For Windows:**
+        ```bash
+        flutter run -d windows
+        ```
+    *   **For Android:**
+        ```bash
+        flutter run
+        ```
 
----
-
-## 💡 How to Use
-
-1. **Choose Your Role**: Startup or Established Company.
-2. **Sign Up**:
-   - **Companies**: Input company details, skills, contact info.
-   - **Startups**: Input name, contact, and stage.
-3. **Login**: Use your credentials to access the dashboard.
-
-### Dashboards:
-
-- **Companies**: View active startups, manage achievements, connections, and hiring.
-- **Startups**: Browse startups by sector (Fintech, AI, Healthtech, etc.), connect and apply.
-
-### Core Interactions:
-
-- **Message**: Start conversations with startups or companies.
-- **Support**: Contribute financially through UPI, Cards, Net Banking, Wallets, etc.
-- **Sign MoU** *(If applicable)*: Digitally sign collaboration documents.
-- **Update Profile**: Add team members, achievements, and showcase posts.
-- **Settings**: Toggle dark mode, notifications, privacy, etc.
+### Configuration
+The app is pre-configured to connect to the backend.
+*   **Backend URL**: Defined in `lib/config.dart`.
+*   **Supabase/API Keys**: Managed internally.
 
 ---
 
-## 🛣️ Roadmap
+## 📂 Project Structure
 
-- Add advanced analytics & customizable dashboards.
-- Improve matching algorithms for higher relevance.
-- Expand startup resources and learning tools.
-- Launch dedicated job board system.
-- Implement real-time chat.
-- [Add your own planned features here.]
+```
+lib/
+├── common_widget/       # Reusable UI components (Buttons, Cards, Chat)
+├── routes/              # Application routing (app_routes.dart)
+├── services/            # API handling and Authentication (auth_service.dart, api_service.dart)
+├── view/                # Main Application Screens
+│   ├── analytics/       # Graphs and Data Visualization
+│   ├── chat/            # Chat implementation
+│   ├── homepage/        # Company & Startup Dashboards
+│   ├── login/           # Authentication Screens (Login, Signup)
+│   ├── meetings/        # Meeting Scheduling & Notifications
+│   ├── posts/           # Feed and Post Creation
+│   └── profile/         # User Profile Management
+└── main.dart            # Entry point
+```
 
 ---
+
+## 🤝 Contributing
+
+1.  Fork the project
+2.  Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.

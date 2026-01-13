@@ -11,7 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class CreatePostBottomSheet extends StatefulWidget {
   final Function(Map<String, dynamic>) onPostCreated;
 
-  const CreatePostBottomSheet({Key? key, required this.onPostCreated}) : super(key: key);
+  const CreatePostBottomSheet({super.key, required this.onPostCreated});
 
   @override
   State<CreatePostBottomSheet> createState() => _CreatePostBottomSheetState();
@@ -23,7 +23,7 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
   final TextEditingController _tagsController = TextEditingController();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   List<Uint8List> _selectedImages = [];
-  List<String> _createdPostImageUrls = [];
+  final List<String> _createdPostImageUrls = [];
   bool _isLoading = false;
 
   Future<String?> getAuthToken() async {
@@ -33,11 +33,9 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
   Future<void> _pickImages() async {
     final picker = ImagePicker();
     final pickedFiles = await picker.pickMultiImage(imageQuality: 70);
-    if (pickedFiles != null) {
-      final List<Uint8List> images = await Future.wait(pickedFiles.map((file) => file.readAsBytes()));
-      setState(() => _selectedImages = images);
+    final List<Uint8List> images = await Future.wait(pickedFiles.map((file) => file.readAsBytes()));
+    setState(() => _selectedImages = images);
     }
-  }
 
   Future<List<String>> _uploadImagesToSupabase(List<Uint8List> images) async {
     final supabase = Supabase.instance.client;

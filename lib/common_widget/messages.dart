@@ -73,7 +73,7 @@ class UserProfile {
 
 // Main Messages Page with TabBar
 class MessagesPage extends StatefulWidget {
-  const MessagesPage({Key? key}) : super(key: key);
+  const MessagesPage({super.key});
 
   @override
   _MessagesPageState createState() => _MessagesPageState();
@@ -162,8 +162,8 @@ class _MessagesPageState extends State<MessagesPage> with SingleTickerProviderSt
               backgroundColor: Colors.white,
               elevation: 4,
               onPressed: _showUsersModal,
-              child: const Icon(Icons.people, color: Colors.blueAccent),
               tooltip: 'Browse Users',
+              child: const Icon(Icons.people, color: Colors.blueAccent),
             ),
           ),
         ],
@@ -171,17 +171,13 @@ class _MessagesPageState extends State<MessagesPage> with SingleTickerProviderSt
     );
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }
 
 // Chat List Tab
 class ChatListTab extends StatefulWidget {
   final Function(int) onUnreadCountChanged;
 
-  const ChatListTab({Key? key, required this.onUnreadCountChanged}) : super(key: key);
+  const ChatListTab({super.key, required this.onUnreadCountChanged});
 
   @override
   _ChatListTabState createState() => _ChatListTabState();
@@ -343,14 +339,14 @@ class _ChatListTabState extends State<ChatListTab> {
                         backgroundImage: user.avatarUrl != null
                             ? CachedNetworkImageProvider(user.avatarUrl!)
                             : null,
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFFFF9800),
                         child: user.avatarUrl == null
                             ? Text(
                                 user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
                                 style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF9800)),
                               )
                             : null,
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFFFF9800),
                       ),
                       title: Text(
                         user.name,
@@ -430,7 +426,7 @@ class _ChatListTabState extends State<ChatListTab> {
 
 // Users Tab
 class UsersTab extends StatefulWidget {
-  const UsersTab({Key? key}) : super(key: key);
+  const UsersTab({super.key});
 
   @override
   _UsersTabState createState() => _UsersTabState();
@@ -596,14 +592,14 @@ class _UsersTabState extends State<UsersTab> {
                             backgroundImage: user.avatarUrl != null
                                 ? CachedNetworkImageProvider(user.avatarUrl!)
                                 : null,
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFFFF9800),
                             child: user.avatarUrl == null
                                 ? Text(
                                     user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
                                     style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF9800)),
                                   )
                                 : null,
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFFFF9800),
                           ),
                           title: Text(
                             user.name,
@@ -657,10 +653,10 @@ class ChatPage extends StatefulWidget {
   final String conversationId;
 
   const ChatPage({
-    Key? key,
+    super.key,
     required this.otherUser,
     required this.conversationId,
-  }) : super(key: key);
+  });
 
   @override
   _ChatPageState createState() => _ChatPageState();
@@ -870,6 +866,7 @@ class _ChatPageState extends State<ChatPage> {
                                   backgroundImage: widget.otherUser.avatarUrl != null
                                       ? CachedNetworkImageProvider(widget.otherUser.avatarUrl!)
                                       : null,
+                                  backgroundColor: Colors.white,
                                   child: widget.otherUser.avatarUrl == null
                                       ? Text(
                                           widget.otherUser.name.isNotEmpty
@@ -878,7 +875,6 @@ class _ChatPageState extends State<ChatPage> {
                                           style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF9800)),
                                         )
                                       : null,
-                                  backgroundColor: Colors.white,
                                 ),
                                 const SizedBox(width: 8),
                               ],

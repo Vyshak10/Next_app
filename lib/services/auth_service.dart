@@ -23,7 +23,7 @@ Future<Map<String, dynamic>> signUp({
 }) async {
   try {
     final response = await http.post(
-      Uri.parse('${baseUrl}/signup.php'),
+      Uri.parse('$baseUrl/signup.php'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'email': email,
@@ -96,7 +96,7 @@ Future<Map<String, dynamic>> signUp({
   Future<void> requestPasswordReset(String email) async {
     try {
       final response = await http.post(
-        Uri.parse('${baseUrl}/auth/request_password_reset.php'),
+        Uri.parse('$baseUrl/auth/request_password_reset.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email}),
       );
@@ -113,7 +113,7 @@ Future<Map<String, dynamic>> signUp({
   Future<void> resetPassword(String token, String newPassword) async {
     try {
       final response = await http.post(
-        Uri.parse('${baseUrl}/auth/reset_password.php'),
+        Uri.parse('$baseUrl/auth/reset_password.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'token': token,

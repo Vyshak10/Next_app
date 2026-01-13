@@ -1,7 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:next_app/services/auth_service.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:next_app/view/login/forgot_password_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -45,6 +46,16 @@ class _LoginViewState extends State<LoginView> {
 
       if (result['success'] == true) {
         _showSnackBar('Login successful!');
+        
+        // Store user ID
+        final userId = result['userData']?['id']?.toString();
+        if (userId != null && userId.isNotEmpty) {
+          const storage = FlutterSecureStorage();
+          await storage.write(key: 'user_id', value: userId);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('user_id', userId);
+        }
+
         _navigateToUserScreen(userType);
       } else {
         _showSnackBar(result['message'] ?? 'Login failed');
@@ -58,9 +69,7 @@ class _LoginViewState extends State<LoginView> {
 
   void _navigateToUserScreen(String userType) {
     switch (userType) {
-      case 'Job Seeker':
-        Navigator.pushReplacementNamed(context, '/Seeker');
-        break;
+
       case 'Startup':
         Navigator.pushReplacementNamed(context, '/startUp');
         break;
@@ -127,6 +136,20 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
                 obscureText: _obscurePassword,
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ForgotPasswordView(),
+                      ),
+                    );
+                  },
+                  child: const Text('Forgot Password?'),
+                ),
               ),
               const SizedBox(height: 30),
               SizedBox(

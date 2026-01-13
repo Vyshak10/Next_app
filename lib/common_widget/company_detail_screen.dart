@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'messages.dart'; // Import MessagesScreen
-import '../view/chat/individual_chat_screen.dart'; 
-import 'package:url_launcher/url_launcher.dart';// Import IndividualChatScreen
+// Import MessagesScreen
+import 'chat_screen.dart'; // Import ChatScreen
+import 'package:url_launcher/url_launcher.dart';
 
 class CompanyDetailScreen extends StatelessWidget {
   final Map<String, dynamic> companyData;
@@ -537,7 +537,7 @@ class CompanyDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
           ],
-          Container(
+          SizedBox(
             width: double.infinity,
             height: 50,
             child: ElevatedButton.icon(
@@ -577,9 +577,10 @@ class CompanyDetailScreen extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => IndividualChatScreen(
-                    userId: userId,
-                    partnerId: companyData['id'].toString(),
+                  builder: (context) => ChatScreen(
+                    currentUserId: userId,
+                    otherUserId: companyData['id'].toString(),
+                    otherUserName: companyData['name'] ?? 'Company',
                   ),
                 ),
               );
@@ -809,7 +810,7 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
   late Razorpay _razorpay;
   String _selectedPaymentMethod = 'card';
   bool _isProcessing = false;
-  List<int> _quickAmounts = [500, 1000, 2500, 5000, 10000];
+  final List<int> _quickAmounts = [500, 1000, 2500, 5000, 10000];
 
   @override
   void initState() {
@@ -1310,7 +1311,7 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
   }
 
   Widget _buildPayButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       height: 56,
       child: ElevatedButton(

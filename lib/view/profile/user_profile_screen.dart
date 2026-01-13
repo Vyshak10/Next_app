@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../common_widget/connection_request.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../common_widget/home.dart';
 import '../../common_widget/animated_greeting_gradient_mixin.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -34,10 +33,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     _loadUserProfile();
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   Future<void> _loadUserProfile() async {
     setState(() {

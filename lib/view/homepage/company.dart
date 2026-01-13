@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../common_widget/home.dart';
-import '../../common_widget/profile.dart';
 import '../../common_widget/messages.dart';
-import '../../common_widget/items_card.dart';
 import '../../common_widget/company_detail_screen.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -11,10 +8,8 @@ import 'dart:convert';
 import '../../common_widget/animated_greeting_gradient_mixin.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../view/analytics/analytics_dashboard_screen.dart';
-import 'dart:math' as math;
 import '../../view/profile/company_profile.dart' as company_profile;
-import '../../common_widget/post.dart';
-import '../../common_widget/NotificationsScreen.dart';
+import '../../view/meetings/meeting_screen.dart';
 import '../../common_widget/company_post.dart' as company_post;
 import '../analytics/pairing_screen.dart';
 import 'search_screen.dart';
@@ -236,7 +231,7 @@ class _CompanyScreenState extends State<CompanyScreen>
 // Enhanced Company Home Screen with modern UI elements
 class CompanyHomeScreen extends StatefulWidget {
   final String userId;
-  const CompanyHomeScreen({Key? key, required this.userId}) : super(key: key);
+  const CompanyHomeScreen({super.key, required this.userId});
 
   @override
   State<CompanyHomeScreen> createState() => _CompanyHomeScreenState();
@@ -652,10 +647,10 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           animation: Listenable.merge([gradientAnimationController, _pulseController]),
           builder: (context, child) {
             final String? cacheBustedAvatarUrl = (avatarUrl != null && avatarUrl!.isNotEmpty)
-                ? avatarUrl! + '?t=' + DateTime.now().millisecondsSinceEpoch.toString()
+                ? '${avatarUrl!}?t=${DateTime.now().millisecondsSinceEpoch}'
                 : null;
             return Opacity(
-              opacity: ((0.97 + 0.03 * _pulseAnimation.value).clamp(0.0, 1.0)) as double,
+              opacity: ((0.97 + 0.03 * _pulseAnimation.value).clamp(0.0, 1.0)),
               child: Transform.scale(
                 scale: _pulseAnimation.value,
                 child: Container(
@@ -1082,7 +1077,7 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                   ),
                 ],
               ),
-            )).toList(),
+            )),
           ],
         ),
       ),
@@ -1307,10 +1302,10 @@ class StartupCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const StartupCard({
-    Key? key,
+    super.key,
     required this.startup,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1435,11 +1430,11 @@ class PostCard extends StatelessWidget {
   final VoidCallback onCommentPressed;
 
   const PostCard({
-    Key? key,
+    super.key,
     required this.post,
     required this.onLikePressed,
     required this.onCommentPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1558,7 +1553,7 @@ class PostCard extends StatelessWidget {
 
 // Modal widgets for FAB actions
 class CreatePostModal extends StatelessWidget {
-  const CreatePostModal({Key? key}) : super(key: key);
+  const CreatePostModal({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1607,7 +1602,7 @@ class CreatePostModal extends StatelessWidget {
 }
 
 class ScheduleMeetDialog extends StatelessWidget {
-  const ScheduleMeetDialog({Key? key}) : super(key: key);
+  const ScheduleMeetDialog({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1630,7 +1625,7 @@ class ScheduleMeetDialog extends StatelessWidget {
 }
 
 class DiscoverModal extends StatelessWidget {
-  const DiscoverModal({Key? key}) : super(key: key);
+  const DiscoverModal({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1679,7 +1674,7 @@ class DiscoverModal extends StatelessWidget {
 }
 
 class MarketTrendsModal extends StatelessWidget {
-  const MarketTrendsModal({Key? key}) : super(key: key);
+  const MarketTrendsModal({super.key});
 
   @override
   Widget build(BuildContext context) {

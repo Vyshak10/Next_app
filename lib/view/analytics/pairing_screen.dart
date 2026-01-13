@@ -4,7 +4,7 @@ class PairingScreen extends StatefulWidget {
   final int companyId; // Pass the logged-in company ID
   final VoidCallback? onGoToAnalytics;
 
-  const PairingScreen({Key? key, required this.companyId, this.onGoToAnalytics}) : super(key: key);
+  const PairingScreen({super.key, required this.companyId, this.onGoToAnalytics});
 
   @override
   State<PairingScreen> createState() => _PairingScreenState();

@@ -4,7 +4,7 @@ import 'pairing_screen.dart';
 
 class AnalyticsDashboardScreen extends StatefulWidget {
   final String userId;
-  const AnalyticsDashboardScreen({Key? key, required this.userId}) : super(key: key);
+  const AnalyticsDashboardScreen({super.key, required this.userId});
 
   @override
   State<AnalyticsDashboardScreen> createState() => _AnalyticsDashboardScreenState();
@@ -455,7 +455,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen> {
                                     ],
                                   ),
                                 );
-                              }).toList(),
+                              }),
                             ],
                           ),
                         ),

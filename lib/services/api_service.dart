@@ -67,7 +67,7 @@ class ApiService {
       body: jsonEncode({
         'email': email,
         'password': password,
-        'userType': 'seeker', // Default to seeker for now
+        'userType': 'startup', // Default to startup
       }),
     );
     print('Login response status: ${response.statusCode}');

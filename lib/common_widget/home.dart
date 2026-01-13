@@ -5,8 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import 'company_detail_screen.dart';
-import 'package:next_app/common_widget/items_card.dart';
-import 'package:next_app/common_widget/NotificationsScreen.dart';
+import 'package:next_app/view/meetings/meeting_screen.dart';
 import 'animated_greeting_gradient_mixin.dart';
 
 // Constants
@@ -242,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
 
     } catch (jsonError) {
       print('❌ JSON parsing error: $jsonError');
-      print('📄 Raw response preview: ${responseBody.length > 200 ? responseBody.substring(0, 200) + "..." : responseBody}');
+      print('📄 Raw response preview: ${responseBody.length > 200 ? "${responseBody.substring(0, 200)}..." : responseBody}');
       setState(() {
         companyData = [];
         isLoading = false;

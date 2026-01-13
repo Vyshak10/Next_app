@@ -19,7 +19,7 @@ class CompanyProfileScreen extends StatefulWidget {
   final String? userId;
   final VoidCallback onBackTap;
 
-  const CompanyProfileScreen({Key? key, this.userId, required this.onBackTap}) : super(key: key);
+  const CompanyProfileScreen({super.key, this.userId, required this.onBackTap});
 
   @override
   State<CompanyProfileScreen> createState() => _CompanyProfileScreenState();
@@ -273,21 +273,12 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
 
   Future<void> _resolveUserIdAndFetch() async {
     String? id = widget.userId;
-    if (id == null) {
-      id = await storage.read(key: 'user_id');
-    }
+    id ??= await storage.read(key: 'user_id');
     // If still null, use hardcoded company id
-    if (id == null) {
-      id = '685322';
-    }
+    id ??= '685322';
     setState(() => _resolvedUserId = id);
-    if (id != null) {
-      await fetchProfileData(id);
-    } else {
-      setState(() => isLoading = false);
-      _showErrorSnackBar('No user ID found');
+    await fetchProfileData(id);
     }
-  }
 
   Future<void> fetchProfileData(String userId) async {
     final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=$userId');
@@ -406,11 +397,11 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
           _showSuccessSnackBar('Avatar updated successfully');
           widget.onBackTap();
         } else {
-          print('Upload failed: ' + responseString);
+          print('Upload failed: $responseString');
           _showErrorSnackBar('Failed to upload avatar');
         }
       } else {
-        print('Upload failed: HTTP  ${response.statusCode} - ' + responseString);
+        print('Upload failed: HTTP  ${response.statusCode} - $responseString');
         _showErrorSnackBar('Upload failed');
       }
     } catch (e) {
@@ -1422,7 +1413,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                       _acceptingFunding = value;
                     });
                   },
-                  activeColor: Colors.green.shade600,
+                  activeThumbColor: Colors.green.shade600,
                 ),
                 if (_acceptingFunding) ...[
                   const SizedBox(height: 16),
@@ -1570,6 +1561,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   }
 
   // Add blue gradient greeting logic
+  @override
   LinearGradient getGreetingGradient(AlignmentGeometry begin, AlignmentGeometry end) {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) {

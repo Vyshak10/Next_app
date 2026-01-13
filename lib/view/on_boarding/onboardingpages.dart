@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:next_app/common/color_extension.dart';
 import 'package:next_app/view/login/user_type.dart';
 
 class OnboardingPages extends StatefulWidget {

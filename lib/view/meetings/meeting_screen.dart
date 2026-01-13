@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 
 class MeetingScreen extends StatefulWidget {
   const MeetingScreen({super.key});
@@ -13,7 +14,9 @@ class MeetingScreen extends StatefulWidget {
 
 class _MeetingScreenState extends State<MeetingScreen> {
   final _storage = const FlutterSecureStorage();
-  final DateTime _selectedDay = DateTime.now();
+  DateTime _selectedDay = DateTime.now();
+  DateTime _focusedDay = DateTime.now();
+
   List<dynamic> meetings = [];
   List<dynamic> notifications = [];
   List<dynamic> profiles = [];
@@ -48,7 +51,9 @@ class _MeetingScreenState extends State<MeetingScreen> {
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
-      meetings = jsonDecode(response.body);
+      setState(() {
+        meetings = jsonDecode(response.body);
+      });
     }
   }
 
@@ -59,7 +64,9 @@ class _MeetingScreenState extends State<MeetingScreen> {
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
-      notifications = jsonDecode(response.body);
+      setState(() {
+        notifications = jsonDecode(response.body);
+      });
     }
   }
 
@@ -70,7 +77,9 @@ class _MeetingScreenState extends State<MeetingScreen> {
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
-      profiles = jsonDecode(response.body);
+      setState(() {
+        profiles = jsonDecode(response.body);
+      });
     }
   }
 
@@ -100,32 +109,18 @@ class _MeetingScreenState extends State<MeetingScreen> {
         const SnackBar(content: Text('Meeting scheduled successfully!')),
       );
       await fetchMeetings(_selectedDay);
-      setState(() {});
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to schedule meeting')),
+        const SnackBar(content: Text('Failed to schedule meeting')),
       );
     }
   }
 
-  Future<void> updateMeetingStatus(int meetingId, String status) async {
-    final token = await getAuthToken();
-    final response = await http.put(
-      Uri.parse('$apiUrl/meetings/$meetingId/status'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'status': status}),
-    );
-
-    if (response.statusCode == 200) {
-      await fetchMeetings(_selectedDay);
-      setState(() {});
+  void _showScheduleMeetingDialog() async {
+    // Ensure profiles are loaded before showing the dialog
+    if (profiles.isEmpty) {
+      await fetchProfiles();
     }
-  }
-
-  void _showScheduleMeetingDialog() {
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     DateTime selectedDateTime = _selectedDay;
@@ -154,7 +149,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                     ),
                     const SizedBox(height: 8),
                     ListTile(
-                      title: Text('Date: ${selectedDateTime.toLocal().toString().split(' ')[0]}'),
+                      title: Text('Date: ${DateFormat('y-MM-dd').format(selectedDateTime)}'),
                       trailing: const Icon(Icons.calendar_today),
                       onTap: () async {
                         final picked = await showDatePicker(
@@ -205,7 +200,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                       items: profiles.map((profile) {
                         return DropdownMenuItem<String>(
                           value: profile['id'].toString(),
-                          child: Text(profile['name'] ?? profile['email']),
+                          child: Text(profile['name'] ?? profile['email'] ?? 'Unknown'),
                         );
                       }).toList(),
                       onChanged: (value) {
@@ -241,7 +236,6 @@ class _MeetingScreenState extends State<MeetingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ⚠️ Replace this with your full widget structure or ask for full layout rebuild
     return Scaffold(
       appBar: AppBar(
         title: const Text('Meetings'),
@@ -249,29 +243,56 @@ class _MeetingScreenState extends State<MeetingScreen> {
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _showScheduleMeetingDialog,
-          )
+          ),
         ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('Meetings on ${_formatDate(_selectedDay)}'),
-          const SizedBox(height: 8),
-          ...meetings.map((meeting) => ListTile(
-            title: Text(meeting['title']),
-            subtitle: Text(_formatDateTime(meeting['scheduled_time'])),
-            trailing: Text(meeting['status']),
-          )),
-          const Divider(height: 32),
-          const Text('Recent Notifications'),
-          ...notifications.map((notif) => ListTile(
-            title: Text(notif['title']),
-            subtitle: Text(_formatDateTime(notif['timestamp'])),
-          )),
-        ],
-      ),
+              padding: const EdgeInsets.all(16),
+              children: [
+                TableCalendar(
+                  firstDay: DateTime.utc(2020, 1, 1),
+                  lastDay: DateTime.utc(2030, 12, 31),
+                  focusedDay: _focusedDay,
+                  selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                  onDaySelected: (selectedDay, focusedDay) {
+                    setState(() {
+                      _selectedDay = selectedDay;
+                      _focusedDay = focusedDay;
+                    });
+                    fetchMeetings(selectedDay);
+                  },
+                  calendarStyle: const CalendarStyle(
+                    todayDecoration: BoxDecoration(
+                      color: Colors.blueAccent,
+                      shape: BoxShape.circle,
+                    ),
+                    selectedDecoration: BoxDecoration(
+                      color: Colors.green,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text('Meetings on ${_formatDate(_selectedDay)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                if (meetings.isEmpty)
+                  const Text('No meetings scheduled for this day.'),
+                ...meetings.map((meeting) => ListTile(
+                      title: Text(meeting['title']),
+                      subtitle: Text(_formatDateTime(meeting['scheduled_time'])),
+                      trailing: Text(meeting['status']),
+                    )),
+                const Divider(height: 32),
+                const Text('Recent Notifications', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...notifications.map((notif) => ListTile(
+                      title: Text(notif['title']),
+                      subtitle: Text(_formatDateTime(notif['timestamp'])),
+                    )),
+              ],
+            ),
     );
   }
 

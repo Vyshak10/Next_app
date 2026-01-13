@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:next_app/common/color_extension.dart';
-import 'package:next_app/view/on_boarding/onboardingpages.dart';
 
 class StartedView extends StatefulWidget {
   const StartedView({super.key});
@@ -114,7 +112,7 @@ class _StartedViewState extends State<StartedView> with SingleTickerProviderStat
 
 class _AnimatedNextFullForm extends StatelessWidget {
   final AnimationController controller;
-  _AnimatedNextFullForm({required this.controller});
+  const _AnimatedNextFullForm({required this.controller});
 
   @override
   Widget build(BuildContext context) {

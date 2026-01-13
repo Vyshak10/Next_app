@@ -10,20 +10,18 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 // If you need to use ChatListPage, use the correct import:
 // import '../views/messages/chat_list_page.dart';
 import 'animated_greeting_gradient_mixin.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../view/settings/settings_screen.dart';
 import '../services/image_picker_service.dart';
 import 'dart:typed_data';
 import 'post.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import '../common/user_id_helper.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
   final VoidCallback onBackTap;
 
-  const ProfileScreen({Key? key, this.userId, required this.onBackTap}) : super(key: key);
+  const ProfileScreen({super.key, this.userId, required this.onBackTap});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -201,22 +199,17 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     String? id = widget.userId;
     if (id == null) {
       id = await getUserId();
-      print('DEBUG: Read user_id from user_id_helper: ' + (id ?? 'null'));
+      print('DEBUG: Read user_id from user_id_helper: ${id ?? 'null'}');
       if (id == null) {
         id = '6852';
         print('DEBUG: Forcing user_id to 6852 as backup');
       }
     } else {
-      print('DEBUG: Using widget.userId: ' + id);
+      print('DEBUG: Using widget.userId: $id');
     }
     setState(() => _resolvedUserId = id);
-    if (id != null) {
-      await fetchProfileData(id);
-    } else {
-      setState(() => isLoading = false);
-      _showErrorSnackBar('No user ID found');
+    await fetchProfileData(id);
     }
-  }
 
   Future<void> fetchProfileData(String userId) async {
     final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=$userId');
@@ -313,7 +306,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   Future<void> _pickAvatar() async {
     print('DEBUG: _pickAvatar called');
     final bytes = await pickImage();
-    print('DEBUG: pickImage returned: ' + (bytes != null ? 'bytes length ${bytes.length}' : 'null'));
+    print('DEBUG: pickImage returned: ${bytes != null ? 'bytes length ${bytes.length}' : 'null'}');
     if (bytes != null) {
       setState(() => _pickedAvatarBytes = bytes);
       await _uploadAvatar();
@@ -331,7 +324,7 @@ Future<void> _uploadAvatar() async {
     print('DEBUG: Uploading to Supabase Storage...');
     await storage.from('avatars').uploadBinary(fileName, _pickedAvatarBytes!);
     final publicUrl = storage.from('avatars').getPublicUrl(fileName);
-    print('DEBUG: Supabase publicUrl: ' + publicUrl);
+    print('DEBUG: Supabase publicUrl: $publicUrl');
 
     // Update backend with the new public URL
     final response = await http.post(
@@ -342,8 +335,8 @@ Future<void> _uploadAvatar() async {
         'avatar_url': publicUrl,
       }),
     );
-    print('DEBUG: Backend response status: ' + response.statusCode.toString());
-    print('DEBUG: Backend response body: ' + response.body);
+    print('DEBUG: Backend response status: ${response.statusCode}');
+    print('DEBUG: Backend response body: ${response.body}');
 
     final responseBody = jsonDecode(response.body);
     if (response.statusCode == 200 && responseBody['success']) {
@@ -1508,7 +1501,7 @@ Future<void> _uploadAvatar() async {
                       _acceptingFunding = value;
                     });
                   },
-                  activeColor: Colors.green.shade600,
+                  activeThumbColor: Colors.green.shade600,
                 ),
                 if (_acceptingFunding) ...[
                   const SizedBox(height: 16),

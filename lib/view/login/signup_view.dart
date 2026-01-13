@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:next_app/services/auth_service.dart';
 import '../../common_widget/animated_greeting_gradient_mixin.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -88,15 +86,15 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
         phone: phoneController.text.trim(),
       );
 
-      print('DEBUG: Signup result: ' + result.toString());
+      print('DEBUG: Signup result: $result');
       if (result['userId'] != null) {
-        print('DEBUG: About to save user_id: ' + result['userId'].toString());
+        print('DEBUG: About to save user_id: ${result['userId']}');
         final storage = FlutterSecureStorage();
         await storage.write(key: 'user_id', value: result['userId'].toString());
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_id', result['userId'].toString());
         String? testId = prefs.getString('user_id');
-        print('DEBUG: Immediately read user_id from shared_preferences: ' + (testId ?? 'null'));
+        print('DEBUG: Immediately read user_id from shared_preferences: ${testId ?? 'null'}');
       }
       _showSnackBar('Signup successful! Please check your email for verification.');
       Navigator.pushReplacementNamed(context, '/login', arguments: {'userType': userType});
@@ -369,8 +367,7 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
         return _establishedCompanyForm();
       case 'Startup':
         return _startupForm();
-      case 'Job Seeker':
-        return _jobSeekerForm();
+
       default:
         return const Center(child: Text('Invalid user type.'));
     }
@@ -512,47 +509,7 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
     );
   }
 
-  Widget _jobSeekerForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextFormField(
-          controller: fullNameController,
-          decoration: const InputDecoration(
-            labelText: 'Full Name',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: phoneController,
-          keyboardType: TextInputType.phone,
-          decoration: const InputDecoration(
-            labelText: 'Phone Number',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: emailController,
-          decoration: const InputDecoration(
-            labelText: 'Email',
-            border: OutlineInputBorder(),
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildPasswordField(),
-        const SizedBox(height: 16),
-        TextFormField(
-          controller: skillsController,
-          decoration: const InputDecoration(
-            labelText: 'Key Skills',
-            border: OutlineInputBorder(),
-          ),
-        ),
-      ],
-    );
-  }
+
 
   Widget _benefitChip(String text, Color color) {
     return Container(

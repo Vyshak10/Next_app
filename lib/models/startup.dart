@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../common_widget/home.dart';
-import '../../common_widget/post.dart';
 import '../../common_widget/profile.dart';
 import '../../views/messages/chat_list_page.dart';
 

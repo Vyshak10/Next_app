@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
-import 'home.dart';
 import 'animated_greeting_gradient_mixin.dart';
 
 class CompanyProfileScreen extends StatefulWidget {
   final Map<String, dynamic> companyData;
-  const CompanyProfileScreen({Key? key, required this.companyData}) : super(key: key);
+  const CompanyProfileScreen({super.key, required this.companyData});
 
   @override
   State<CompanyProfileScreen> createState() => _CompanyProfileScreenState();
@@ -15,15 +14,7 @@ class CompanyProfileScreen extends StatefulWidget {
 class _CompanyProfileScreenState extends State<CompanyProfileScreen> with TickerProviderStateMixin, AnimatedGreetingGradientMixin<CompanyProfileScreen> {
   File? _coverPhoto;
 
-  @override
-  void initState() {
-    super.initState();
-  }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 
   Future<void> _pickCoverPhoto() async {
     final picker = ImagePicker();

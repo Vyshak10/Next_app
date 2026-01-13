@@ -3,7 +3,6 @@ import '../../common_widget/home.dart';
 import '../../common_widget/post.dart'; // This should contain your PostScreen class
 import '../../common_widget/profile.dart';
 import '../../common_widget/messages.dart';
-import '../../common_widget/post.dart';
 import '../../services/api_service.dart';
 import '../../common_widget/company_post.dart' as company_post;
 

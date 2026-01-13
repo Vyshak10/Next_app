@@ -230,9 +230,9 @@ class CreatePostBottomSheet extends StatefulWidget {
   final Function(Map<String, dynamic>) onPostCreated;
 
   const CreatePostBottomSheet({
-    Key? key,
+    super.key,
     required this.onPostCreated,
-  }) : super(key: key);
+  });
 
   @override
   State<CreatePostBottomSheet> createState() => _CreatePostBottomSheetState();
@@ -524,11 +524,11 @@ class PostCard extends StatelessWidget {
   final VoidCallback onCommentPressed;
 
   const PostCard({
-    Key? key,
+    super.key,
     required this.post,
     required this.onLikePressed,
     required this.onCommentPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -702,11 +702,11 @@ class CommentsBottomSheet extends StatefulWidget {
   final Function(Map<String, dynamic>) onCommentAdded;
 
   const CommentsBottomSheet({
-    Key? key,
+    super.key,
     required this.postId,
     required this.comments,
     required this.onCommentAdded,
-  }) : super(key: key);
+  });
 
   @override
   State<CommentsBottomSheet> createState() => _CommentsBottomSheetState();
@@ -856,10 +856,10 @@ class AnimatedRocketLike extends StatefulWidget {
   final VoidCallback onTap;
 
   const AnimatedRocketLike({
-    Key? key,
+    super.key,
     required this.isLiked,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   State<AnimatedRocketLike> createState() => AnimatedRocketLikeState();
@@ -940,7 +940,7 @@ class AnimatedRocketLikeState extends State<AnimatedRocketLike> with SingleTicke
 }
 
 class CompanyPostScreen extends StatefulWidget {
-  const CompanyPostScreen({Key? key}) : super(key: key);
+  const CompanyPostScreen({super.key});
 
   @override
   State<CompanyPostScreen> createState() => _CompanyPostScreenState();
