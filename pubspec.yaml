@@ -52,11 +52,11 @@ dev_dependencies:
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  image_path: "assets/img/Icon.png"
+  image_path: "assets/img/Favicon.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
   web:
     generate: true
-    image_path: "assets/img/Icon.png"
+    image_path: "assets/img/Favicon.png"
     background_color: "#hex_code"
     theme_color: "#hex_code"
 
