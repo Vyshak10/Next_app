@@ -44,9 +44,10 @@
 Follow these instructions to get a copy of the project up and running on your local machine.
 
 ### Prerequisites
-*   [Flutter SDK](https://flutter.dev/docs/get-started/install) (Version 3.7.0 or higher)
+*   [Flutter SDK](https://flutter.dev/docs/get-started/install) (Version 3.7.2 or higher)
 *   [Git](https://git-scm.com/)
 *   A browser (Chrome/Edge) for web debugging or an Android Emulator/Device.
+*   **Active Internet Connection** (Required for API and Supabase connectivity)
 
 ### Installation
 

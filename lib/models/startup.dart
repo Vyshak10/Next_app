@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../common_widget/home.dart';
-import '../../common_widget/profile.dart';
-import '../../views/messages/chat_list_page.dart';
+import '../common_widget/home.dart';
+import '../common_widget/profile.dart';
+import '../view/messages/chat_list_page.dart';
 
 class Startup extends StatefulWidget {
   const Startup({super.key});

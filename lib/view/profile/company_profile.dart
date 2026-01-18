@@ -6,9 +6,9 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
-// import 'package:your_app_name/views/messages/chat_list_page.dart';
+// import 'package:your_app_name/view/messages/chat_list_page.dart';
 // If you need to use ChatListPage, use the correct import:
-// import '../views/messages/chat_list_page.dart';
+// import '../view/messages/chat_list_page.dart';
 import '../../common_widget/animated_greeting_gradient_mixin.dart';
 import '../settings/settings_screen.dart';
 import '../../../services/image_picker_service.dart';
