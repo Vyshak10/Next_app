@@ -1501,7 +1501,7 @@ Future<void> _uploadAvatar() async {
                       _acceptingFunding = value;
                     });
                   },
-                  activeThumbColor: Colors.green.shade600,
+                  activeColor: Colors.green.shade600,
                 ),
                 if (_acceptingFunding) ...[
                   const SizedBox(height: 16),

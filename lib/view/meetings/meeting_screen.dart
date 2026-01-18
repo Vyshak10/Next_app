@@ -195,7 +195,7 @@ class _MeetingScreenState extends State<MeetingScreen> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      initialValue: selectedInviteeId,
+                      value: selectedInviteeId,
                       decoration: const InputDecoration(labelText: 'Select Invitee'),
                       items: profiles.map((profile) {
                         return DropdownMenuItem<String>(

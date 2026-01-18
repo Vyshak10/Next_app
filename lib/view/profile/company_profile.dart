@@ -1413,7 +1413,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                       _acceptingFunding = value;
                     });
                   },
-                  activeThumbColor: Colors.green.shade600,
+                  activeColor: Colors.green.shade600,
                 ),
                 if (_acceptingFunding) ...[
                   const SizedBox(height: 16),
