@@ -9,12 +9,12 @@ import 'package:url_launcher/url_launcher.dart';
 
 class CompanyDetailScreen extends StatefulWidget {
   final Map<String, dynamic> companyData;
-  final String widget.userId;
+  final String userId;
 
   const CompanyDetailScreen({
     super.key,
     required this.companyData,
-    required this.widget.userId,
+    required this.userId,
   });
 
   @override
@@ -626,8 +626,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => ChatScreen(
-                    currentwidget.userId: widget.userId,
-                    otherwidget.userId: widget.companyData['id'].toString(),
+                    currentUserId: widget.userId,
+                    otherUserId: widget.companyData['id'].toString(),
                     otherUserName: widget.companyData['name'] ?? 'Company',
                   ),
                 ),
@@ -712,9 +712,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
 
     try {
       final storage = const FlutterSecureStorage();
-      final currentwidget.userId = await storage.read(key: 'user_id');
+      final currentUserId = await storage.read(key: 'user_id');
 
-      if (currentwidget.userId == null) {
+      if (currentUserId == null) {
         _showSnackBar('Please log in to follow');
         setState(() => isLoadingFollow = false);
         return;
@@ -724,7 +724,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
         Uri.parse('https://indianrupeeservices.in/NEXT/backend/toggle_follow.php'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'follower_id': currentwidget.userId,
+          'follower_id': currentUserId,
           'following_id': widget.companyData['id'].toString(),
           'action': isFollowing ? 'unfollow' : 'follow',
         }),
@@ -789,8 +789,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ProfessionalPaymentPage(
-          companyData: companyData,
-          widget.userId: widget.userId,
+          companyData: widget.companyData,
+          userId: widget.userId,
         ),
       ),
     );
@@ -889,12 +889,12 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
 // Professional Payment Page
 class ProfessionalPaymentPage extends StatefulWidget {
   final Map<String, dynamic> companyData;
-  final String widget.userId;
+  final String userId;
 
   const ProfessionalPaymentPage({
     super.key,
     required this.companyData,
-    required this.widget.userId,
+    required this.userId,
   });
 
   @override

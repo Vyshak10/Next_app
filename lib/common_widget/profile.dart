@@ -16,6 +16,7 @@ import 'dart:typed_data';
 import 'post.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../common/user_id_helper.dart';
+import 'chat_screen.dart';
 import '../view/follow/followers_screen.dart';
 import '../view/follow/following_screen.dart';
 
@@ -199,21 +200,73 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     );
   }
 
+  bool _isMyProfile = true;
+  bool _isFollowing = false;
+  bool _isLoadingFollow = false;
+
   Future<void> _resolveUserIdAndFetch() async {
+    final currentId = await getUserId();
     String? id = widget.userId;
-    if (id == null) {
-      id = await getUserId();
-      print('DEBUG: Read user_id from user_id_helper: ${id ?? 'null'}');
-      if (id == null) {
-        id = '6852';
-        print('DEBUG: Forcing user_id to 6852 as backup');
-      }
+    
+    if (id == null || id == currentId) {
+      _isMyProfile = true;
+      id = id ?? currentId ?? '6852';
     } else {
-      print('DEBUG: Using widget.userId: $id');
+      _isMyProfile = false;
+      // Fetch follow status here if needed
+      _checkFollowStatus(currentId, id);
     }
+    
     setState(() => _resolvedUserId = id);
-    await fetchProfileData(id);
+    await fetchProfileData(id!);
     }
+
+  Future<void> _checkFollowStatus(String? followerId, String followingId) async {
+    if (followerId == null) return;
+    // In a real app, you'd call an API like check_follow.php
+  }
+
+  Future<void> _toggleFollowProfile() async {
+    setState(() => _isLoadingFollow = true);
+    try {
+      final currentUserId = await getUserId();
+      if (currentUserId == null) {
+        _showErrorSnackBar('Please login to follow');
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('https://indianrupeeservices.in/NEXT/backend/toggle_follow.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'follower_id': currentUserId,
+          'following_id': _resolvedUserId,
+          'action': _isFollowing ? 'unfollow' : 'follow',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          setState(() {
+            _isFollowing = !_isFollowing;
+            if (_isFollowing) {
+              userFollowersCount++;
+            } else {
+              userFollowersCount--;
+            }
+          });
+          _showSuccessSnackBar(_isFollowing ? 'Following now!' : 'Unfollowed');
+        } else {
+          _showErrorSnackBar(data['message'] ?? 'Failed to update follow status');
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Error: $e');
+    } finally {
+      setState(() => _isLoadingFollow = false);
+    }
+  }
 
   Future<void> fetchProfileData(String userId) async {
     final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=$userId');
@@ -930,43 +983,44 @@ Future<void> _uploadAvatar() async {
                     ),
                   ),
                   // Camera button
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  if (_isMyProfile)
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.blue.withOpacity(0.5),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue.withOpacity(0.5),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.transparent,
+                          child: isUploadingAvatar
+                              ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                              : IconButton(
+                            icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                            padding: EdgeInsets.zero,
+                            onPressed: _pickAvatar,
                           ),
-                        ],
-                      ),
-                      child: CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.transparent,
-                        child: isUploadingAvatar
-                            ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                            : IconButton(
-                          icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
-                          padding: EdgeInsets.zero,
-                          onPressed: _pickAvatar,
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -1080,6 +1134,65 @@ Future<void> _uploadAvatar() async {
                     ),
                   ),
                 ),
+
+              if (!_isMyProfile) ...[
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _isLoadingFollow ? null : _toggleFollowProfile,
+                          icon: _isLoadingFollow
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : Icon(_isFollowing ? Icons.person_remove : Icons.person_add, color: Colors.white, size: 20),
+                          label: Text(_isFollowing ? 'Unfollow' : 'Follow'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _isFollowing ? Colors.white.withOpacity(0.15) : Colors.white,
+                            foregroundColor: _isFollowing ? Colors.white : Colors.blue.shade700,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: _isFollowing ? const BorderSide(color: Colors.white) : BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            final currentUserId = await getUserId();
+                            if (currentUserId == null) {
+                              _showErrorSnackBar('Please login to message');
+                                return;
+                            }
+                            if (!mounted) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                  currentUserId: currentUserId,
+                                  otherUserId: _resolvedUserId ?? '',
+                                  otherUserName: profile?['name'] ?? 'User',
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.message, size: 20),
+                          label: const Text('Message'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.15),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: const BorderSide(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 24),
 
