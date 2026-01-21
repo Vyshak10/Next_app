@@ -16,6 +16,8 @@ import 'dart:typed_data';
 import 'post.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../common/user_id_helper.dart';
+import '../view/follow/followers_screen.dart';
+import '../view/follow/following_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -1086,11 +1088,31 @@ Future<void> _uploadAvatar() async {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    Expanded(child: _buildEnhancedStat("Posts", userPostsCount, Icons.article)),
+                    Expanded(child: _buildEnhancedStat("Posts", userPostsCount, Icons.article, null)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildEnhancedStat("Followers", userFollowersCount, Icons.people)),
+                    Expanded(child: _buildEnhancedStat("Followers", userFollowersCount, Icons.people, () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FollowersScreen(
+                            userId: widget.userId,
+                            userName: profile?['name'] ?? 'User',
+                          ),
+                        ),
+                      );
+                    })),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildEnhancedStat("Following", userFollowingCount, Icons.person_add)),
+                    Expanded(child: _buildEnhancedStat("Following", userFollowingCount, Icons.person_add, () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FollowingScreen(
+                            userId: widget.userId,
+                            userName: profile?['name'] ?? 'User',
+                          ),
+                        ),
+                      );
+                    })),
                   ],
                 ),
               ),
@@ -1103,8 +1125,8 @@ Future<void> _uploadAvatar() async {
     );
   }
 
-  Widget _buildEnhancedStat(String label, int count, IconData icon) {
-    return Container(
+  Widget _buildEnhancedStat(String label, int count, IconData icon, VoidCallback? onTap) {
+    final child = Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.15),
@@ -1142,6 +1164,13 @@ Future<void> _uploadAvatar() async {
         ],
       ),
     );
+
+    return onTap != null
+        ? GestureDetector(
+            onTap: onTap,
+            child: child,
+          )
+        : child;
   }
 
   Widget _buildProfileStat(String label, int count) {
