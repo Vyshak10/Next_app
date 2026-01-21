@@ -53,6 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   final _locationController = TextEditingController();
   final _sectorController = TextEditingController();
   final _videoController = TextEditingController();
+  final _pitchDeckController = TextEditingController();
   final _fundingGoalController = TextEditingController();
   final _fundingDescriptionController = TextEditingController();
   String? _resolvedUserId;
@@ -83,6 +84,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     _locationController.dispose();
     _sectorController.dispose();
     _videoController.dispose();
+    _pitchDeckController.dispose();
     _fundingGoalController.dispose();
     _fundingDescriptionController.dispose();
     _razorpay.clear();
@@ -259,6 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
     _locationController.text = profile?['location'] ?? '';
     _sectorController.text = profile?['sector'] ?? '';
     _videoController.text = profile?['pitch_video_url'] ?? '';
+    _pitchDeckController.text = profile?['pitch_deck_url'] ?? '';
   }
 
   Future<void> saveProfileChanges() async {
@@ -275,6 +278,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
         "location": _locationController.text.trim(),
         "sector": _sectorController.text.trim(),
         "pitch_video_url": _videoController.text.trim(),
+        "pitch_deck_url": _pitchDeckController.text.trim(),
       });
       
       if (response.statusCode == 200) {
@@ -289,6 +293,7 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
           profile?['location'] = _locationController.text.trim();
           profile?['sector'] = _sectorController.text.trim();
           profile?['pitch_video_url'] = _videoController.text.trim();
+          profile?['pitch_deck_url'] = _pitchDeckController.text.trim();
           isEditing = false;
         });
         
@@ -1085,6 +1090,7 @@ Future<void> _uploadAvatar() async {
               _buildEditableField("Location", _locationController),
               _buildEditableField("Sector", _sectorController),
               _buildEditableField("YouTube Video ID", _videoController),
+              _buildEditableField("Pitch Deck URL", _pitchDeckController),
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -1212,6 +1218,133 @@ Future<void> _uploadAvatar() async {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPitchDeckSection() {
+    final pitchDeckUrl = profile?['pitch_deck_url']?.toString().trim() ?? '';
+    if (pitchDeckUrl.isEmpty) return const SizedBox.shrink();
+
+    return Card(
+      margin: const EdgeInsets.all(16),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.picture_as_pdf,
+                    color: Colors.blueAccent,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Pitch Deck',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blueAccent.withOpacity(0.1), Colors.blue.withOpacity(0.05)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blueAccent.withOpacity(0.3), width: 2),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.description,
+                    size: 60,
+                    color: Colors.blueAccent.withOpacity(0.7),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Startup Pitch Deck',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'View our comprehensive business presentation',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          final url = Uri.parse(pitchDeckUrl);
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          } else {
+                            _showErrorSnackBar('Could not open pitch deck');
+                          }
+                        },
+                        icon: const Icon(Icons.visibility, size: 20),
+                        label: const Text('View Deck'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final url = Uri.parse(pitchDeckUrl);
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          } else {
+                            _showErrorSnackBar('Could not download pitch deck');
+                          }
+                        },
+                        icon: const Icon(Icons.download, size: 20),
+                        label: const Text('Download'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.blueAccent,
+                          side: const BorderSide(color: Colors.blueAccent, width: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1682,6 +1815,7 @@ Future<void> _uploadAvatar() async {
                     children: [
                       _buildProfileHeader(),
                       _buildInfoSection(),
+                      _buildPitchDeckSection(),
                       _buildPitchVideoSection(),
                       _buildPostsSection(),
                       const SizedBox(height: 20),
