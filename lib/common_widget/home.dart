@@ -538,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
       MaterialPageRoute(
         builder: (context) => CompanyDetailScreen(
           companyData: company,
-          userId: company['id']?.toString() ?? '',
+          userId: widget.userId ?? '',
         ),
       ),
     );
