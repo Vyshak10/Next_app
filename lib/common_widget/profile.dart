@@ -1095,7 +1095,7 @@ Future<void> _uploadAvatar() async {
                         context,
                         MaterialPageRoute(
                           builder: (_) => FollowersScreen(
-                            userId: widget.userId,
+                            userId: widget.userId ?? '',
                             userName: profile?['name'] ?? 'User',
                           ),
                         ),
@@ -1107,7 +1107,7 @@ Future<void> _uploadAvatar() async {
                         context,
                         MaterialPageRoute(
                           builder: (_) => FollowingScreen(
-                            userId: widget.userId,
+                            userId: widget.userId ?? '',
                             userName: profile?['name'] ?? 'User',
                           ),
                         ),

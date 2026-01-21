@@ -38,6 +38,72 @@ class _FollowingScreenState extends State<FollowingScreen> {
   Future<void> _fetchFollowing() async {
     setState(() => isLoading = true);
     
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 1));
+    
+    // Dummy data for testing
+    setState(() {
+      following = [
+        {
+          'id': '10',
+          'name': 'Startup Accelerator Hub',
+          'avatar_url': '',
+          'user_type': 'Company',
+          'role': 'Business Incubator',
+          'bio': 'Accelerating growth for early-stage startups with mentorship and resources.',
+          'is_verified': true,
+        },
+        {
+          'id': '11',
+          'name': 'Emily Watson',
+          'avatar_url': '',
+          'user_type': 'Startup',
+          'role': 'Co-Founder',
+          'bio': 'Developing sustainable fashion solutions with blockchain technology.',
+          'is_verified': false,
+        },
+        {
+          'id': '12',
+          'name': 'Future Fund Ventures',
+          'avatar_url': '',
+          'user_type': 'Company',
+          'role': 'Venture Capital',
+          'bio': 'Investing in tomorrow\'s unicorns today. Focus on AI and deep tech.',
+          'is_verified': true,
+        },
+        {
+          'id': '13',
+          'name': 'Michael Zhang',
+          'avatar_url': '',
+          'user_type': 'Startup',
+          'role': 'Founder & CEO',
+          'bio': 'Building the future of education with immersive VR experiences.',
+          'is_verified': true,
+        },
+        {
+          'id': '14',
+          'name': 'Green Energy Partners',
+          'avatar_url': '',
+          'user_type': 'Company',
+          'role': 'Impact Investors',
+          'bio': 'Funding renewable energy and climate tech startups worldwide.',
+          'is_verified': false,
+        },
+        {
+          'id': '15',
+          'name': 'Lisa Kumar',
+          'avatar_url': '',
+          'user_type': 'Startup',
+          'role': 'Chief Product Officer',
+          'bio': 'Creating next-gen fintech solutions for emerging markets.',
+          'is_verified': true,
+        },
+      ];
+      isLoading = false;
+    });
+    
+    /* 
+    // Original API call - uncomment when backend is ready
     try {
       final response = await http.get(
         Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_following.php?user_id=${widget.userId}'),
@@ -60,6 +126,7 @@ class _FollowingScreenState extends State<FollowingScreen> {
       print('Error fetching following: $e');
       setState(() => isLoading = false);
     }
+    */
   }
 
   Future<void> _unfollowUser(String targetUserId) async {

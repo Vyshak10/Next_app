@@ -38,6 +38,98 @@ class _FollowersScreenState extends State<FollowersScreen> {
   Future<void> _fetchFollowers() async {
     setState(() => isLoading = true);
     
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 1));
+    
+    // Dummy data for testing
+    setState(() {
+      followers = [
+        {
+          'id': '1',
+          'name': 'TechVentures Inc.',
+          'avatar_url': '',
+          'user_type': 'Company',
+          'role': 'Technology Investor',
+          'bio': 'Investing in the future of technology and innovation. Helping startups scale globally.',
+          'is_verified': true,
+          'is_following': false,
+        },
+        {
+          'id': '2',
+          'name': 'Sarah Johnson',
+          'avatar_url': '',
+          'user_type': 'Startup',
+          'role': 'CEO & Founder',
+          'bio': 'Building the next generation of AI-powered solutions for healthcare.',
+          'is_verified': true,
+          'is_following': true,
+        },
+        {
+          'id': '3',
+          'name': 'Innovation Labs',
+          'avatar_url': '',
+          'user_type': 'Company',
+          'role': 'Venture Capital',
+          'bio': 'Seed to Series A funding for innovative startups in fintech and blockchain.',
+          'is_verified': false,
+          'is_following': false,
+        },
+        {
+          'id': '4',
+          'name': 'Alex Chen',
+          'avatar_url': '',
+          'user_type': 'Startup',
+          'role': 'CTO',
+          'bio': 'Passionate about clean energy and sustainable technology solutions.',
+          'is_verified': false,
+          'is_following': true,
+        },
+        {
+          'id': '5',
+          'name': 'Global Ventures',
+          'avatar_url': '',
+          'user_type': 'Company',
+          'role': 'Investment Firm',
+          'bio': 'Supporting entrepreneurs worldwide with capital and mentorship.',
+          'is_verified': true,
+          'is_following': false,
+        },
+        {
+          'id': '6',
+          'name': 'Maria Rodriguez',
+          'avatar_url': '',
+          'user_type': 'Startup',
+          'role': 'Founder',
+          'bio': 'Revolutionizing e-commerce with AI-driven personalization.',
+          'is_verified': true,
+          'is_following': false,
+        },
+        {
+          'id': '7',
+          'name': 'NextGen Capital',
+          'avatar_url': '',
+          'user_type': 'Company',
+          'role': 'Angel Investors',
+          'bio': 'Early-stage funding for disruptive tech startups.',
+          'is_verified': false,
+          'is_following': true,
+        },
+        {
+          'id': '8',
+          'name': 'David Park',
+          'avatar_url': '',
+          'user_type': 'Startup',
+          'role': 'Product Lead',
+          'bio': 'Creating innovative SaaS solutions for modern businesses.',
+          'is_verified': false,
+          'is_following': false,
+        },
+      ];
+      isLoading = false;
+    });
+    
+    /* 
+    // Original API call - uncomment when backend is ready
     try {
       final response = await http.get(
         Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_followers.php?user_id=${widget.userId}'),
@@ -60,6 +152,7 @@ class _FollowersScreenState extends State<FollowersScreen> {
       print('Error fetching followers: $e');
       setState(() => isLoading = false);
     }
+    */
   }
 
   Future<void> _toggleFollow(String targetUserId, bool isFollowing) async {
