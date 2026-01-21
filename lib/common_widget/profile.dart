@@ -854,6 +854,7 @@ Future<void> _uploadAvatar() async {
     final name = profile?['name'] ?? 'Unknown User';
     final role = profile?['role'] ?? '';
     final userType = profile?['user_type'] ?? '';
+    final bio = profile?['bio'] ?? '';
 
     return AnimatedBuilder(
       animation: gradientAnimationController,
@@ -861,79 +862,104 @@ Future<void> _uploadAvatar() async {
         return Container(
           width: double.infinity,
           decoration: BoxDecoration(
-            gradient: getGreetingGradient(
-              gradientBeginAnimation.value,
-              gradientEndAnimation.value,
+            gradient: LinearGradient(
+              begin: gradientBeginAnimation.value,
+              end: gradientEndAnimation.value,
+              colors: [
+                const Color(0xFF1E3A8A),
+                const Color(0xFF3B82F6),
+                const Color(0xFF60A5FA),
+              ],
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.blue.shade200,
-                blurRadius: 10,
-                offset: const Offset(0, 5),
+                color: Colors.blue.shade300.withOpacity(0.5),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
           child: Column(
             children: [
-              const SizedBox(height: 20),
-              // Avatar
+              const SizedBox(height: 30),
+              // Enhanced Avatar with Ring
               Stack(
-                alignment: Alignment.bottomRight,
+                alignment: Alignment.center,
                 children: [
+                  // Outer glow ring
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.3),
+                          Colors.white.withOpacity(0.1),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Avatar container
                   Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
                     child: CircleAvatar(
-                      radius: 55,
+                      radius: 62,
                       backgroundColor: Colors.white,
                       child: CircleAvatar(
-                        radius: 52,
-                        backgroundColor: Colors.grey[300],
+                        radius: 58,
+                        backgroundColor: Colors.grey[200],
                         backgroundImage: _pickedAvatarBytes != null
                             ? MemoryImage(_pickedAvatarBytes!)
                             : (hasAvatar ? NetworkImage(avatarUrl) : null),
                         child: !hasAvatar
-                            ? Icon(Icons.person, size: 55, color: Colors.grey[600])
+                            ? Icon(Icons.person, size: 60, color: Colors.grey[400])
                             : null,
                       ),
                     ),
                   ),
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 5,
-                          offset: const Offset(0, 2),
+                  // Camera button
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
                         ),
-                      ],
-                    ),
-                    child: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.blue.withOpacity(0.5),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
                       child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Colors.blue.shade600,
+                        radius: 20,
+                        backgroundColor: Colors.transparent,
                         child: isUploadingAvatar
                             ? const SizedBox(
-                          width: 16,
-                          height: 16,
+                          width: 20,
+                          height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             color: Colors.white,
                           ),
                         )
                             : IconButton(
-                          icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                          icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
+                          padding: EdgeInsets.zero,
                           onPressed: _pickAvatar,
                         ),
                       ),
@@ -941,78 +967,180 @@ Future<void> _uploadAvatar() async {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              // Name and Role
+              // Name with enhanced typography
               Text(
                 name,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 26,
+                  fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
+                  letterSpacing: 0.5,
                   shadows: [
                     Shadow(
                       color: Colors.black26,
                       offset: Offset(0, 2),
-                      blurRadius: 4,
+                      blurRadius: 8,
                     ),
                   ],
                 ),
               ),
+              
+              // Role with icon
               if (role.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                  child: Text(
-                    role,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w400,
-                    ),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.work_outline,
+                        size: 16,
+                        color: Colors.white.withOpacity(0.9),
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          role,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              
+              // User type badge with enhanced design
               if (userType.isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.25),
+                        Colors.white.withOpacity(0.15),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(25),
+                    border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        userType.toLowerCase().contains('startup') 
+                            ? Icons.rocket_launch 
+                            : Icons.business,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        userType.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Bio preview
+              if (bio.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                   child: Text(
-                    userType.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 1,
+                    bio.length > 100 ? '${bio.substring(0, 100)}...' : bio,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white.withOpacity(0.85),
+                      height: 1.4,
                     ),
                   ),
                 ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 24),
 
-              // Stats Row: Posts, Followers, Following
+              // Enhanced Stats Cards
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildProfileStat("Posts", userPostsCount),
-                    _buildProfileStat("Followers", userFollowersCount),
-                    _buildProfileStat("Following", userFollowingCount),
+                    Expanded(child: _buildEnhancedStat("Posts", userPostsCount, Icons.article)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildEnhancedStat("Followers", userFollowersCount, Icons.people)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildEnhancedStat("Following", userFollowingCount, Icons.person_add)),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 30),
             ],
           ),
         );
       },
+    );
+  }
 
+  Widget _buildEnhancedStat(String label, int count, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.white, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            count.toString(),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.9),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1022,7 +1150,7 @@ Future<void> _uploadAvatar() async {
         Text(
           count.toString(),
           style: const TextStyle(
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
@@ -1030,9 +1158,10 @@ Future<void> _uploadAvatar() async {
         const SizedBox(height: 4),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.white70,
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.white.withOpacity(0.9),
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -1043,24 +1172,69 @@ Future<void> _uploadAvatar() async {
   Widget _buildInfoSection() {
     return Card(
       margin: const EdgeInsets.all(16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      elevation: 8,
+      shadowColor: Colors.blueAccent.withOpacity(0.2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Column(
+        children: [
+          // Gradient Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.blueAccent.withOpacity(0.1),
+                  Colors.blue.withOpacity(0.05),
+                ],
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Profile Information',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.info_outline,
+                        color: Colors.blueAccent,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Profile Information',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: isEditing ? Colors.green.shade50 : Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    gradient: LinearGradient(
+                      colors: isEditing 
+                          ? [const Color(0xFF10B981), const Color(0xFF059669)]
+                          : [Colors.blueAccent, const Color(0xFF2563EB)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (isEditing ? Colors.green : Colors.blue).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: IconButton(
                     onPressed: () {
@@ -1072,15 +1246,21 @@ Future<void> _uploadAvatar() async {
                     },
                     icon: Icon(
                       isEditing ? Icons.save : Icons.edit,
-                      color: isEditing ? Colors.green.shade600 : Colors.blue.shade600,
+                      color: Colors.white,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            
-            if (isEditing) ...[
+          ),
+          
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isEditing) ...[
               _buildEditableField("Name", _nameController),
               _buildEditableField("Role", _roleController),
               _buildEditableField("Bio", _bioController, maxLines: 2),
@@ -1135,6 +1315,8 @@ Future<void> _uploadAvatar() async {
             ],
           ],
         ),
+      ),
+        ],
       ),
     );
   }
