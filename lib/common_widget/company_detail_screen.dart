@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // Import MessagesScreen
 import 'chat_screen.dart'; // Import ChatScreen
 import 'package:url_launcher/url_launcher.dart';
 
-class CompanyDetailScreen extends StatelessWidget {
+class CompanyDetailScreen extends StatefulWidget {
   final Map<String, dynamic> companyData;
-  final String userId;
+  final String widget.userId;
 
   const CompanyDetailScreen({
     super.key,
     required this.companyData,
-    required this.userId,
+    required this.widget.userId,
   });
+
+  @override
+  State<CompanyDetailScreen> createState() => _CompanyDetailScreenState();
+}
+
+class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
+  bool isFollowing = false;
+  bool isLoadingFollow = false;
 
   @override
   Widget build(BuildContext context) {
@@ -92,9 +103,9 @@ class CompanyDetailScreen extends StatelessWidget {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(22),
-                              child: companyData['logo'] != null && companyData['logo'].toString().isNotEmpty
+                              child: widget.companyData['logo'] != null && widget.companyData['logo'].toString().isNotEmpty
                                   ? Image.network(
-                                companyData['logo'],
+                                widget.companyData['logo'],
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
                                   return _buildPlaceholderLogo();
@@ -106,7 +117,7 @@ class CompanyDetailScreen extends StatelessWidget {
                           const SizedBox(height: 16),
                           // Company name with enhanced styling
                           Text(
-                            companyData['name'] ?? 'Company Name',
+                            widget.companyData['name'] ?? 'Company Name',
                             style: const TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -134,7 +145,7 @@ class CompanyDetailScreen extends StatelessWidget {
                               ),
                             ),
                             child: Text(
-                              companyData['sector'] ?? 'Technology',
+                              widget.companyData['sector'] ?? 'Technology',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -144,14 +155,14 @@ class CompanyDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 12),
                           // Location if available
-                          if (companyData['location'] != null && companyData['location'].toString().isNotEmpty)
+                          if (widget.companyData['location'] != null && widget.companyData['location'].toString().isNotEmpty)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 const Icon(Icons.location_on, color: Colors.white70, size: 16),
                                 const SizedBox(width: 4),
                                 Text(
-                                  companyData['location'],
+                                  widget.companyData['location'],
                                   style: const TextStyle(
                                     color: Colors.white70,
                                     fontSize: 14,
@@ -247,7 +258,7 @@ class CompanyDetailScreen extends StatelessWidget {
             child: _buildStatItem(
               icon: Icons.business_center,
               label: 'Industry',
-              value: companyData['sector'] ?? 'Technology',
+              value: widget.companyData['sector'] ?? 'Technology',
             ),
           ),
           Container(
@@ -259,7 +270,7 @@ class CompanyDetailScreen extends StatelessWidget {
             child: _buildStatItem(
               icon: Icons.web,
               label: 'Website',
-              value: companyData['website'] != null && companyData['website'].toString().isNotEmpty 
+              value: widget.companyData['website'] != null && widget.companyData['website'].toString().isNotEmpty 
                   ? 'Available' 
                   : 'Not provided',
             ),
@@ -335,14 +346,14 @@ class CompanyDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            companyData['bio'] ?? companyData['description'] ?? 'No description available.',
+            widget.companyData['bio'] ?? widget.companyData['description'] ?? 'No description available.',
             style: const TextStyle(
               fontSize: 16,
               color: Colors.black87,
               height: 1.5,
             ),
           ),
-          if (companyData['tags'] != null) ...[
+          if (widget.companyData['tags'] != null) ...[
             const SizedBox(height: 16),
             const Text(
               'Tags',
@@ -366,10 +377,10 @@ class CompanyDetailScreen extends StatelessWidget {
 
   List<Widget> _buildTagsList() {
     List<String> tags = [];
-    if (companyData['tags'] is List) {
-      tags = (companyData['tags'] as List).map((e) => e.toString()).toList();
-    } else if (companyData['tags'] != null && companyData['tags'].toString().isNotEmpty) {
-      tags = companyData['tags'].toString().split(',').map((e) => e.trim()).toList();
+    if (widget.companyData['tags'] is List) {
+      tags = (widget.companyData['tags'] as List).map((e) => e.toString()).toList();
+    } else if (widget.companyData['tags'] != null && widget.companyData['tags'].toString().isNotEmpty) {
+      tags = widget.companyData['tags'].toString().split(',').map((e) => e.trim()).toList();
     }
 
     return tags.map((tag) => Container(
@@ -416,13 +427,13 @@ class CompanyDetailScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          if (companyData['role'] != null && companyData['role'].toString().isNotEmpty)
-            _buildDetailRow(Icons.work, 'Role', companyData['role']),
-          if (companyData['skills'] != null && companyData['skills'].toString().isNotEmpty)
-            _buildDetailRow(Icons.star, 'Skills', companyData['skills']),
-          if (companyData['website'] != null && companyData['website'].toString().isNotEmpty)
-            _buildDetailRow(Icons.web, 'Website', companyData['website'], isLink: true),
-          if (companyData['pitch_video_url'] != null && companyData['pitch_video_url'].toString().isNotEmpty)
+          if (widget.companyData['role'] != null && widget.companyData['role'].toString().isNotEmpty)
+            _buildDetailRow(Icons.work, 'Role', widget.companyData['role']),
+          if (widget.companyData['skills'] != null && widget.companyData['skills'].toString().isNotEmpty)
+            _buildDetailRow(Icons.star, 'Skills', widget.companyData['skills']),
+          if (widget.companyData['website'] != null && widget.companyData['website'].toString().isNotEmpty)
+            _buildDetailRow(Icons.web, 'Website', widget.companyData['website'], isLink: true),
+          if (widget.companyData['pitch_video_url'] != null && widget.companyData['pitch_video_url'].toString().isNotEmpty)
             _buildDetailRow(Icons.play_circle, 'Pitch Video', 'Available', isLink: true),
         ],
       ),
@@ -515,9 +526,9 @@ class CompanyDetailScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          if (companyData['funding_goal'] != null && companyData['funding_goal'].toString().isNotEmpty) ...[
+          if (widget.companyData['funding_goal'] != null && widget.companyData['funding_goal'].toString().isNotEmpty) ...[
             Text(
-              'Funding Goal: ₹${_formatCurrency(companyData['funding_goal'])}',
+              'Funding Goal: ₹${_formatCurrency(widget.companyData['funding_goal'])}',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -526,9 +537,9 @@ class CompanyDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          if (companyData['funding_description'] != null && companyData['funding_description'].toString().isNotEmpty) ...[
+          if (widget.companyData['funding_description'] != null && widget.companyData['funding_description'].toString().isNotEmpty) ...[
             Text(
-              companyData['funding_description'],
+              widget.companyData['funding_description'],
               style: const TextStyle(
                 fontSize: 16,
                 color: Colors.black87,
@@ -568,6 +579,43 @@ class CompanyDetailScreen extends StatelessWidget {
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
+        // Follow/Unfollow button
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton.icon(
+            onPressed: isLoadingFollow ? null : _toggleFollow,
+            icon: isLoadingFollow
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Icon(
+                    isFollowing ? Icons.person_remove : Icons.person_add,
+                    color: Colors.white,
+                  ),
+            label: Text(
+              isFollowing ? 'Unfollow' : 'Follow',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isFollowing ? Colors.grey.shade600 : Colors.blueAccent,
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         // Message button
         SizedBox(
           width: double.infinity,
@@ -578,9 +626,9 @@ class CompanyDetailScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (context) => ChatScreen(
-                    currentUserId: userId,
-                    otherUserId: companyData['id'].toString(),
-                    otherUserName: companyData['name'] ?? 'Company',
+                    currentwidget.userId: widget.userId,
+                    otherwidget.userId: widget.companyData['id'].toString(),
+                    otherUserName: widget.companyData['name'] ?? 'Company',
                   ),
                 ),
               );
@@ -647,10 +695,10 @@ class CompanyDetailScreen extends StatelessWidget {
             onPressed: () async {
               await launchUPIPayment(
                 context: context,
-                upiId: companyData['upi_id'] ?? 'yourupi@okicici', // Replace with actual UPI ID or add to your data
-                name: companyData['name'] ?? 'Company',
+                upiId: widget.companyData['upi_id'] ?? 'yourupi@okicici', // Replace with actual UPI ID or add to your data
+                name: widget.companyData['name'] ?? 'Company',
                 amount: '100', // You can get this from user input or dialog
-                transactionNote: 'Support for ${companyData['name']}',
+                transactionNote: 'Support for ${widget.companyData['name']}',
               );
             },
           ),
@@ -659,10 +707,63 @@ class CompanyDetailScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _toggleFollow() async {
+    setState(() => isLoadingFollow = true);
+
+    try {
+      final storage = const FlutterSecureStorage();
+      final currentwidget.userId = await storage.read(key: 'user_id');
+
+      if (currentwidget.userId == null) {
+        _showSnackBar('Please log in to follow');
+        setState(() => isLoadingFollow = false);
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse('https://indianrupeeservices.in/NEXT/backend/toggle_follow.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'follower_id': currentwidget.userId,
+          'following_id': widget.companyData['id'].toString(),
+          'action': isFollowing ? 'unfollow' : 'follow',
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          setState(() {
+            isFollowing = !isFollowing;
+          });
+          _showSnackBar(isFollowing ? 'Following now!' : 'Unfollowed');
+        } else {
+          _showSnackBar(data['message'] ?? 'Failed to update follow status');
+        }
+      } else {
+        _showSnackBar('Server error. Please try again.');
+      }
+    } catch (e) {
+      _showSnackBar('Error: $e');
+    } finally {
+      setState(() => isLoadingFollow = false);
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   bool _isAcceptingFunding() {
-    return companyData['accepting_funding'] == 1 || 
-           companyData['accepting_funding'] == '1' ||
-           companyData['accepting_funding'] == true;
+    return widget.companyData['accepting_funding'] == 1 || 
+           widget.companyData['accepting_funding'] == '1' ||
+           widget.companyData['accepting_funding'] == true;
   }
 
   String _formatCurrency(dynamic amount) {
@@ -689,14 +790,14 @@ class CompanyDetailScreen extends StatelessWidget {
       MaterialPageRoute(
         builder: (context) => ProfessionalPaymentPage(
           companyData: companyData,
-          userId: userId,
+          widget.userId: widget.userId,
         ),
       ),
     );
   }
 
   void _showMouDialog(BuildContext context, VoidCallback onAgreed) {
-    final companyName = companyData['name'] ?? 'Partner';
+    final companyName = widget.companyData['name'] ?? 'Partner';
     final today = DateTime.now();
     final dateStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
     bool agreed = false;
@@ -788,12 +889,12 @@ class CompanyDetailScreen extends StatelessWidget {
 // Professional Payment Page
 class ProfessionalPaymentPage extends StatefulWidget {
   final Map<String, dynamic> companyData;
-  final String userId;
+  final String widget.userId;
 
   const ProfessionalPaymentPage({
     super.key,
     required this.companyData,
-    required this.userId,
+    required this.widget.userId,
   });
 
   @override
