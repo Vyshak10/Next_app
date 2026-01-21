@@ -5,6 +5,10 @@ import 'dart:convert';
 
 import '../login/user_type.dart';
 import 'help_support_screen.dart';
+import 'privacy_settings_screen.dart';
+import 'location_services_screen.dart';
+import 'about_next_screen.dart';
+import 'company_analytics_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -271,7 +275,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: const Icon(Icons.analytics),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                     onTap: () {
-                      Navigator.pushNamed(context, '/company-analytics');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const CompanyAnalyticsScreen()),
+                      );
                     },
                   ),
                   const Divider(height: 0, indent: 16, endIndent: 16),
@@ -299,7 +306,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.lock_outline),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                   onTap: () {
-                    print('Privacy Settings tapped');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const PrivacySettingsScreen()),
+                    );
                   },
                 ),
                 const Divider(height: 0, indent: 16, endIndent: 16),
@@ -308,7 +318,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.location_on_outlined),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                   onTap: () {
-                    print('Location Services tapped');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LocationServicesScreen()),
+                    );
                   },
                 ),
               ],
@@ -339,7 +352,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.info_outline),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 18),
                   onTap: () {
-                    print('About NEXT tapped');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AboutNextScreen()),
+                    );
                   },
                 ),
                 const Divider(height: 0, indent: 16, endIndent: 16),
