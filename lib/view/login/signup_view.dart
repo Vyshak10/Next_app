@@ -3,6 +3,7 @@ import 'package:next_app/services/auth_service.dart';
 import '../../common_widget/animated_greeting_gradient_mixin.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../verification/startup_training_room.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -21,6 +22,7 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController skillsController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
+  final TextEditingController sinController = TextEditingController();
 
   String userType = 'Unknown';
   bool isLoading = false;
@@ -58,6 +60,10 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
       return;
     }
 
+    if (userType == 'Startup' && sinController.text.trim().isEmpty) {
+      _showSnackBar('Please enter your SIN number');
+      return;
+    }
 
     if (!acceptTerms) {
       _showSnackBar('Please accept the terms and conditions');
@@ -96,8 +102,24 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
         String? testId = prefs.getString('user_id');
         print('DEBUG: Immediately read user_id from shared_preferences: ${testId ?? 'null'}');
       }
-      _showSnackBar('Signup successful! Please check your email for verification.');
-      Navigator.pushReplacementNamed(context, '/login', arguments: {'userType': userType});
+      
+      // Route based on user type
+      if (userType == 'Startup') {
+        // Import the training room at the top of the file
+        _showSnackBar('Signup successful! Redirecting to verification...');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => StartupTrainingRoom(
+              startupName: startupNameController.text.trim(),
+              sinNumber: sinController.text.trim(),
+            ),
+          ),
+        );
+      } else {
+        _showSnackBar('Signup successful! Please check your email for verification.');
+        Navigator.pushReplacementNamed(context, '/login', arguments: {'userType': userType});
+      }
     } catch (e) {
       _showSnackBar('An error occurred: ${e.toString()}');
     } finally {
@@ -504,6 +526,27 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
             border: OutlineInputBorder(),
           ),
         ),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: sinController,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'SIN Number',
+            hintText: 'Enter your Startup Identification Number',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.verified_user),
+            helperText: 'Required for verification (verified within 48 hours)',
+          ),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter your SIN number';
+            }
+            if (value.length < 6) {
+              return 'SIN number must be at least 6 digits';
+            }
+            return null;
+          },
+        ),
     
       ],
     );
@@ -540,6 +583,7 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin, 
     fullNameController.dispose();
     skillsController.dispose();
     phoneController.dispose();
+    sinController.dispose();
     super.dispose();
   }
 }
