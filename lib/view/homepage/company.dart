@@ -532,60 +532,69 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
       pinned: true,
       backgroundColor: Colors.white,
       elevation: 0,
-      flexibleSpace: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+      title: SafeArea(
+        child: GestureDetector(
+          onTap: () {
+            // Refresh the CompanyHomeScreen by reloading data
+            final state = context.findAncestorStateOfType<_CompanyHomeScreenState>();
+            state?._loadData();
+          },
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              GestureDetector(
-                onTap: () {
-                  // Refresh the CompanyHomeScreen by reloading data
-                  final state = context.findAncestorStateOfType<_CompanyHomeScreenState>();
-                  state?._loadData();
-                },
-                child: Row(
-                  children: [
-                    Image.asset('assets/img/Icon.png', height: 36),
-                    const SizedBox(width: 12),
-                    Text(
-                      'N.E.X.T.',
-                      style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 28,
-                        letterSpacing: 4,
-                      ),
-                    ),
-                  ],
+              Image.asset('assets/img/Icon.png', height: 36),
+              const SizedBox(width: 12),
+              Text(
+                'N.E.X.T.',
+                style: TextStyle(
+                  color: Colors.blueAccent,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 28,
+                  letterSpacing: 4,
                 ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.search, color: Colors.blueAccent, size: 26),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const SearchScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  _buildNotificationBell(),
-                ],
               ),
             ],
           ),
         ),
       ),
+      actions: [
+        _buildSearchIcon(),
+        _buildNotificationBell(),
+        const SizedBox(width: 8),
+      ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
         child: Container(
           color: Colors.grey[200],
           height: 1,
         ),
+      ),
+    );
+  }
+
+  Widget _buildSearchIcon() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SearchScreen()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 4, top: 8, bottom: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.search, color: Colors.blueAccent),
       ),
     );
   }
@@ -598,36 +607,39 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           MaterialPageRoute(builder: (context) => const MeetingScreen()),
         );
       },
-      child: Stack(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.notifications_outlined, color: Colors.blueAccent),
-          ),
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Colors.red,
+      child: Container(
+        margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8, right: 8),
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.notifications_outlined, color: Colors.blueAccent),
+            ),
+            Positioned(
+              right: 8,
+              top: 8,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
