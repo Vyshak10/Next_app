@@ -10,11 +10,13 @@ import 'package:url_launcher/url_launcher.dart';
 class CompanyDetailScreen extends StatefulWidget {
   final Map<String, dynamic> companyData;
   final String userId;
+  final bool? isStartupUser; // New optional parameter
 
   const CompanyDetailScreen({
     super.key,
     required this.companyData,
     required this.userId,
+    this.isStartupUser,
   });
 
   @override
@@ -24,6 +26,73 @@ class CompanyDetailScreen extends StatefulWidget {
 class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   bool isFollowing = false;
   bool isLoadingFollow = false;
+  bool _isStartupUser = false;
+  bool _isLoadingUserType = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isStartupUser != null) {
+      _isStartupUser = widget.isStartupUser!;
+      _isLoadingUserType = false;
+    } else {
+      _checkUserType();
+    }
+  }
+
+  Future<void> _checkUserType() async {
+    try {
+      final storage = const FlutterSecureStorage();
+      final currentUserId = await storage.read(key: 'user_id');
+
+      // Try reading user_type from storage first
+      final storedUserType = await storage.read(key: 'user_type');
+      if (storedUserType != null) {
+        setState(() {
+          _isStartupUser = storedUserType.toLowerCase().contains('startup');
+          _isLoadingUserType = false;
+        });
+        return;
+      }
+
+      if (currentUserId != null) {
+        final token = await storage.read(key: 'auth_token');
+        final response = await http.get(
+          Uri.parse(
+            'https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=$currentUserId',
+          ),
+          headers: {
+            if (token != null) 'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data =
+              json.decode(response.body.trim()) as Map<String, dynamic>;
+          final profile = data['profile'] ?? data['data'];
+          if (profile != null) {
+            final userType = profile['user_type'] ?? profile['userType'] ?? '';
+            setState(() {
+              _isStartupUser = userType.toString().toLowerCase().contains(
+                'startup',
+              );
+              _isLoadingUserType = false;
+            });
+            return;
+          }
+        }
+      }
+      setState(() {
+        _isLoadingUserType = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingUserType = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +114,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   color: Colors.white.withOpacity(0.9),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.arrow_back, color: Colors.black, size: 20),
+                child: const Icon(
+                  Icons.arrow_back,
+                  color: Colors.black,
+                  size: 20,
+                ),
               ),
               onPressed: () => Navigator.pop(context),
             ),
@@ -55,10 +128,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      const Color(0xFF667EEA),
-                      const Color(0xFF764BA2),
-                    ],
+                    colors: [const Color(0xFF667EEA), const Color(0xFF764BA2)],
                   ),
                 ),
                 child: Stack(
@@ -70,7 +140,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                         child: Container(
                           decoration: const BoxDecoration(
                             image: DecorationImage(
-                              image: NetworkImage('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjEiLz4KICAgIDwvcGF0dGVybj4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPgo8L3N2Zz4='),
+                              image: NetworkImage(
+                                'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjEiLz4KICAgIDwvcGF0dGVybj4KICA8L2RlZnM+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPgo8L3N2Zz4=',
+                              ),
                               repeat: ImageRepeat.repeat,
                             ),
                           ),
@@ -103,15 +175,23 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(22),
-                              child: widget.companyData['logo'] != null && widget.companyData['logo'].toString().isNotEmpty
-                                  ? Image.network(
-                                widget.companyData['logo'],
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return _buildPlaceholderLogo();
-                                },
-                              )
-                                  : _buildPlaceholderLogo(),
+                              child:
+                                  widget.companyData['logo'] != null &&
+                                          widget.companyData['logo']
+                                              .toString()
+                                              .isNotEmpty
+                                      ? Image.network(
+                                        widget.companyData['logo'],
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (
+                                          context,
+                                          error,
+                                          stackTrace,
+                                        ) {
+                                          return _buildPlaceholderLogo();
+                                        },
+                                      )
+                                      : _buildPlaceholderLogo(),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -135,7 +215,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                           const SizedBox(height: 8),
                           // Enhanced sector badge
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(25),
@@ -155,11 +238,18 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                           ),
                           const SizedBox(height: 12),
                           // Location if available
-                          if (widget.companyData['location'] != null && widget.companyData['location'].toString().isNotEmpty)
+                          if (widget.companyData['location'] != null &&
+                              widget.companyData['location']
+                                  .toString()
+                                  .isNotEmpty)
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.location_on, color: Colors.white70, size: 16),
+                                const Icon(
+                                  Icons.location_on,
+                                  color: Colors.white70,
+                                  size: 16,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   widget.companyData['location'],
@@ -223,18 +313,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.blue.shade300,
-            Colors.blue.shade600,
-          ],
+          colors: [Colors.blue.shade300, Colors.blue.shade600],
         ),
         borderRadius: BorderRadius.circular(22),
       ),
-      child: const Icon(
-        Icons.business,
-        size: 50,
-        color: Colors.white,
-      ),
+      child: const Icon(Icons.business, size: 50, color: Colors.white),
     );
   }
 
@@ -261,25 +344,19 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               value: widget.companyData['sector'] ?? 'Technology',
             ),
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.grey.shade200,
-          ),
+          Container(width: 1, height: 40, color: Colors.grey.shade200),
           Expanded(
             child: _buildStatItem(
               icon: Icons.web,
               label: 'Website',
-              value: widget.companyData['website'] != null && widget.companyData['website'].toString().isNotEmpty 
-                  ? 'Available' 
-                  : 'Not provided',
+              value:
+                  widget.companyData['website'] != null &&
+                          widget.companyData['website'].toString().isNotEmpty
+                      ? 'Available'
+                      : 'Not provided',
             ),
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.grey.shade200,
-          ),
+          Container(width: 1, height: 40, color: Colors.grey.shade200),
           Expanded(
             child: _buildStatItem(
               icon: Icons.trending_up,
@@ -292,7 +369,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     );
   }
 
-  Widget _buildStatItem({required IconData icon, required String label, required String value}) {
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return Column(
       children: [
         Icon(icon, color: Colors.blue.shade600, size: 24),
@@ -346,7 +427,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            widget.companyData['bio'] ?? widget.companyData['description'] ?? 'No description available.',
+            widget.companyData['bio'] ??
+                widget.companyData['description'] ??
+                'No description available.',
             style: const TextStyle(
               fontSize: 16,
               color: Colors.black87,
@@ -364,11 +447,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _buildTagsList(),
-            ),
+            Wrap(spacing: 8, runSpacing: 8, children: _buildTagsList()),
           ],
         ],
       ),
@@ -378,27 +457,40 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   List<Widget> _buildTagsList() {
     List<String> tags = [];
     if (widget.companyData['tags'] is List) {
-      tags = (widget.companyData['tags'] as List).map((e) => e.toString()).toList();
-    } else if (widget.companyData['tags'] != null && widget.companyData['tags'].toString().isNotEmpty) {
-      tags = widget.companyData['tags'].toString().split(',').map((e) => e.trim()).toList();
+      tags =
+          (widget.companyData['tags'] as List)
+              .map((e) => e.toString())
+              .toList();
+    } else if (widget.companyData['tags'] != null &&
+        widget.companyData['tags'].toString().isNotEmpty) {
+      tags =
+          widget.companyData['tags']
+              .toString()
+              .split(',')
+              .map((e) => e.trim())
+              .toList();
     }
 
-    return tags.map((tag) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
-      child: Text(
-        tag,
-        style: TextStyle(
-          color: Colors.blue.shade700,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    )).toList();
+    return tags
+        .map(
+          (tag) => Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Text(
+              tag,
+              style: TextStyle(
+                color: Colors.blue.shade700,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        )
+        .toList();
   }
 
   Widget _buildBusinessDetails() {
@@ -427,20 +519,39 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          if (widget.companyData['role'] != null && widget.companyData['role'].toString().isNotEmpty)
+          if (widget.companyData['role'] != null &&
+              widget.companyData['role'].toString().isNotEmpty)
             _buildDetailRow(Icons.work, 'Role', widget.companyData['role']),
-          if (widget.companyData['skills'] != null && widget.companyData['skills'].toString().isNotEmpty)
+          if (widget.companyData['skills'] != null &&
+              widget.companyData['skills'].toString().isNotEmpty)
             _buildDetailRow(Icons.star, 'Skills', widget.companyData['skills']),
-          if (widget.companyData['website'] != null && widget.companyData['website'].toString().isNotEmpty)
-            _buildDetailRow(Icons.web, 'Website', widget.companyData['website'], isLink: true),
-          if (widget.companyData['pitch_video_url'] != null && widget.companyData['pitch_video_url'].toString().isNotEmpty)
-            _buildDetailRow(Icons.play_circle, 'Pitch Video', 'Available', isLink: true),
+          if (widget.companyData['website'] != null &&
+              widget.companyData['website'].toString().isNotEmpty)
+            _buildDetailRow(
+              Icons.web,
+              'Website',
+              widget.companyData['website'],
+              isLink: true,
+            ),
+          if (widget.companyData['pitch_video_url'] != null &&
+              widget.companyData['pitch_video_url'].toString().isNotEmpty)
+            _buildDetailRow(
+              Icons.play_circle,
+              'Pitch Video',
+              'Available',
+              isLink: true,
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String? value, {bool isLink = false}) {
+  Widget _buildDetailRow(
+    IconData icon,
+    String label,
+    String? value, {
+    bool isLink = false,
+  }) {
     if (value == null || value.isEmpty) return const SizedBox.shrink();
 
     return Padding(
@@ -493,10 +604,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.green.shade50,
-            Colors.green.shade100,
-          ],
+          colors: [Colors.green.shade50, Colors.green.shade100],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.green.shade200),
@@ -512,7 +620,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   color: Colors.green.shade600,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.monetization_on, color: Colors.white, size: 24),
+                child: const Icon(
+                  Icons.monetization_on,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -526,7 +638,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          if (widget.companyData['funding_goal'] != null && widget.companyData['funding_goal'].toString().isNotEmpty) ...[
+          if (widget.companyData['funding_goal'] != null &&
+              widget.companyData['funding_goal'].toString().isNotEmpty) ...[
             Text(
               'Funding Goal: ₹${_formatCurrency(widget.companyData['funding_goal'])}',
               style: TextStyle(
@@ -537,7 +650,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             ),
             const SizedBox(height: 8),
           ],
-          if (widget.companyData['funding_description'] != null && widget.companyData['funding_description'].toString().isNotEmpty) ...[
+          if (widget.companyData['funding_description'] != null &&
+              widget.companyData['funding_description']
+                  .toString()
+                  .isNotEmpty) ...[
             Text(
               widget.companyData['funding_description'],
               style: const TextStyle(
@@ -553,7 +669,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             height: 50,
             child: ElevatedButton.icon(
               onPressed: () => _showProfessionalPaymentPage(context),
-              icon: const Icon(Icons.account_balance_wallet, color: Colors.white),
+              icon: const Icon(
+                Icons.account_balance_wallet,
+                color: Colors.white,
+              ),
               label: const Text(
                 'Support This Startup',
                 style: TextStyle(
@@ -585,19 +704,20 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           height: 52,
           child: ElevatedButton.icon(
             onPressed: isLoadingFollow ? null : _toggleFollow,
-            icon: isLoadingFollow
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
+            icon:
+                isLoadingFollow
+                    ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                    : Icon(
+                      isFollowing ? Icons.person_remove : Icons.person_add,
                       color: Colors.white,
                     ),
-                  )
-                : Icon(
-                    isFollowing ? Icons.person_remove : Icons.person_add,
-                    color: Colors.white,
-                  ),
             label: Text(
               isFollowing ? 'Unfollow' : 'Follow',
               style: const TextStyle(
@@ -607,7 +727,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               ),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isFollowing ? Colors.grey.shade600 : Colors.blueAccent,
+              backgroundColor:
+                  isFollowing ? Colors.grey.shade600 : Colors.blueAccent,
               elevation: 3,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -625,11 +746,12 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ChatScreen(
-                    currentUserId: widget.userId,
-                    otherUserId: widget.companyData['id'].toString(),
-                    otherUserName: widget.companyData['name'] ?? 'Company',
-                  ),
+                  builder:
+                      (context) => ChatScreen(
+                        currentUserId: widget.userId,
+                        otherUserId: widget.companyData['id'].toString(),
+                        otherUserName: widget.companyData['name'] ?? 'Company',
+                      ),
                 ),
               );
             },
@@ -641,25 +763,32 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
+              overflow: TextOverflow.ellipsis,
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.blue.shade600,
               elevation: 3,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),
         ),
-        // Support button (if not already shown in funding section)
-        if (!_isAcceptingFunding()) ...[
+        // Support button (if check completed AND not startup AND not funding AND not already accepting funding)
+        if (!_isLoadingUserType &&
+            !_isStartupUser &&
+            !_isAcceptingFunding()) ...[
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             height: 52,
             child: OutlinedButton.icon(
               onPressed: () {
-                _showMouDialog(context, () => _showProfessionalPaymentPage(context));
+                _showMouDialog(
+                  context,
+                  () => _showProfessionalPaymentPage(context),
+                );
               },
               icon: Icon(Icons.favorite, color: Colors.green.shade600),
               label: Text(
@@ -679,30 +808,38 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             ),
           ),
         ],
-        // UPI button
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.qr_code),
-            label: const Text('Pay with UPI'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.deepPurple,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        // UPI button (only show if check completed AND user is not a startup)
+        if (!_isLoadingUserType && !_isStartupUser) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.qr_code),
+              label: const Text('Pay with UPI'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.deepPurple,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () async {
+                await launchUPIPayment(
+                  context: context,
+                  upiId:
+                      widget.companyData['upi_id'] ??
+                      'yourupi@okicici', // Replace with actual UPI ID or add to your data
+                  name: widget.companyData['name'] ?? 'Company',
+                  amount: '100', // You can get this from user input or dialog
+                  transactionNote: 'Support for ${widget.companyData['name']}',
+                );
+              },
             ),
-            onPressed: () async {
-              await launchUPIPayment(
-                context: context,
-                upiId: widget.companyData['upi_id'] ?? 'yourupi@okicici', // Replace with actual UPI ID or add to your data
-                name: widget.companyData['name'] ?? 'Company',
-                amount: '100', // You can get this from user input or dialog
-                transactionNote: 'Support for ${widget.companyData['name']}',
-              );
-            },
           ),
-        ),
+        ],
+        // Add padding at the bottom to ensure message button doesn't get clipped
+        const SizedBox(height: 80),
       ],
     );
   }
@@ -721,7 +858,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
       }
 
       final response = await http.post(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/toggle_follow.php'),
+        Uri.parse(
+          'https://indianrupeeservices.in/NEXT/backend/toggle_follow.php',
+        ),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'follower_id': currentUserId,
@@ -761,20 +900,23 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   }
 
   bool _isAcceptingFunding() {
-    return widget.companyData['accepting_funding'] == 1 || 
-           widget.companyData['accepting_funding'] == '1' ||
-           widget.companyData['accepting_funding'] == true;
+    return widget.companyData['accepting_funding'] == 1 ||
+        widget.companyData['accepting_funding'] == '1' ||
+        widget.companyData['accepting_funding'] == true;
   }
 
   String _formatCurrency(dynamic amount) {
     if (amount == null) return '0';
     try {
       double value = double.parse(amount.toString());
-      if (value >= 10000000) { // 1 crore
+      if (value >= 10000000) {
+        // 1 crore
         return '${(value / 10000000).toStringAsFixed(1)}Cr';
-      } else if (value >= 100000) { // 1 lakh
+      } else if (value >= 100000) {
+        // 1 lakh
         return '${(value / 100000).toStringAsFixed(1)}L';
-      } else if (value >= 1000) { // 1 thousand
+      } else if (value >= 1000) {
+        // 1 thousand
         return '${(value / 1000).toStringAsFixed(1)}K';
       } else {
         return value.toStringAsFixed(0);
@@ -788,10 +930,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ProfessionalPaymentPage(
-          companyData: widget.companyData,
-          userId: widget.userId,
-        ),
+        builder:
+            (context) => ProfessionalPaymentPage(
+              companyData: widget.companyData,
+              userId: widget.userId,
+            ),
       ),
     );
   }
@@ -799,7 +942,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   void _showMouDialog(BuildContext context, VoidCallback onAgreed) {
     final companyName = widget.companyData['name'] ?? 'Partner';
     final today = DateTime.now();
-    final dateStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+    final dateStr =
+        "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
     bool agreed = false;
     showDialog(
       context: context,
@@ -812,26 +956,53 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Between Xpress AI and $companyName', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Between Xpress AI and $companyName',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     Text('Dated: $dateStr'),
                     const SizedBox(height: 12),
-                    Text('This MoU outlines a mutual understanding between Xpress AI, developers of the Next.js application "N.E.X.T", and $companyName, regarding collaboration in the use, testing, and enhancement of the platform.'),
+                    Text(
+                      'This MoU outlines a mutual understanding between Xpress AI, developers of the Next.js application "N.E.X.T", and $companyName, regarding collaboration in the use, testing, and enhancement of the platform.',
+                    ),
                     const SizedBox(height: 12),
-                    const Text('1. Purpose', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const Text('To collaborate on the use and/or testing of "N.E.X.T", a web application developed in Next.js for startup and innovation management.'),
+                    const Text(
+                      '1. Purpose',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const Text(
+                      'To collaborate on the use and/or testing of "N.E.X.T", a web application developed in Next.js for startup and innovation management.',
+                    ),
                     const SizedBox(height: 8),
-                    const Text('2. Responsibilities', style: TextStyle(fontWeight: FontWeight.bold)),
-                    Text('Xpress AI will provide platform access, updates, and technical support.\n$companyName agrees to use the platform, provide feedback, and maintain confidentiality.'),
+                    const Text(
+                      '2. Responsibilities',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Xpress AI will provide platform access, updates, and technical support.\n$companyName agrees to use the platform, provide feedback, and maintain confidentiality.',
+                    ),
                     const SizedBox(height: 8),
-                    const Text('3. Confidentiality', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const Text('Both parties will keep any shared technical or business information confidential.'),
+                    const Text(
+                      '3. Confidentiality',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const Text(
+                      'Both parties will keep any shared technical or business information confidential.',
+                    ),
                     const SizedBox(height: 8),
-                    const Text('4. Duration & Termination', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const Text('This MoU is valid for 3 months from the signing date and may be ended by either party with written notice.'),
+                    const Text(
+                      '4. Duration & Termination',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const Text(
+                      'This MoU is valid for 3 months from the signing date and may be ended by either party with written notice.',
+                    ),
                     const SizedBox(height: 16),
                     Text('Signed by:'),
                     const SizedBox(height: 8),
-                    Text('Xpress AI\nRole: Developer / Owner\nDate: _____________'),
+                    Text(
+                      'Xpress AI\nRole: Developer / Owner\nDate: _____________',
+                    ),
                     Text('$companyName\nRole: Startup\nDate: _____________'),
                     const SizedBox(height: 16),
                     Row(
@@ -840,7 +1011,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                           value: agreed,
                           onChanged: (v) => setState(() => agreed = v ?? false),
                         ),
-                        const Expanded(child: Text('I agree to the terms above.')),
+                        const Expanded(
+                          child: Text('I agree to the terms above.'),
+                        ),
                       ],
                     ),
                   ],
@@ -852,10 +1025,13 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
-                  onPressed: agreed ? () {
-                    Navigator.pop(context);
-                    onAgreed();
-                  } : null,
+                  onPressed:
+                      agreed
+                          ? () {
+                            Navigator.pop(context);
+                            onAgreed();
+                          }
+                          : null,
                   child: const Text('OK / Proceed'),
                 ),
               ],
@@ -879,9 +1055,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not launch UPI app')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Could not launch UPI app')));
     }
   }
 }
@@ -898,7 +1074,8 @@ class ProfessionalPaymentPage extends StatefulWidget {
   });
 
   @override
-  State<ProfessionalPaymentPage> createState() => _ProfessionalPaymentPageState();
+  State<ProfessionalPaymentPage> createState() =>
+      _ProfessionalPaymentPageState();
 }
 
 class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
@@ -907,7 +1084,7 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  
+
   late Razorpay _razorpay;
   String _selectedPaymentMethod = 'card';
   bool _isProcessing = false;
@@ -1015,29 +1192,45 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: widget.companyData['logo'] != null && widget.companyData['logo'].toString().isNotEmpty
-                  ? Image.network(
-                widget.companyData['logo'],
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.blue.shade300, Colors.blue.shade600],
+              child:
+                  widget.companyData['logo'] != null &&
+                          widget.companyData['logo'].toString().isNotEmpty
+                      ? Image.network(
+                        widget.companyData['logo'],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.blue.shade300,
+                                  Colors.blue.shade600,
+                                ],
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.business,
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                          );
+                        },
+                      )
+                      : Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.blue.shade300,
+                              Colors.blue.shade600,
+                            ],
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.business,
+                          color: Colors.white,
+                          size: 30,
+                        ),
                       ),
-                    ),
-                    child: const Icon(Icons.business, color: Colors.white, size: 30),
-                  );
-                },
-              )
-                  : Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.blue.shade300, Colors.blue.shade600],
-                  ),
-                ),
-                child: const Icon(Icons.business, color: Colors.white, size: 30),
-              ),
             ),
           ),
           const SizedBox(width: 16),
@@ -1047,10 +1240,7 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
               children: [
                 Text(
                   'Supporting',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1064,10 +1254,7 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
                 if (widget.companyData['sector'] != null)
                   Text(
                     widget.companyData['sector'],
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                   ),
               ],
             ),
@@ -1107,36 +1294,47 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _quickAmounts.map((amount) => GestureDetector(
-              onTap: () {
-                setState(() {
-                  _amountController.text = amount.toString();
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _amountController.text == amount.toString() 
-                      ? Colors.blue.shade600 
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: _amountController.text == amount.toString() 
-                        ? Colors.blue.shade600 
-                        : Colors.grey.shade300,
-                  ),
-                ),
-                child: Text(
-                  '₹$amount',
-                  style: TextStyle(
-                    color: _amountController.text == amount.toString() 
-                        ? Colors.white 
-                        : Colors.black87,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            )).toList(),
+            children:
+                _quickAmounts
+                    .map(
+                      (amount) => GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _amountController.text = amount.toString();
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                _amountController.text == amount.toString()
+                                    ? Colors.blue.shade600
+                                    : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color:
+                                  _amountController.text == amount.toString()
+                                      ? Colors.blue.shade600
+                                      : Colors.grey.shade300,
+                            ),
+                          ),
+                          child: Text(
+                            '₹$amount',
+                            style: TextStyle(
+                              color:
+                                  _amountController.text == amount.toString()
+                                      ? Colors.white
+                                      : Colors.black87,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
           ),
           const SizedBox(height: 16),
           // Custom amount input
@@ -1299,7 +1497,12 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
     );
   }
 
-  Widget _buildPaymentMethodOption(String value, String title, IconData icon, String subtitle) {
+  Widget _buildPaymentMethodOption(
+    String value,
+    String title,
+    IconData icon,
+    String subtitle,
+  ) {
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -1309,10 +1512,16 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: _selectedPaymentMethod == value ? Colors.blue.shade50 : Colors.grey.shade50,
+          color:
+              _selectedPaymentMethod == value
+                  ? Colors.blue.shade50
+                  : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _selectedPaymentMethod == value ? Colors.blue.shade600 : Colors.grey.shade300,
+            color:
+                _selectedPaymentMethod == value
+                    ? Colors.blue.shade600
+                    : Colors.grey.shade300,
             width: _selectedPaymentMethod == value ? 2 : 1,
           ),
         ),
@@ -1321,14 +1530,13 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _selectedPaymentMethod == value ? Colors.blue.shade600 : Colors.grey.shade400,
+                color:
+                    _selectedPaymentMethod == value
+                        ? Colors.blue.shade600
+                        : Colors.grey.shade400,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                icon,
-                color: Colors.white,
-                size: 20,
-              ),
+              child: Icon(icon, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1340,26 +1548,22 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: _selectedPaymentMethod == value ? Colors.blue.shade800 : Colors.black87,
+                      color:
+                          _selectedPaymentMethod == value
+                              ? Colors.blue.shade800
+                              : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                   ),
                 ],
               ),
             ),
             if (_selectedPaymentMethod == value)
-              Icon(
-                Icons.check_circle,
-                color: Colors.blue.shade600,
-                size: 24,
-              ),
+              Icon(Icons.check_circle, color: Colors.blue.shade600, size: 24),
           ],
         ),
       ),
@@ -1425,44 +1629,45 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        child: _isProcessing
-            ? const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
-            SizedBox(width: 12),
-            Text(
-              'Processing...',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        )
-            : Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.security, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Pay ₹${_amountController.text.isEmpty ? "0" : _amountController.text}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
+        child:
+            _isProcessing
+                ? const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Processing...',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                )
+                : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.security, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Pay ₹${_amountController.text.isEmpty ? "0" : _amountController.text}',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
       ),
     );
   }
@@ -1493,10 +1698,7 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
                 ),
                 Text(
                   'Your payment is secured by Razorpay with 256-bit SSL encryption',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.green.shade700,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.green.shade700),
                 ),
               ],
             ),
@@ -1554,14 +1756,12 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
         'netbanking': _selectedPaymentMethod == 'netbanking',
         'wallet': _selectedPaymentMethod == 'wallet',
       },
-      'theme': {
-        'color': '#4CAF50',
-      },
+      'theme': {'color': '#4CAF50'},
       'notes': {
         'recipient_id': widget.companyData['id'],
         'supporter_message': _messageController.text,
         'payment_method': _selectedPaymentMethod,
-      }
+      },
     };
 
     try {
@@ -1578,65 +1778,60 @@ class _ProfessionalPaymentPageState extends State<ProfessionalPaymentPage> {
     setState(() {
       _isProcessing = false;
     });
-    
+
     Navigator.pop(context);
-    
+
     // Show success dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.green.shade100,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.check,
-                color: Colors.green.shade600,
-                size: 48,
-              ),
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Payment Successful!',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check,
+                    color: Colors.green.shade600,
+                    size: 48,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Payment Successful!',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Thank you for supporting ${widget.companyData['name']}!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Payment ID: ${response.paymentId}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Thank you for supporting ${widget.companyData['name']}!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade600,
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Done'),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Payment ID: ${response.paymentId}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade500,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Done'),
+            ],
           ),
-        ],
-      ),
     );
   }
 

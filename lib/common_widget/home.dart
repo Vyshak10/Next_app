@@ -16,8 +16,9 @@ class HomeScreen extends StatefulWidget {
   final VoidCallback? onProfileTap;
   final String? userId;
   final bool verticalList;
+  final bool isStartupUser;
 
-  const HomeScreen({super.key, this.userProfile, this.onProfileTap, this.userId, this.verticalList = false});
+  const HomeScreen({super.key, this.userProfile, this.onProfileTap, this.userId, this.verticalList = false, this.isStartupUser = false});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -539,6 +540,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
         builder: (context) => CompanyDetailScreen(
           companyData: company,
           userId: widget.userId ?? '',
+          isStartupUser: widget.isStartupUser,
         ),
       ),
     );

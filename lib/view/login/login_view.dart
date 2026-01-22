@@ -52,8 +52,10 @@ class _LoginViewState extends State<LoginView> {
         if (userId != null && userId.isNotEmpty) {
           const storage = FlutterSecureStorage();
           await storage.write(key: 'user_id', value: userId);
+          await storage.write(key: 'user_type', value: userType); // Persist user type
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('user_id', userId);
+          await prefs.setString('user_type', userType); // Persist user type
         }
 
         _navigateToUserScreen(userType);
