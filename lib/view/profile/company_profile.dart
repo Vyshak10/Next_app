@@ -14,6 +14,8 @@ import '../settings/settings_screen.dart';
 import '../../../services/image_picker_service.dart';
 import 'dart:typed_data';
 import 'dart:io'; // Added for File
+import '../../../services/verification_service.dart';
+import '../../../services/team_service.dart';
 
 class CompanyProfileScreen extends StatefulWidget {
   final String? userId;
@@ -25,11 +27,14 @@ class CompanyProfileScreen extends StatefulWidget {
   State<CompanyProfileScreen> createState() => _CompanyProfileScreenState();
 }
 
-class _CompanyProfileScreenState extends State<CompanyProfileScreen> with TickerProviderStateMixin, AnimatedGreetingGradientMixin<CompanyProfileScreen> {
+class _CompanyProfileScreenState extends State<CompanyProfileScreen>
+    with
+        TickerProviderStateMixin,
+        AnimatedGreetingGradientMixin<CompanyProfileScreen> {
   final storage = const FlutterSecureStorage();
   final ImagePicker _picker = ImagePicker();
   late Razorpay _razorpay;
-  
+
   Map<String, dynamic>? profile;
   List<Map<String, dynamic>> posts = [];
   bool isLoading = true;
@@ -37,7 +42,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   bool isUploadingAvatar = false;
   bool _acceptingFunding = true;
   String? _resolvedUserId;
-  
+
   // Controllers for editing
   final _nameController = TextEditingController();
   final _roleController = TextEditingController();
@@ -53,27 +58,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
 
   Uint8List? _pickedAvatarBytes;
 
-  // Dummy data for demonstration
-  final List<Map<String, String>> teamMembers = [
-    {
-      'name': 'Alice Johnson',
-      'role': 'CEO',
-      'photo': 'https://randomuser.me/api/portraits/women/44.jpg',
-      'linkedin': 'https://linkedin.com/in/alicejohnson',
-    },
-    {
-      'name': 'Bob Smith',
-      'role': 'CTO',
-      'photo': 'https://randomuser.me/api/portraits/men/32.jpg',
-      'linkedin': 'https://linkedin.com/in/bobsmith',
-    },
-    {
-      'name': 'Carol Lee',
-      'role': 'CFO',
-      'photo': 'https://randomuser.me/api/portraits/women/65.jpg',
-      'linkedin': 'https://linkedin.com/in/carollee',
-    },
-  ];
+  List<Map<String, dynamic>> teamMembers = [];
 
   final List<Map<String, dynamic>> portfolio = [
     {
@@ -127,17 +112,21 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     gradientBeginAnimation = Tween<AlignmentGeometry>(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-    ).animate(CurvedAnimation(
-      parent: gradientAnimationController,
-      curve: Curves.easeInOutCubicEmphasized,
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: gradientAnimationController,
+        curve: Curves.easeInOutCubicEmphasized,
+      ),
+    );
     gradientEndAnimation = Tween<AlignmentGeometry>(
       begin: Alignment.bottomRight,
       end: Alignment.topLeft,
-    ).animate(CurvedAnimation(
-      parent: gradientAnimationController,
-      curve: Curves.easeInOutCubicEmphasized,
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: gradientAnimationController,
+        curve: Curves.easeInOutCubicEmphasized,
+      ),
+    );
     gradientAnimationController.forward();
   }
 
@@ -167,7 +156,9 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
 
   // Payment Handlers
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
-    _showSuccessSnackBar('Payment successful! Payment ID: ${response.paymentId}');
+    _showSuccessSnackBar(
+      'Payment successful! Payment ID: ${response.paymentId}',
+    );
     _recordPayment(response.paymentId!, response.orderId, response.signature);
   }
 
@@ -179,18 +170,27 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     _showErrorSnackBar('External wallet selected: ${response.walletName}');
   }
 
-  Future<void> _recordPayment(String paymentId, String? orderId, String? signature) async {
+  Future<void> _recordPayment(
+    String paymentId,
+    String? orderId,
+    String? signature,
+  ) async {
     try {
-      final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/record_payment.php');
-      final response = await http.post(uri, body: {
-        'payment_id': paymentId,
-        'order_id': orderId ?? '',
-        'signature': signature ?? '',
-        'recipient_id': widget.userId,
-        'payer_id': await _getCurrentUserId(),
-        'status': 'completed',
-      });
-      
+      final uri = Uri.parse(
+        'https://indianrupeeservices.in/NEXT/backend/record_payment.php',
+      );
+      final response = await http.post(
+        uri,
+        body: {
+          'payment_id': paymentId,
+          'order_id': orderId ?? '',
+          'signature': signature ?? '',
+          'recipient_id': widget.userId,
+          'payer_id': await _getCurrentUserId(),
+          'status': 'completed',
+        },
+      );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -209,13 +209,19 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
 
   Future<void> _createPaymentOrder(double amount, String currency) async {
     try {
-      final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/create_payment_order.php');
-      final response = await http.post(uri, body: {
-        'amount': (amount * 100).toString(), // Razorpay expects amount in paise
-        'currency': currency,
-        'recipient_id': widget.userId,
-      });
-      
+      final uri = Uri.parse(
+        'https://indianrupeeservices.in/NEXT/backend/create_payment_order.php',
+      );
+      final response = await http.post(
+        uri,
+        body: {
+          'amount':
+              (amount * 100).toString(), // Razorpay expects amount in paise
+          'currency': currency,
+          'recipient_id': widget.userId,
+        },
+      );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true) {
@@ -236,13 +242,10 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
       'name': 'Fund ${profile?['name'] ?? 'User'}',
       'description': 'Supporting ${profile?['name'] ?? 'this person'}\'s work',
       'order_id': orderId,
-      'prefill': {
-        'contact': '',
-        'email': ''
-      },
+      'prefill': {'contact': '', 'email': ''},
       'external': {
-        'wallets': ['paytm']
-      }
+        'wallets': ['paytm'],
+      },
     };
 
     try {
@@ -257,17 +260,18 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+      builder:
+          (context) => Container(
+            height: MediaQuery.of(context).size.height * 0.8,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: SizedBox.shrink(),
           ),
-        ),
-        child: SizedBox.shrink(),
-      ),
     );
   }
 
@@ -278,10 +282,20 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     id ??= '685322';
     setState(() => _resolvedUserId = id);
     await fetchProfileData(id);
-    }
+    await _fetchTeamMembers(id);
+  }
+
+  Future<void> _fetchTeamMembers(String companyId) async {
+    final members = await TeamService().fetchTeamMembers(companyId);
+    setState(() {
+      teamMembers = members;
+    });
+  }
 
   Future<void> fetchProfileData(String userId) async {
-    final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=$userId');
+    final uri = Uri.parse(
+      'https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=$userId',
+    );
     try {
       final response = await http.get(uri);
       if (response.statusCode == 200) {
@@ -324,21 +338,26 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   }
 
   Future<void> saveProfileChanges() async {
-    final uri = Uri.parse("https://indianrupeeservices.in/NEXT/backend/update_profile.php");
+    final uri = Uri.parse(
+      "https://indianrupeeservices.in/NEXT/backend/update_profile.php",
+    );
     try {
-      final response = await http.post(uri, body: {
-        "id": widget.userId,
-        "name": _nameController.text.trim(),
-        "role": _roleController.text.trim(),
-        "bio": _bioController.text.trim(),
-        "description": _descriptionController.text.trim(),
-        "skills": _skillsController.text.trim(),
-        "website": _websiteController.text.trim(),
-        "location": _locationController.text.trim(),
-        "sector": _sectorController.text.trim(),
-        "pitch_video_url": _videoController.text.trim(),
-      });
-      
+      final response = await http.post(
+        uri,
+        body: {
+          "id": widget.userId,
+          "name": _nameController.text.trim(),
+          "role": _roleController.text.trim(),
+          "bio": _bioController.text.trim(),
+          "description": _descriptionController.text.trim(),
+          "skills": _skillsController.text.trim(),
+          "website": _websiteController.text.trim(),
+          "location": _locationController.text.trim(),
+          "sector": _sectorController.text.trim(),
+          "pitch_video_url": _videoController.text.trim(),
+        },
+      );
+
       if (response.statusCode == 200) {
         // Update local profile data immediately for real-time reflection
         setState(() {
@@ -353,7 +372,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
           profile?['pitch_video_url'] = _videoController.text.trim();
           isEditing = false;
         });
-        
+
         _showSuccessSnackBar('Profile updated successfully');
         // Optionally refresh from server to ensure consistency
         // await fetchProfileData();
@@ -374,7 +393,9 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
       final token = await storage.read(key: 'auth_token');
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/upload_avatar.php'),
+        Uri.parse(
+          'https://indianrupeeservices.in/NEXT/backend/upload_avatar.php',
+        ),
       );
       request.fields['user_id'] = widget.userId ?? '';
       request.files.add(
@@ -426,129 +447,164 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.95,
-        minChildSize: 0.5,
-        builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          child: Column(
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                height: 4,
-                width: 50,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(16),
+      builder:
+          (context) => DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            maxChildSize: 0.95,
+            minChildSize: 0.5,
+            builder:
+                (context, scrollController) => Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Post Images
-                      if (post['image_urls'] != null && post['image_urls'].isNotEmpty)
-                        SizedBox(
-                          height: 200,
-                          child: PageView.builder(
-                            itemCount: post['image_urls'].length,
-                            itemBuilder: (context, index) {
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  post['image_urls'][index],
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: Colors.grey[200],
-                                      child: const Icon(Icons.broken_image, color: Colors.grey),
-                                    );
-                                  },
+                      Container(
+                        margin: const EdgeInsets.symmetric(vertical: 10),
+                        height: 4,
+                        width: 50,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Post Images
+                              if (post['image_urls'] != null &&
+                                  post['image_urls'].isNotEmpty)
+                                SizedBox(
+                                  height: 200,
+                                  child: PageView.builder(
+                                    itemCount: post['image_urls'].length,
+                                    itemBuilder: (context, index) {
+                                      return ClipRRect(
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Image.network(
+                                          post['image_urls'][index],
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (
+                                            context,
+                                            error,
+                                            stackTrace,
+                                          ) {
+                                            return Container(
+                                              color: Colors.grey[200],
+                                              child: const Icon(
+                                                Icons.broken_image,
+                                                color: Colors.grey,
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
-                              );
-                            },
+                              const SizedBox(height: 16),
+
+                              // Post Content
+                              if (post['content'] != null &&
+                                  post['content'].toString().isNotEmpty) ...[
+                                const Text(
+                                  'Content',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  post['content'],
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+
+                              // Post Description
+                              if (post['description'] != null &&
+                                  post['description']
+                                      .toString()
+                                      .isNotEmpty) ...[
+                                const Text(
+                                  'Description',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  post['description'],
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+
+                              // Post Date
+                              if (post['created_at'] != null) ...[
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_today,
+                                      size: 16,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'Posted on ${post['created_at']}',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+
+                              // Likes and other stats
+                              if (post['likes_count'] != null ||
+                                  post['comments_count'] != null)
+                                Row(
+                                  children: [
+                                    if (post['likes_count'] != null) ...[
+                                      const Icon(
+                                        Icons.favorite,
+                                        size: 16,
+                                        color: Colors.red,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text('${post['likes_count']} likes'),
+                                      const SizedBox(width: 16),
+                                    ],
+                                    if (post['comments_count'] != null) ...[
+                                      const Icon(
+                                        Icons.comment,
+                                        size: 16,
+                                        color: Colors.blue,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${post['comments_count']} comments',
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                            ],
                           ),
                         ),
-                      const SizedBox(height: 16),
-                      
-                      // Post Content
-                      if (post['content'] != null && post['content'].toString().isNotEmpty) ...[
-                        const Text(
-                          'Content',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          post['content'],
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      
-                      // Post Description
-                      if (post['description'] != null && post['description'].toString().isNotEmpty) ...[
-                        const Text(
-                          'Description',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          post['description'],
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      
-                      // Post Date
-                      if (post['created_at'] != null) ...[
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Posted on ${post['created_at']}',
-                              style: TextStyle(color: Colors.grey[600]),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-                      
-                      // Likes and other stats
-                      if (post['likes_count'] != null || post['comments_count'] != null)
-                        Row(
-                          children: [
-                            if (post['likes_count'] != null) ...[
-                              const Icon(Icons.favorite, size: 16, color: Colors.red),
-                              const SizedBox(width: 4),
-                              Text('${post['likes_count']} likes'),
-                              const SizedBox(width: 16),
-                            ],
-                            if (post['comments_count'] != null) ...[
-                              const Icon(Icons.comment, size: 16, color: Colors.blue),
-                              const SizedBox(width: 4),
-                              Text('${post['comments_count']} comments'),
-                            ],
-                          ],
-                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-            ],
           ),
-        ),
-      ),
     );
   }
 
@@ -557,90 +613,96 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+      builder:
+          (context) => Container(
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              children: [
+                // Handle bar
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  height: 4,
+                  width: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    'Settings',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    children: [
+                      _buildSettingsItem(
+                        icon: Icons.account_circle,
+                        title: 'Profile',
+                        subtitle: 'Edit your profile information',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => isEditing = true);
+                        },
+                      ),
+                      _buildSettingsItem(
+                        icon: Icons.lock_outline,
+                        title: 'Privacy',
+                        subtitle: 'Control your privacy settings',
+                        onTap: _showPrivacySettings,
+                      ),
+                      _buildSettingsItem(
+                        icon: Icons.notifications,
+                        title: 'Notifications',
+                        subtitle: 'Manage notification preferences',
+                        onTap: _showNotificationSettings,
+                      ),
+                      _buildSettingsItem(
+                        icon: Icons.help_outline,
+                        title: 'Help & FAQ',
+                        subtitle: 'Get help and find answers',
+                        onTap: _showHelpAndFAQ,
+                      ),
+                      _buildSettingsItem(
+                        icon: Icons.info_outline,
+                        title: 'About',
+                        subtitle: 'App information',
+                        onTap: _showAboutDialog,
+                      ),
+                      const Divider(),
+                      _buildSettingsItem(
+                        icon: Icons.delete_forever,
+                        title: 'Delete Account',
+                        subtitle: 'Permanently delete your account',
+                        onTap: _showDeleteAccountDialog,
+                        isDestructive: true,
+                      ),
+                      _buildSettingsItem(
+                        icon: Icons.logout,
+                        title: 'Logout',
+                        subtitle: 'Sign out of your account',
+                        onTap: () => _showLogoutDialog(),
+                        isDestructive: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              height: 4,
-              width: 50,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
-              child: Text('Settings', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  _buildSettingsItem(
-                    icon: Icons.account_circle,
-                    title: 'Profile',
-                    subtitle: 'Edit your profile information',
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() => isEditing = true);
-                    },
-                  ),
-                  _buildSettingsItem(
-                    icon: Icons.lock_outline,
-                    title: 'Privacy',
-                    subtitle: 'Control your privacy settings',
-                    onTap: _showPrivacySettings,
-                  ),
-                  _buildSettingsItem(
-                    icon: Icons.notifications,
-                    title: 'Notifications',
-                    subtitle: 'Manage notification preferences',
-                    onTap: _showNotificationSettings,
-                  ),
-                  _buildSettingsItem(
-                    icon: Icons.help_outline,
-                    title: 'Help & FAQ',
-                    subtitle: 'Get help and find answers',
-                    onTap: _showHelpAndFAQ,
-                  ),
-                  _buildSettingsItem(
-                    icon: Icons.info_outline,
-                    title: 'About',
-                    subtitle: 'App information',
-                    onTap: _showAboutDialog,
-                  ),
-                  const Divider(),
-                  _buildSettingsItem(
-                    icon: Icons.delete_forever,
-                    title: 'Delete Account',
-                    subtitle: 'Permanently delete your account',
-                    onTap: _showDeleteAccountDialog,
-                    isDestructive: true,
-                  ),
-                  _buildSettingsItem(
-                    icon: Icons.logout,
-                    title: 'Logout',
-                    subtitle: 'Sign out of your account',
-                    onTap: () => _showLogoutDialog(),
-                    isDestructive: true,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -674,10 +736,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          fontSize: 13,
-          color: Colors.grey.shade600,
-        ),
+        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
       ),
       trailing: Icon(
         Icons.arrow_forward_ios,
@@ -691,38 +750,39 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   void _showThemeDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choose Theme'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('Light Theme'),
-              leading: Radio<String>(
-                value: 'light',
-                groupValue: 'light',
-                onChanged: (value) => Navigator.pop(context),
-              ),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Choose Theme'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: const Text('Light Theme'),
+                  leading: Radio<String>(
+                    value: 'light',
+                    groupValue: 'light',
+                    onChanged: (value) => Navigator.pop(context),
+                  ),
+                ),
+                ListTile(
+                  title: const Text('Dark Theme'),
+                  leading: Radio<String>(
+                    value: 'dark',
+                    groupValue: 'light',
+                    onChanged: (value) => Navigator.pop(context),
+                  ),
+                ),
+                ListTile(
+                  title: const Text('System Default'),
+                  leading: Radio<String>(
+                    value: 'system',
+                    groupValue: 'light',
+                    onChanged: (value) => Navigator.pop(context),
+                  ),
+                ),
+              ],
             ),
-            ListTile(
-              title: const Text('Dark Theme'),
-              leading: Radio<String>(
-                value: 'dark',
-                groupValue: 'light',
-                onChanged: (value) => Navigator.pop(context),
-              ),
-            ),
-            ListTile(
-              title: const Text('System Default'),
-              leading: Radio<String>(
-                value: 'system',
-                groupValue: 'light',
-                onChanged: (value) => Navigator.pop(context),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -740,36 +800,43 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Help & FAQ'),
-        content: const SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Frequently Asked Questions',
-                style: TextStyle(fontWeight: FontWeight.bold),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Help & FAQ'),
+            content: const SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Frequently Asked Questions',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 12),
+                  Text('Q: How do I update my profile?'),
+                  Text(
+                    'A: Tap the edit icon next to "Profile Information" to make changes.',
+                  ),
+                  SizedBox(height: 8),
+                  Text('Q: How do I upload a profile picture?'),
+                  Text(
+                    'A: Tap the camera icon on your profile picture to upload a new one.',
+                  ),
+                  SizedBox(height: 8),
+                  Text('Q: How do I add a pitch video?'),
+                  Text(
+                    'A: Enter your YouTube video ID in the profile edit section.',
+                  ),
+                ],
               ),
-              SizedBox(height: 12),
-              Text('Q: How do I update my profile?'),
-              Text('A: Tap the edit icon next to "Profile Information" to make changes.'),
-              SizedBox(height: 8),
-              Text('Q: How do I upload a profile picture?'),
-              Text('A: Tap the camera icon on your profile picture to upload a new one.'),
-              SizedBox(height: 8),
-              Text('Q: How do I add a pitch video?'),
-              Text('A: Enter your YouTube video ID in the profile edit section.'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -790,30 +857,31 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Terms & Conditions'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'Terms and Conditions\n\n'
-            '1. Acceptance of Terms\n'
-            'By using this application, you agree to these terms.\n\n'
-            '2. User Responsibilities\n'
-            'Users are responsible for maintaining accurate profile information.\n\n'
-            '3. Privacy\n'
-            'We respect your privacy and handle data responsibly.\n\n'
-            '4. Prohibited Activities\n'
-            'Users must not engage in harmful or illegal activities.\n\n'
-            '5. Modifications\n'
-            'These terms may be updated from time to time.',
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Terms & Conditions'),
+            content: const SingleChildScrollView(
+              child: Text(
+                'Terms and Conditions\n\n'
+                '1. Acceptance of Terms\n'
+                'By using this application, you agree to these terms.\n\n'
+                '2. User Responsibilities\n'
+                'Users are responsible for maintaining accurate profile information.\n\n'
+                '3. Privacy\n'
+                'We respect your privacy and handle data responsibly.\n\n'
+                '4. Prohibited Activities\n'
+                'Users must not engage in harmful or illegal activities.\n\n'
+                '5. Modifications\n'
+                'These terms may be updated from time to time.',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -821,31 +889,32 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Privacy Policy'),
-        content: const SingleChildScrollView(
-          child: Text(
-            'Privacy Policy\n\n'
-            'We collect and use your information to provide and improve our services.\n\n'
-            'Information We Collect:\n'
-            '• Profile information you provide\n'
-            '• Usage data and preferences\n'
-            '• Device information\n\n'
-            'How We Use Your Information:\n'
-            '• To provide app functionality\n'
-            '• To improve user experience\n'
-            '• To communicate with you\n\n'
-            'Data Security:\n'
-            'We implement appropriate security measures to protect your information.',
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Privacy Policy'),
+            content: const SingleChildScrollView(
+              child: Text(
+                'Privacy Policy\n\n'
+                'We collect and use your information to provide and improve our services.\n\n'
+                'Information We Collect:\n'
+                '• Profile information you provide\n'
+                '• Usage data and preferences\n'
+                '• Device information\n\n'
+                'How We Use Your Information:\n'
+                '• To provide app functionality\n'
+                '• To improve user experience\n'
+                '• To communicate with you\n\n'
+                'Data Security:\n'
+                'We implement appropriate security measures to protect your information.',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -853,28 +922,33 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Logout'),
+            content: const Text('Are you sure you want to logout?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  // Functional logout: clear secure storage and go to login/user type
+                  await storage.deleteAll();
+                  if (mounted) {
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/user-type',
+                      (route) => false,
+                    );
+                  }
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Logout'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              // Functional logout: clear secure storage and go to login/user type
-              await storage.deleteAll();
-              if (mounted) {
-                Navigator.pushNamedAndRemoveUntil(context, '/user-type', (route) => false);
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Logout'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -903,7 +977,12 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
   Widget _buildProfileHeader() {
     final avatarUrl = profile?['avatar_url'];
     final hasAvatar = avatarUrl != null && avatarUrl.toString().isNotEmpty;
-    final cacheBustedUrl = hasAvatar ? avatarUrl + '?t=' + DateTime.now().millisecondsSinceEpoch.toString() : null;
+    final cacheBustedUrl =
+        hasAvatar
+            ? avatarUrl +
+                '?t=' +
+                DateTime.now().millisecondsSinceEpoch.toString()
+            : null;
     final name = profile?['name'] ?? 'Azazle';
     final role = profile?['role'] ?? '';
     final userType = profile?['user_type'] ?? '';
@@ -952,12 +1031,20 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                           child: CircleAvatar(
                             radius: 52,
                             backgroundColor: Colors.grey[300],
-                            backgroundImage: _pickedAvatarBytes != null
-                                ? MemoryImage(_pickedAvatarBytes!)
-                                : (hasAvatar ? NetworkImage(cacheBustedUrl!) : null),
-                            child: !hasAvatar 
-                              ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
-                              : null,
+                            backgroundImage:
+                                _pickedAvatarBytes != null
+                                    ? MemoryImage(_pickedAvatarBytes!)
+                                    : (hasAvatar
+                                        ? NetworkImage(cacheBustedUrl!)
+                                        : null),
+                            child:
+                                !hasAvatar
+                                    ? Icon(
+                                      Icons.person,
+                                      size: 55,
+                                      color: Colors.grey[600],
+                                    )
+                                    : null,
                           ),
                         ),
                       ),
@@ -978,12 +1065,20 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                           child: CircleAvatar(
                             radius: 52,
                             backgroundColor: Colors.grey[300],
-                            backgroundImage: _pickedAvatarBytes != null
-                                ? MemoryImage(_pickedAvatarBytes!)
-                                : (hasAvatar ? NetworkImage(cacheBustedUrl!) : null),
-                            child: !hasAvatar 
-                              ? Icon(Icons.person, size: 55, color: Colors.grey[600]) 
-                              : null,
+                            backgroundImage:
+                                _pickedAvatarBytes != null
+                                    ? MemoryImage(_pickedAvatarBytes!)
+                                    : (hasAvatar
+                                        ? NetworkImage(cacheBustedUrl!)
+                                        : null),
+                            child:
+                                !hasAvatar
+                                    ? Icon(
+                                      Icons.person,
+                                      size: 55,
+                                      color: Colors.grey[600],
+                                    )
+                                    : null,
                           ),
                         ),
                       ),
@@ -1004,19 +1099,24 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                           child: CircleAvatar(
                             radius: 16,
                             backgroundColor: Colors.blue.shade600,
-                            child: isUploadingAvatar
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
+                            child:
+                                isUploadingAvatar
+                                    ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                    : IconButton(
+                                      icon: const Icon(
+                                        Icons.camera_alt,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: _uploadAvatar,
                                     ),
-                                  )
-                                : IconButton(
-                                    icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
-                                    onPressed: _uploadAvatar,
-                                  ),
                           ),
                         ),
                       ),
@@ -1042,10 +1142,27 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      ...List.generate(4, (i) => const Icon(Icons.star, color: Colors.amber, size: 22)),
-                      const Icon(Icons.star_half, color: Colors.amber, size: 22),
+                      ...List.generate(
+                        4,
+                        (i) => const Icon(
+                          Icons.star,
+                          color: Colors.amber,
+                          size: 22,
+                        ),
+                      ),
+                      const Icon(
+                        Icons.star_half,
+                        color: Colors.amber,
+                        size: 22,
+                      ),
                       const SizedBox(width: 6),
-                      const Text('4.5/5', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                      const Text(
+                        '4.5/5',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
                   if (role.isNotEmpty)
@@ -1064,11 +1181,16 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                   if (userType.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3),
+                        ),
                       ),
                       child: Text(
                         userType.toUpperCase(),
@@ -1097,7 +1219,9 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
                 );
               },
               tooltip: 'Settings',
@@ -1127,7 +1251,8 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: isEditing ? Colors.green.shade50 : Colors.blue.shade50,
+                    color:
+                        isEditing ? Colors.green.shade50 : Colors.blue.shade50,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: IconButton(
@@ -1140,19 +1265,26 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                     },
                     icon: Icon(
                       isEditing ? Icons.save : Icons.edit,
-                      color: isEditing ? Colors.green.shade600 : Colors.blue.shade600,
+                      color:
+                          isEditing
+                              ? Colors.green.shade600
+                              : Colors.blue.shade600,
                     ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            
+
             if (isEditing) ...[
               _buildEditableField("Name", _nameController),
               _buildEditableField("Role", _roleController),
               _buildEditableField("Bio", _bioController, maxLines: 2),
-              _buildEditableField("Description", _descriptionController, maxLines: 3),
+              _buildEditableField(
+                "Description",
+                _descriptionController,
+                maxLines: 3,
+              ),
               _buildEditableField("Skills", _skillsController),
               _buildEditableField("Website", _websiteController),
               _buildEditableField("Location", _locationController),
@@ -1194,18 +1326,38 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
               ),
             ] else ...[
               _buildInfoRow(Icons.info, 'Bio', profile?['bio']),
-              _buildInfoRow(Icons.description, 'Description', profile?['description']),
+              _buildInfoRow(
+                Icons.description,
+                'Description',
+                profile?['description'],
+              ),
               _buildInfoRow(Icons.work, 'Skills', profile?['skills']),
               if ((profile?['industry'] ?? '').isNotEmpty)
-                _buildInfoRow(Icons.apartment, 'Industry', profile?['industry']),
+                _buildInfoRow(
+                  Icons.apartment,
+                  'Industry',
+                  profile?['industry'],
+                ),
               if ((profile?['website'] ?? '').isNotEmpty)
                 GestureDetector(
                   onTap: () => _launchWebsite(profile?['website']),
-                  child: _buildInfoRow(Icons.language, 'Website', profile?['website']),
+                  child: _buildInfoRow(
+                    Icons.language,
+                    'Website',
+                    profile?['website'],
+                  ),
                 ),
               if ((profile?['founded'] ?? '').isNotEmpty)
-                _buildInfoRow(Icons.calendar_today, 'Founded', profile?['founded']),
-              _buildInfoRow(Icons.location_on, 'Location', profile?['location']),
+                _buildInfoRow(
+                  Icons.calendar_today,
+                  'Founded',
+                  profile?['founded'],
+                ),
+              _buildInfoRow(
+                Icons.location_on,
+                'Location',
+                profile?['location'],
+              ),
               _buildInfoRow(Icons.business, 'Sector', profile?['sector']),
             ],
           ],
@@ -1216,7 +1368,7 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
 
   Widget _buildInfoRow(IconData icon, String label, String? value) {
     if (value == null || value.isEmpty) return const SizedBox.shrink();
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -1260,7 +1412,11 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     );
   }
 
-  Widget _buildEditableField(String label, TextEditingController controller, {int maxLines = 1}) {
+  Widget _buildEditableField(
+    String label,
+    TextEditingController controller, {
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -1287,7 +1443,10 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide(color: Colors.blue.shade600, width: 2),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
               filled: true,
               fillColor: Colors.grey.shade50,
             ),
@@ -1312,7 +1471,10 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
               children: [
                 Icon(Icons.ondemand_video, color: Colors.blueAccent, size: 28),
                 const SizedBox(width: 10),
-                const Text('Introduction Video', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Introduction Video',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -1325,7 +1487,9 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                     color: Colors.black12,
                   ),
                   height: 180,
-                  child: Center(child: Text('Video Preview or YouTube Thumbnail')),
+                  child: Center(
+                    child: Text('Video Preview or YouTube Thumbnail'),
+                  ),
                 ),
               )
             else
@@ -1347,39 +1511,44 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     final controller = TextEditingController();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add Introduction Video'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Enter YouTube link or video URL'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Add Introduction Video'),
+            content: TextField(
+              controller: controller,
+              decoration: const InputDecoration(
+                hintText: 'Enter YouTube link or video URL',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final url = controller.text.trim();
+                  if (url.isNotEmpty && _resolvedUserId != null) {
+                    await _savePitchVideoUrl(url);
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () async {
-              final url = controller.text.trim();
-              if (url.isNotEmpty && _resolvedUserId != null) {
-                await _savePitchVideoUrl(url);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
     );
   }
 
   Future<void> _savePitchVideoUrl(String url) async {
-    final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/update_profile.php');
+    final uri = Uri.parse(
+      'https://indianrupeeservices.in/NEXT/backend/update_profile.php',
+    );
     try {
-      final response = await http.post(uri, body: {
-        'id': _resolvedUserId,
-        'pitch_video_url': url,
-      });
+      final response = await http.post(
+        uri,
+        body: {'id': _resolvedUserId, 'pitch_video_url': url},
+      );
       if (response.statusCode == 200) {
         setState(() {
           profile?['pitch_video_url'] = url;
@@ -1397,71 +1566,87 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Funding Settings'),
-        content: StatefulBuilder(
-          builder: (context, setDialogState) => SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SwitchListTile(
-                  title: const Text('Accept Funding'),
-                  subtitle: const Text('Allow others to support you financially'),
-                  value: _acceptingFunding,
-                  onChanged: (value) {
-                    setDialogState(() {
-                      _acceptingFunding = value;
-                    });
-                  },
-                  activeColor: Colors.green.shade600,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Funding Settings'),
+            content: StatefulBuilder(
+              builder:
+                  (context, setDialogState) => SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SwitchListTile(
+                          title: const Text('Accept Funding'),
+                          subtitle: const Text(
+                            'Allow others to support you financially',
+                          ),
+                          value: _acceptingFunding,
+                          onChanged: (value) {
+                            setDialogState(() {
+                              _acceptingFunding = value;
+                            });
+                          },
+                          activeColor: Colors.green.shade600,
+                        ),
+                        if (_acceptingFunding) ...[
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: _fundingGoalController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'Funding Goal (₹)',
+                              prefixIcon: const Icon(Icons.track_changes),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              hintText: 'Optional target amount',
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: _fundingDescriptionController,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              labelText: 'Funding Description',
+                              prefixIcon: const Icon(Icons.description),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              hintText:
+                                  'Describe what the funding will be used for',
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  setState(() {});
+                  _showSuccessSnackBar(
+                    'Funding settings will be saved with profile',
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
-                if (_acceptingFunding) ...[
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _fundingGoalController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: 'Funding Goal (₹)',
-                      prefixIcon: const Icon(Icons.track_changes),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      hintText: 'Optional target amount',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _fundingDescriptionController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: 'Funding Description',
-                      prefixIcon: const Icon(Icons.description),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      hintText: 'Describe what the funding will be used for',
-                    ),
-                  ),
-                ],
-              ],
-            ),
+                child: const Text(
+                  'Save',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() {});
-              _showSuccessSnackBar('Funding settings will be saved with profile');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade600,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Save', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -1469,54 +1654,65 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     Navigator.pop(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Account'),
-        content: const Text('Are you sure you want to delete your account? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              // Call delete account logic (reuse SettingsScreen logic)
-              final storage = FlutterSecureStorage();
-              final token = await storage.read(key: 'auth_token');
-              final userId = await storage.read(key: 'user_id');
-              if (token != null && userId != null) {
-                try {
-                  final response = await http.post(
-                    Uri.parse('https://indianrupeeservices.in/NEXT/backend/api/delete-account'),
-                    headers: {
-                      'Authorization': 'Bearer $token',
-                      'Content-Type': 'application/json',
-                    },
-                    body: jsonEncode({'user_id': userId}),
-                  );
-                  if (response.statusCode == 200) {
-                    await storage.deleteAll();
-                    if (mounted) {
-                      Navigator.pushNamedAndRemoveUntil(context, '/user-type', (route) => false);
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Account'),
+            content: const Text(
+              'Are you sure you want to delete your account? This action cannot be undone.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  // Call delete account logic (reuse SettingsScreen logic)
+                  final storage = FlutterSecureStorage();
+                  final token = await storage.read(key: 'auth_token');
+                  final userId = await storage.read(key: 'user_id');
+                  if (token != null && userId != null) {
+                    try {
+                      final response = await http.post(
+                        Uri.parse(
+                          'https://indianrupeeservices.in/NEXT/backend/api/delete-account',
+                        ),
+                        headers: {
+                          'Authorization': 'Bearer $token',
+                          'Content-Type': 'application/json',
+                        },
+                        body: jsonEncode({'user_id': userId}),
+                      );
+                      if (response.statusCode == 200) {
+                        await storage.deleteAll();
+                        if (mounted) {
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            '/user-type',
+                            (route) => false,
+                          );
+                        }
+                      } else {
+                        throw Exception(
+                          'Failed with status ${response.statusCode}',
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to delete account: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
                     }
-                  } else {
-                    throw Exception('Failed with status ${response.statusCode}');
                   }
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to delete account: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+                },
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
           ),
-        ],
-      ),
     );
   }
 
@@ -1537,32 +1733,36 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
         preferredSize: Size.fromHeight(0),
         child: SizedBox.shrink(),
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildProfileHeader(),
-                      _buildInfoSection(),
-                      _buildPitchVideoSection(),
-                      _buildKeyMetrics(),
-                      _buildTeamSection(),
-                      _buildPortfolioSection(),
-                      _buildContactActions(),
-                      _buildAchievementsSection(),
-                    ],
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
+                children: [
+                  SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        _buildProfileHeader(),
+                        _buildInfoSection(),
+                        _buildPitchVideoSection(),
+                        _buildKeyMetrics(),
+                        _buildTeamSection(),
+                        _buildPortfolioSection(),
+                        _buildContactActions(),
+                        _buildAchievementsSection(),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
     );
   }
 
   // Add blue gradient greeting logic
   @override
-  LinearGradient getGreetingGradient(AlignmentGeometry begin, AlignmentGeometry end) {
+  LinearGradient getGreetingGradient(
+    AlignmentGeometry begin,
+    AlignmentGeometry end,
+  ) {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 12) {
       // Morning: very light to light blue
@@ -1618,9 +1818,19 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _buildMetric('Investments', '8', Icons.trending_up, Colors.blue),
-            _buildMetric('Total Invested', '₹3,50,000', Icons.attach_money, Colors.green),
+            _buildMetric(
+              'Total Invested',
+              '₹3,50,000',
+              Icons.attach_money,
+              Colors.green,
+            ),
             _buildMetric('Startups', '3', Icons.business, Colors.purple),
-            _buildMetric('Years Active', '5', Icons.calendar_today, Colors.orange),
+            _buildMetric(
+              'Years Active',
+              '5',
+              Icons.calendar_today,
+              Colors.orange,
+            ),
           ],
         ),
       ),
@@ -1635,7 +1845,10 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
           child: Icon(icon, color: color, size: 22),
         ),
         const SizedBox(height: 8),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
@@ -1660,57 +1873,97 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                   onPressed: () async {
                     String name = '';
                     String role = '';
-                    String? photoUrl;
+                    File? photoFile;
                     await showDialog(
                       context: context,
                       builder: (context) {
-                        return AlertDialog(
-                          title: const Text('Add Team Member'),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextField(
-                                decoration: const InputDecoration(labelText: 'Name'),
-                                onChanged: (v) => name = v,
+                        return StatefulBuilder(
+                          builder: (context, setDialogState) {
+                            return AlertDialog(
+                              title: const Text('Add Team Member'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextField(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Name',
+                                    ),
+                                    onChanged: (v) => name = v,
+                                  ),
+                                  TextField(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Role',
+                                    ),
+                                    onChanged: (v) => role = v,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton.icon(
+                                    icon: const Icon(Icons.camera_alt),
+                                    label: Text(
+                                      photoFile == null
+                                          ? 'Pick Photo'
+                                          : 'Photo Selected',
+                                    ),
+                                    style:
+                                        photoFile != null
+                                            ? ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green,
+                                              foregroundColor: Colors.white,
+                                            )
+                                            : null,
+                                    onPressed: () async {
+                                      final picked = await _picker.pickImage(
+                                        source: ImageSource.gallery,
+                                      );
+                                      if (picked != null) {
+                                        setDialogState(() {
+                                          photoFile = File(picked.path);
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ],
                               ),
-                              TextField(
-                                decoration: const InputDecoration(labelText: 'Role'),
-                                onChanged: (v) => role = v,
-                              ),
-                              const SizedBox(height: 8),
-                              ElevatedButton.icon(
-                                icon: const Icon(Icons.camera_alt),
-                                label: const Text('Pick Photo'),
-                                onPressed: () async {
-                                  final picked = await _picker.pickImage(source: ImageSource.gallery);
-                                  if (picked != null) {
-                                    photoUrl = picked.path;
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                if (name.isNotEmpty && role.isNotEmpty) {
-                                  setState(() {
-                                    teamMembers.add({
-                                      'name': name,
-                                      'role': role,
-                                      'photo': photoUrl ?? 'https://randomuser.me/api/portraits/men/1.jpg',
-                                    });
-                                  });
-                                  Navigator.pop(context);
-                                }
-                              },
-                              child: const Text('Add'),
-                            ),
-                          ],
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    if (name.isNotEmpty &&
+                                        role.isNotEmpty &&
+                                        _resolvedUserId != null) {
+                                      Navigator.pop(context);
+                                      _showSuccessSnackBar(
+                                        'Adding team member...',
+                                      );
+
+                                      final success = await TeamService()
+                                          .addTeamMember(
+                                            companyId: _resolvedUserId!,
+                                            name: name,
+                                            role: role,
+                                            photoFile: photoFile,
+                                          );
+
+                                      if (success) {
+                                        _showSuccessSnackBar(
+                                          'Team member added',
+                                        );
+                                        _fetchTeamMembers(_resolvedUserId!);
+                                      } else {
+                                        _showErrorSnackBar(
+                                          'Failed to add team member',
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: const Text('Add'),
+                                ),
+                              ],
+                            );
+                          },
                         );
                       },
                     );
@@ -1724,7 +1977,11 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                         children: [
                           const Icon(Icons.group, color: Colors.blueAccent),
                           const SizedBox(width: 8),
-                          Text('Team Members', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                          Text(
+                            'Team Members',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -1736,7 +1993,11 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                     children: [
                       const Icon(Icons.group, color: Colors.blueAccent),
                       const SizedBox(width: 8),
-                      Text('Team Members', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                      Text(
+                        'Team Members',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
                       const Spacer(),
                       addButton,
                     ],
@@ -1748,10 +2009,18 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
             Wrap(
               spacing: 16,
               runSpacing: 16,
-              children: teamMembers.map((member) => ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 120, minWidth: 80),
-                child: _buildTeamMemberCard(member),
-              )).toList(),
+              children:
+                  teamMembers
+                      .map(
+                        (member) => ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: 120,
+                            minWidth: 80,
+                          ),
+                          child: _buildTeamMemberCard(member),
+                        ),
+                      )
+                      .toList(),
             ),
           ],
         ),
@@ -1759,39 +2028,58 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
     );
   }
 
-  Widget _buildTeamMemberCard(Map<String, String> member) {
+  Widget _buildTeamMemberCard(Map<String, dynamic> member) {
+    final photoUrl = member['photo_url'] ?? member['photo'];
+
     return Column(
       children: [
         GestureDetector(
           onTap: () async {
-            // Pick new photo for this team member
+            // Update photo logic
             final picked = await _picker.pickImage(source: ImageSource.gallery);
-            if (picked != null) {
-              setState(() {
-                member['photo'] = picked.path;
-              });
+            if (picked != null && member['id'] != null) {
+              _showSuccessSnackBar('Updating photo...');
+              final success = await TeamService().updateTeamMemberPhoto(
+                member['id'],
+                File(picked.path),
+              );
+              if (success) {
+                _showSuccessSnackBar('Photo updated');
+                _fetchTeamMembers(_resolvedUserId!);
+              } else {
+                _showErrorSnackBar('Failed to update photo');
+              }
             }
           },
           child: CircleAvatar(
             radius: 32,
-            backgroundImage: NetworkImage(member['photo']!),
+            backgroundImage:
+                photoUrl != null
+                    ? NetworkImage(photoUrl.toString())
+                    : const NetworkImage(
+                      'https://randomuser.me/api/portraits/lego/1.jpg',
+                    ),
             onBackgroundImageError: (_, __) {},
-            child: Icon(Icons.person, size: 32, color: Colors.grey[400]),
+            child:
+                photoUrl == null
+                    ? Icon(Icons.person, size: 32, color: Colors.grey[400])
+                    : null,
           ),
         ),
         const SizedBox(height: 8),
-        Text(member['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-        Text(member['role']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(
+          member['name'] ?? 'Unknown',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        Text(
+          member['role'] ?? 'Member',
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+
         IconButton(
-          icon: const Icon(Icons.linked_camera, color: Colors.blueAccent),
-          onPressed: () async {
-            // Pick new photo for this team member (camera icon)
-            final picked = await _picker.pickImage(source: ImageSource.gallery);
-            if (picked != null) {
-              setState(() {
-                member['photo'] = picked.path;
-              });
-            }
+          icon: const Icon(Icons.check_circle, color: Colors.grey),
+          onPressed: () {
+            _showVerificationDialog(member);
           },
         ),
       ],
@@ -1812,15 +2100,26 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
               children: [
                 const Icon(Icons.work, color: Colors.purple),
                 const SizedBox(width: 8),
-                Text('Portfolio', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  'Portfolio',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 16),
-            ...portfolio.map((startup) => ListTile(
-              leading: CircleAvatar(backgroundImage: AssetImage(startup['logo'])),
-              title: Text(startup['name']),
-              subtitle: Text('Invested: ${startup['amount']} on ${startup['date']}'),
-            )),
+            ...portfolio.map(
+              (startup) => ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: AssetImage(startup['logo']),
+                ),
+                title: Text(startup['name']),
+                subtitle: Text(
+                  'Invested: ${startup['amount']} on ${startup['date']}',
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -1857,43 +2156,71 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                             leading: const Icon(Icons.email),
                             title: const Text('Email'),
                             subtitle: Text(email),
-                            onTap: email != 'Not provided' ? () => launchUrl(Uri.parse('mailto:$email')) : null,
+                            onTap:
+                                email != 'Not provided'
+                                    ? () =>
+                                        launchUrl(Uri.parse('mailto:$email'))
+                                    : null,
                           ),
                           ListTile(
                             leading: const Icon(Icons.phone),
                             title: const Text('Phone'),
                             subtitle: Text(phone),
-                            onTap: phone != 'Not provided' ? () => launchUrl(Uri.parse('tel:$phone')) : null,
+                            onTap:
+                                phone != 'Not provided'
+                                    ? () => launchUrl(Uri.parse('tel:$phone'))
+                                    : null,
                           ),
                           ListTile(
                             leading: const Icon(Icons.language),
                             title: const Text('Website'),
                             subtitle: Text(website),
-                            onTap: website != 'Not provided' ? () => launchUrl(Uri.parse(website.startsWith('http') ? website : 'https://$website')) : null,
+                            onTap:
+                                website != 'Not provided'
+                                    ? () => launchUrl(
+                                      Uri.parse(
+                                        website.startsWith('http')
+                                            ? website
+                                            : 'https://$website',
+                                      ),
+                                    )
+                                    : null,
                           ),
                           ListTile(
                             leading: const Icon(Icons.business),
                             title: const Text('LinkedIn'),
                             subtitle: Text(linkedin),
-                            onTap: linkedin != 'Not provided' ? () => launchUrl(Uri.parse(linkedin)) : null,
+                            onTap:
+                                linkedin != 'Not provided'
+                                    ? () => launchUrl(Uri.parse(linkedin))
+                                    : null,
                           ),
                           ListTile(
                             leading: const Icon(Icons.alternate_email),
                             title: const Text('Twitter'),
                             subtitle: Text(twitter),
-                            onTap: twitter != 'Not provided' ? () => launchUrl(Uri.parse(twitter)) : null,
+                            onTap:
+                                twitter != 'Not provided'
+                                    ? () => launchUrl(Uri.parse(twitter))
+                                    : null,
                           ),
                           ListTile(
                             leading: const Icon(Icons.facebook),
                             title: const Text('Facebook'),
                             subtitle: Text(facebook),
-                            onTap: facebook != 'Not provided' ? () => launchUrl(Uri.parse(facebook)) : null,
+                            onTap:
+                                facebook != 'Not provided'
+                                    ? () => launchUrl(Uri.parse(facebook))
+                                    : null,
                           ),
                           ListTile(
                             leading: const Icon(Icons.camera_alt),
                             title: const Text('Instagram'),
                             subtitle: Text(instagram),
-                            onTap: instagram != 'Not provided' ? () => launchUrl(Uri.parse(instagram)) : null,
+                            onTap:
+                                instagram != 'Not provided'
+                                    ? () => launchUrl(Uri.parse(instagram))
+                                    : null,
                           ),
                         ],
                       ),
@@ -1928,13 +2255,20 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
               children: [
                 const Icon(Icons.emoji_events, color: Colors.amber),
                 const SizedBox(width: 8),
-                Text('Achievements', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  'Achievements',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.upload_file, color: Colors.blueAccent),
                   tooltip: 'Upload Achievement',
                   onPressed: () async {
-                    XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
+                    XFile? picked = await _picker.pickImage(
+                      source: ImageSource.gallery,
+                    );
                     if (picked != null) {
                       String? title;
                       String? desc;
@@ -1947,11 +2281,15 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 TextField(
-                                  decoration: const InputDecoration(labelText: 'Title'),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Title',
+                                  ),
                                   onChanged: (v) => title = v,
                                 ),
                                 TextField(
-                                  decoration: const InputDecoration(labelText: 'Description'),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Description',
+                                  ),
                                   onChanged: (v) => desc = v,
                                 ),
                               ],
@@ -1963,12 +2301,17 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
                               ),
                               ElevatedButton(
                                 onPressed: () {
-                                  if (title != null && title!.isNotEmpty && desc != null && desc!.isNotEmpty) {
+                                  if (title != null &&
+                                      title!.isNotEmpty &&
+                                      desc != null &&
+                                      desc!.isNotEmpty) {
                                     setState(() {
                                       achievements.add({
                                         'title': title!,
                                         'desc': desc!,
-                                        'icon': picked.path, // Store local path as icon
+                                        'icon':
+                                            picked
+                                                .path, // Store local path as icon
                                       });
                                     });
                                     Navigator.pop(context);
@@ -1989,7 +2332,10 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
             Wrap(
               spacing: 16,
               runSpacing: 16,
-              children: achievements.map((ach) => _buildAchievementCard(ach)).toList(),
+              children:
+                  achievements
+                      .map((ach) => _buildAchievementCard(ach))
+                      .toList(),
             ),
           ],
         ),
@@ -1999,13 +2345,16 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
 
   Widget _buildAchievementCard(Map<String, String> ach) {
     Widget iconWidget;
-    if (ach['icon'] != null && ach['icon']!.endsWith('.jpg') || ach['icon']!.endsWith('.png')) {
+    if (ach['icon'] != null && ach['icon']!.endsWith('.jpg') ||
+        ach['icon']!.endsWith('.png')) {
       iconWidget = Image.file(
         File(ach['icon']!),
         width: 32,
         height: 32,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(Icons.emoji_events, color: Colors.amber, size: 32),
+        errorBuilder:
+            (_, __, ___) =>
+                const Icon(Icons.emoji_events, color: Colors.amber, size: 32),
       );
     } else {
       IconData icon = Icons.emoji_events;
@@ -2031,10 +2380,90 @@ class _CompanyProfileScreenState extends State<CompanyProfileScreen> with Ticker
         children: [
           iconWidget,
           const SizedBox(height: 8),
-          Text(ach['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Text(ach['desc'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(
+            ach['title'] ?? '',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Text(
+            ach['desc'] ?? '',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
         ],
       ),
+    );
+  }
+
+  void _showVerificationDialog(Map<String, dynamic> member) {
+    final linkedinController = TextEditingController(
+      text: member['linkedin_url'] ?? member['linkedin'] ?? '',
+    );
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Verify LinkedIn Profile'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Enter the LinkedIn profile URL to verify this member.',
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: linkedinController,
+                  decoration: const InputDecoration(
+                    labelText: 'LinkedIn URL',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.link),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final url = linkedinController.text.trim();
+                  if (url.isEmpty) {
+                    _showErrorSnackBar('Please enter a LinkedIn URL');
+                    return;
+                  }
+
+                  Navigator.pop(context); // Close dialog
+
+                  // Show loading or progress if needed, for now just call service
+                  final service = VerificationService();
+                  final userId = await _getCurrentUserId();
+
+                  if (userId == 'anonymous') {
+                    _showErrorSnackBar(
+                      'You must be logged in to submit a request',
+                    );
+                    return;
+                  }
+
+                  final success = await service.submitVerificationRequest(
+                    requesterId: userId,
+                    teamMemberName: member['name'] ?? 'Unknown',
+                    teamMemberRole: member['role'] ?? 'Unknown',
+                    linkedinUrl: url,
+                  );
+
+                  if (success) {
+                    _showSuccessSnackBar(
+                      'Verification request submitted successfully',
+                    );
+                  } else {
+                    _showErrorSnackBar('Failed to submit verification request');
+                  }
+                },
+                child: const Text('Submit'),
+              ),
+            ],
+          ),
     );
   }
 }
