@@ -8,8 +8,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    url: 'https://mcwngfebeexcugypioey.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1jd25nZmViZWV4Y3VneXBpb2V5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc0ODk5NDgsImV4cCI6MjA2MzA2NTk0OH0.bgMmfmoZtYhUSTXTHafDNhzupfredSV0GvD5-drNgoQ',
+    url: 'https://yewsmbnnizomoedmbzhh.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlld3NtYm5uaXpvbW9lZG1iemhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgzMDg5NjQsImV4cCI6MjA4Mzg4NDk2NH0.PjkF6Wjg_k-jcKd4zXN0xr2RE9vE7PqivUgme3lfS60',
   );
   runApp(const MyApp());
 }
@@ -51,13 +52,16 @@ class _MyAppState extends State<MyApp> {
     }
 
     // Listen for incoming links while the app is running
-    _linkSubscription = _appLinks.uriLinkStream.listen((Uri? link) {
-      if (link != null) {
-        _handleDeepLink(link.toString());
-      }
-    }, onError: (err) {
-      print('Failed to receive link: $err');
-    });
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      (Uri? link) {
+        if (link != null) {
+          _handleDeepLink(link.toString());
+        }
+      },
+      onError: (err) {
+        print('Failed to receive link: $err');
+      },
+    );
   }
 
   void _handleDeepLink(String link) {
@@ -95,9 +99,7 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: Colors.blue, width: 2),
