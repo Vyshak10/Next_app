@@ -41,14 +41,11 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
       case 0:
         return HomeScreen(onProfileTap: () => _onItemTapped(3));
       case 1:
-        return PostScreen(userId: userId);
+      //return PostScreen(userId: userId);
       case 2:
         return ChatListPage();
       case 3:
-        return ProfileScreen(
-          userId: userId,
-          onBackTap: () => _onItemTapped(0),
-        );
+        return ProfileScreen(userId: userId, onBackTap: () => _onItemTapped(0));
       default:
         return const Center(child: Text('Invalid tab index'));
     }
@@ -121,9 +118,7 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
@@ -148,7 +143,8 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
                   style: TextStyle(
                     color: isSelected ? Colors.blueAccent : Colors.grey[600],
                     fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ),
