@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/post_service.dart';
 
 class CreatePostBottomSheet extends StatefulWidget {
   final Function(Map<String, dynamic>) onPostCreated;
@@ -73,43 +74,50 @@ class _CreatePostBottomSheetState extends State<CreatePostBottomSheet> {
     final token = await getAuthToken();
 
     try {
+      // Upload images to Supabase Storage
       final imageUrls = await _uploadImagesToSupabase(_selectedImages);
 
-      final response = await http.post(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/create_post.php'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'title': _titleController.text.trim(),
-          'description': _descriptionController.text.trim(),
-          'tags': _tagsController.text
-              .split(',')
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toList(),
-          'image_urls': imageUrls
-        }),
+      // Get user ID from secure storage
+      final storage = const FlutterSecureStorage();
+      final userId = await storage.read(key: 'user_id') ?? '';
+      
+      if (userId.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not logged in')),
+        );
+        return;
+      }
+
+      // Create post using PostService
+      final postService = PostService();
+      final newPost = await postService.createPost(
+        userId: userId,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        imageUrls: imageUrls,
+        tags: _tagsController.text
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList(),
       );
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        if (responseData['success']) {
-          final post = responseData['post'];
-          widget.onPostCreated(post);
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Post created successfully!')));
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${responseData['error']}')));
-        }
+      if (newPost != null) {
+        widget.onPostCreated(newPost);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Post created successfully!')),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create post: ${response.statusCode}')),
+          const SnackBar(content: Text('Failed to create post')),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      print('❌ Error creating post: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     } finally {
       setState(() => _isLoading = false);
     }

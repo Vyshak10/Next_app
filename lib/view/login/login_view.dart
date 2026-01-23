@@ -3,6 +3,7 @@ import 'package:next_app/services/auth_service.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:next_app/view/login/forgot_password_view.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -37,31 +38,31 @@ class _LoginViewState extends State<LoginView> {
     setState(() => isLoading = true);
 
     try {
-      final authService = AuthService();
-      final result = await authService.login(
+      // USE SUPABASE AUTHENTICATION
+      print('🔐 Logging in with Supabase: $email');
+      final response = await Supabase.instance.client.auth.signInWithPassword(
         email: email,
         password: password,
-        userType: userType,
       );
 
-      if (result['success'] == true) {
+      if (response.user != null) {
+        print('✅ Supabase login successful! User ID: ${response.user!.id}');
         _showSnackBar('Login successful!');
         
-        // Store user ID
-        final userId = result['userData']?['id']?.toString();
-        if (userId != null && userId.isNotEmpty) {
-          const storage = FlutterSecureStorage();
-          await storage.write(key: 'user_id', value: userId);
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('user_id', userId);
-        }
+        // Store user ID (Supabase UUID)
+        final userId = response.user!.id;
+        const storage = FlutterSecureStorage();
+        await storage.write(key: 'user_id', value: userId);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_id', userId);
 
         _navigateToUserScreen(userType);
       } else {
-        _showSnackBar(result['message'] ?? 'Login failed');
+        _showSnackBar('Login failed');
       }
     } catch (e) {
-      _showSnackBar('An error occurred: ${e.toString()}');
+      print('❌ Supabase login error: $e');
+      _showSnackBar('Login failed: ${e.toString()}');
     } finally {
       setState(() => isLoading = false);
     }
