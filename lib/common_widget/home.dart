@@ -5,6 +5,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import 'company_detail_screen.dart';
+import '../../view/subscription/subscription_screen.dart'; // Import SubscriptionScreen
 import 'package:next_app/view/meetings/meeting_screen.dart';
 import 'animated_greeting_gradient_mixin.dart';
 
@@ -598,6 +599,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
                   ],
                 ),
                 actions: [
+                  // Upgrade Button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
+                        );
+                      },
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.blueAccent.withOpacity(0.1),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      child: const Text(
+                        'Upgrade',
+                        style: TextStyle(
+                          color: Colors.blueAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _navigateToNotifications,
                     onDoubleTap: toggleNotification,

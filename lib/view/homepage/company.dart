@@ -13,6 +13,7 @@ import '../../view/meetings/meeting_screen.dart';
 import '../../common_widget/company_post.dart' as company_post;
 import '../analytics/pairing_screen.dart';
 import 'search_screen.dart';
+import '../../view/subscription/subscription_screen.dart';
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({super.key});
@@ -611,6 +612,31 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
         ),
       ),
       actions: [
+        // Upgrade Action (Icon)
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(right: 4, top: 8, bottom: 8),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.workspace_premium, color: Colors.amber, size: 24),
+          ),
+        ),
         _buildSearchIcon(),
         _buildNotificationBell(),
         const SizedBox(width: 8),
