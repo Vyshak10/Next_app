@@ -21,11 +21,11 @@ class _MOUScreenState extends State<MOUScreen> {
   bool _isAgreed = false;
   final ScrollController _scrollController = ScrollController();
 
-  // Premium Legal Colors
-  final Color _primaryColor = const Color(0xFF1A237E); // Deep Navy
-  final Color _accentColor = const Color(0xFFC5CAE9); // Light Indigo
-  final Color _paperColor = const Color(0xFFFAFAFA); // Off White
-  final Color _textColor = const Color(0xFF212121); // Almost Black
+  // App Theme Colors (matching CompanyDetailScreen)
+  final Color _primaryBlue = const Color(0xFF667EEA);
+  final Color _primaryPurple = const Color(0xFF764BA2);
+  final Color _backgroundColor = const Color(0xFFF8FAFC);
+  final Color _textColor = const Color(0xFF1A1A1A);
 
   final List<Map<String, String>> _agreements = [
     {
@@ -204,38 +204,47 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFECEFF1), // Light blue-grey frame
+      backgroundColor: _backgroundColor,
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'Select Agreement Type',
           style: TextStyle(
-            color: _primaryColor,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
           ),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new, color: _primaryColor),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              itemCount: _agreements.length,
-              itemBuilder: (context, index) {
-                return _buildAgreementCard(index);
-              },
+        iconTheme: const IconThemeData(color: Colors.white),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [_primaryBlue, _primaryPurple],
             ),
           ),
-        ],
+        ),
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.only(bottom: 24),
+        itemCount: _agreements.length + 1,
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Column(
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 16),
+              ],
+            );
+          }
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: _buildAgreementCard(index - 1),
+          );
+        },
       ),
     );
   }
@@ -246,11 +255,18 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
       padding: const EdgeInsets.all(24.0),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+        border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
       ),
       child: Column(
         children: [
-          Icon(Icons.gavel, size: 48, color: _primaryColor),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _primaryBlue.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.description, size: 40, color: _primaryBlue),
+          ),
           const SizedBox(height: 16),
           Text(
             'Memorandum of Understanding',
@@ -258,7 +274,6 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              fontFamily: 'Serif',
               color: _textColor,
             ),
           ),
@@ -266,7 +281,11 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
           Text(
             'Select the appropriate legal framework for your collaboration with ${widget.startupName}.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.5),
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 14,
+              height: 1.5,
+            ),
           ),
         ],
       ),
@@ -293,15 +312,17 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
-        border: isExpanded ? Border.all(color: _primaryColor, width: 1.5) : Border.all(color: Colors.transparent),
+        border: isExpanded 
+            ? Border.all(color: _primaryBlue, width: 2) 
+            : Border.all(color: Colors.transparent),
       ),
       child: Column(
         children: [
@@ -331,22 +352,26 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
                 }
               },
               borderRadius: BorderRadius.vertical(
-                top: const Radius.circular(12),
-                bottom: Radius.circular(isExpanded ? 0 : 12),
+                top: const Radius.circular(16),
+                bottom: Radius.circular(isExpanded ? 0 : 16),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isExpanded ? _primaryColor : _paperColor,
-                        borderRadius: BorderRadius.circular(10),
+                        gradient: LinearGradient(
+                          colors: isExpanded 
+                              ? [_primaryBlue, _primaryPurple]
+                              : [Colors.grey.shade100, Colors.grey.shade100],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         getIcon(agreement['icon']!),
-                        color: isExpanded ? Colors.white : _primaryColor,
+                        color: isExpanded ? Colors.white : _primaryBlue,
                         size: 24,
                       ),
                     ),
@@ -359,19 +384,18 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
                             agreement['title']!,
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.bold,
                               color: _textColor,
-                              fontFamily: 'Serif', // Adds a legal touch
                             ),
                           ),
                           if (isExpanded)
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
-                                'Click title to collapse',
+                                'Click to collapse',
                                 style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey[500],
+                                  fontSize: 12,
+                                  color: Colors.grey.shade500,
                                 ),
                               ),
                             ),
@@ -380,7 +404,7 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
                     ),
                     Icon(
                       isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      color: Colors.grey[400],
+                      color: Colors.grey.shade400,
                     ),
                   ],
                 ),
@@ -393,9 +417,9 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFFF9F9F9),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-                border: Border(top: BorderSide(color: Colors.grey[100]!)),
+                color: Colors.grey.shade50,
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                border: Border(top: BorderSide(color: Colors.grey.shade100)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,14 +429,8 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(color: Colors.grey[300]!),
-                      boxShadow: [
-                         BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                         )
-                      ]
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Text(
                       agreement['content']!
@@ -420,11 +438,11 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
                           .replaceAll('[Investor Name]', widget.investorName)
                           .replaceAll('[Technology Provider Name]', widget.startupName)
                           .replaceAll('[Partner Name]', widget.investorName),
-                      style: const TextStyle(
-                        fontFamily: 'Courier',
-                        fontSize: 12, // Slightly smaller for dense text
+                      style: TextStyle(
+                        fontSize: 14, // Standard readable size
                         height: 1.6,
-                        color: Color(0xFF37474F),
+                        color: Colors.grey.shade800,
+                        // No Serif font here either to keep it clean
                       ),
                     ),
                   ),
@@ -436,7 +454,7 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blueGrey[100]!),
+                      border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Column(
                       children: [
@@ -447,9 +465,9 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
                               width: 24,
                               child: Checkbox(
                                 value: _isAgreed,
-                                activeColor: _primaryColor,
+                                activeColor: _primaryBlue,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                                side: BorderSide(color: Colors.grey[400]!, width: 1.5),
+                                side: BorderSide(color: Colors.grey.shade400, width: 1.5),
                                 onChanged: (bool? value) {
                                   setState(() {
                                     _isAgreed = value ?? false;
@@ -480,7 +498,7 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
                         const SizedBox(height: 16),
                         SizedBox(
                           width: double.infinity,
-                          height: 50,
+                          height: 52,
                           child: ElevatedButton(
                             onPressed: _isAgreed
                                 ? () {
@@ -489,17 +507,18 @@ IN WITNESS WHEREOF, the Parties have executed this MoU on the date first written
                                   }
                                 : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _primaryColor,
-                              disabledBackgroundColor: Colors.grey[300],
-                              elevation: 2,
+                              backgroundColor: const Color(0xFF667EEA), // _primaryBlue
+                              disabledBackgroundColor: Colors.grey.shade300,
+                              elevation: 4,
+                              shadowColor: const Color(0xFF667EEA).withOpacity(0.4),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                             child: const Text(
                               'Proceed to Payment',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
