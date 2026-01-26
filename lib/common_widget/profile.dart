@@ -2294,67 +2294,72 @@ Future<void> _uploadAvatar() async {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Row(
+      // appBar: AppBar(
+      //   automaticallyImplyLeading: false,
+      //   backgroundColor: Colors.transparent,
+      //   elevation: 0,
+      //   title: Row(
+      //     children: [
+      //       Image.asset('assets/img/Icon.png', height: 32, width: 32),
+      //       const SizedBox(width: 8),
+      //       const Text(
+      //         'N.E.X.T',
+      //         style: TextStyle(
+      //           fontSize: 20,
+      //           fontWeight: FontWeight.bold,
+      //           color: Colors.blue,
+      //         ),
+      //       ),
+      //     ],
+      //   ),
+      // ),
+
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+        child: Column(
           children: [
-            Image.asset('assets/img/Icon.png', height: 32, width: 32),
-            const SizedBox(width: 8),
-            const Text(
-              'N.E.X.T',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
+
+            // 👇 Settings icon at top right (scrollable)
+            Padding(
+              padding: const EdgeInsets.only(top: 16, right: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.settings,
+                        color: Colors.grey[800], size: 28),
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => Container(
+                          height: MediaQuery.of(context).size.height * 0.92,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(24)),
+                          ),
+                          child: const SettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
+
+            _buildProfileHeader(),
+            _buildInfoSection(),
+            _buildPitchDeckSection(),
+            _buildPitchVideoSection(),
+            _buildPostsSection(),
+            const SizedBox(height: 20),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.settings, color: Colors.grey[800], size: 28),
-            tooltip: 'Settings',
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => Container(
-                  height: MediaQuery.of(context).size.height * 0.92,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                  ),
-                  child: const SettingsScreen(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
 
-      body: Stack(
-        children: [
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildProfileHeader(),
-                      _buildInfoSection(),
-                      _buildPitchDeckSection(),
-                      _buildPitchVideoSection(),
-                      _buildPostsSection(),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
-          // Add settings button in the profile header
-
-        ],
-      ),
 
     );
   }
