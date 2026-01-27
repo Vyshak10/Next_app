@@ -584,6 +584,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin, 
               : CustomScrollView(
             slivers: [
               SliverAppBar(
+                automaticallyImplyLeading: false,
                 floating: true,
                 pinned: true,
                 backgroundColor: Colors.white,

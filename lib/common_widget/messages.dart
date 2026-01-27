@@ -141,31 +141,31 @@ class _MessagesPageState extends State<MessagesPage> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text(
-          'Messages',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w800,
-            fontSize: 24,
-            letterSpacing: -0.5,
-          ),
-        ),
-        actions: [
-          _buildNotificationBadge(),
-          const SizedBox(width: 8),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            color: Colors.grey.withOpacity(0.1),
-            height: 1,
-          ),
-        ),
-      ),
+      // appBar: AppBar(
+      //   automaticallyImplyLeading: false,
+      //   backgroundColor: Colors.white,
+      //   elevation: 0,
+      //   title: const Text(
+      //     'Messages',
+      //     style: TextStyle(
+      //       color: Colors.black,
+      //       fontWeight: FontWeight.w800,
+      //       fontSize: 24,
+      //       letterSpacing: -0.5,
+      //     ),
+      //   ),
+      //   actions: [
+      //     _buildNotificationBadge(),
+      //     const SizedBox(width: 8),
+      //   ],
+      //   bottom: PreferredSize(
+      //     preferredSize: const Size.fromHeight(1),
+      //     child: Container(
+      //       color: Colors.grey.withOpacity(0.1),
+      //       height: 1,
+      //     ),
+      //   ),
+      // ),
       body: FadeTransition(
         opacity: _fadeController,
         child: Stack(

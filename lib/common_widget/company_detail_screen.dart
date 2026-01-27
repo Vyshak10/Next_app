@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // Import MessagesScreen
 import 'chat_screen.dart'; // Import ChatScreen
 import 'package:url_launcher/url_launcher.dart';
+import '../../view/legal/mou_screen.dart';
 
 class CompanyDetailScreen extends StatefulWidget {
   final Map<String, dynamic> companyData;

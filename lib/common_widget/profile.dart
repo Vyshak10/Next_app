@@ -17,8 +17,7 @@ import 'post.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../common/user_id_helper.dart';
 import 'chat_screen.dart';
-import '../view/follow/followers_screen.dart';
-import '../view/follow/following_screen.dart';
+import '../view/follow/follow_screens.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String? userId;
@@ -205,63 +204,124 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   bool _isLoadingFollow = false;
 
   Future<void> _resolveUserIdAndFetch() async {
-    final currentId = await getUserId();
     String? id = widget.userId;
     
-    if (id == null || id == currentId) {
+    // Get Supabase user
+    final supabaseUser = Supabase.instance.client.auth.currentUser;
+    
+    if (supabaseUser == null) {
+      print('⚠️ NOT LOGGED IN WITH SUPABASE');
+      print('🎭 DEMO MODE: Loading first available profile from Supabase');
+      
+      // DEMO MODE: Load the first profile from Supabase to show it working
+      try {
+        final demoProfiles = await Supabase.instance.client
+            .from('profiles')
+            .select()
+            .limit(1);
+        
+        if (demoProfiles.isNotEmpty) {
+          id = demoProfiles[0]['id'];
+          _isMyProfile = false;
+          print('🎭 DEMO: Showing profile: ${demoProfiles[0]['email']}');
+          setState(() => _resolvedUserId = id);
+          await fetchProfileData(id!);
+          return;
+        }
+      } catch (e) {
+        print('❌ Demo mode failed: $e');
+      }
+      
+      setState(() => isLoading = false);
+      _showErrorSnackBar('Please log in with Supabase to view your profile');
+      return;
+    }
+    
+    // If no userId provided, show current user's profile
+    if (id == null || id.isEmpty) {
       _isMyProfile = true;
-      id = id ?? currentId ?? '6852';
+      id = supabaseUser.id;
+      print('📱 Loading MY profile: $id');
     } else {
-      _isMyProfile = false;
-      // Fetch follow status here if needed
-      _checkFollowStatus(currentId, id);
+      _isMyProfile = (id == supabaseUser.id);
+      print('📱 Loading profile: $id (isMyProfile: $_isMyProfile)');
     }
     
     setState(() => _resolvedUserId = id);
-    await fetchProfileData(id!);
-    }
+    await fetchProfileData(id);
+  }
+
 
   Future<void> _checkFollowStatus(String? followerId, String followingId) async {
     if (followerId == null) return;
-    // In a real app, you'd call an API like check_follow.php
+    
+    try {
+      final supabaseUser = Supabase.instance.client.auth.currentUser;
+      if (supabaseUser == null) return;
+      
+      final response = await Supabase.instance.client
+          .from('follows')
+          .select()
+          .eq('follower_id', supabaseUser.id)
+          .eq('following_id', followingId)
+          .maybeSingle();
+      
+      setState(() {
+        _isFollowing = response != null;
+      });
+    } catch (e) {
+      print('❌ Error checking follow status: $e');
+    }
   }
 
   Future<void> _toggleFollowProfile() async {
     setState(() => _isLoadingFollow = true);
     try {
-      final currentUserId = await getUserId();
-      if (currentUserId == null) {
+      final supabaseUser = Supabase.instance.client.auth.currentUser;
+      if (supabaseUser == null) {
         _showErrorSnackBar('Please login to follow');
+        setState(() => _isLoadingFollow = false);
         return;
       }
 
-      final response = await http.post(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/toggle_follow.php'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'follower_id': currentUserId,
-          'following_id': _resolvedUserId,
-          'action': _isFollowing ? 'unfollow' : 'follow',
-        }),
-      );
+      if (_resolvedUserId == null) {
+        _showErrorSnackBar('Invalid user');
+        setState(() => _isLoadingFollow = false);
+        return;
+      }
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          setState(() {
-            _isFollowing = !_isFollowing;
-            if (_isFollowing) {
-              userFollowersCount++;
-            } else {
-              userFollowersCount--;
-            }
-          });
-          _showSuccessSnackBar(_isFollowing ? 'Following now!' : 'Unfollowed');
-        } else {
-          _showErrorSnackBar(data['message'] ?? 'Failed to update follow status');
-        }
+      if (_isFollowing) {
+        // Unfollow
+        print('👥 Unfollowing user: $_resolvedUserId');
+        await Supabase.instance.client
+            .from('follows')
+            .delete()
+            .eq('follower_id', supabaseUser.id)
+            .eq('following_id', _resolvedUserId!);
+        
+        setState(() {
+          _isFollowing = false;
+          userFollowersCount--;
+        });
+        _showSuccessSnackBar('Unfollowed');
+      } else {
+        // Follow
+        print('👥 Following user: $_resolvedUserId');
+        await Supabase.instance.client
+            .from('follows')
+            .insert({
+              'follower_id': supabaseUser.id,
+              'following_id': _resolvedUserId!,
+            });
+        
+        setState(() {
+          _isFollowing = true;
+          userFollowersCount++;
+        });
+        _showSuccessSnackBar('Following now!');
       }
     } catch (e) {
+      print('❌ Error toggling follow: $e');
       _showErrorSnackBar('Error: $e');
     } finally {
       setState(() => _isLoadingFollow = false);
@@ -269,6 +329,107 @@ class _ProfileScreenState extends State<ProfileScreen> with TickerProviderStateM
   }
 
   Future<void> fetchProfileData(String userId) async {
+    print('🔍 Fetching profile for user: $userId');
+    
+    // Check if ID is a valid UUID
+    bool isUuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false).hasMatch(userId);
+
+    if (!isUuid) {
+      print('❌ Invalid UUID: $userId');
+      _showErrorSnackBar('Invalid user ID format');
+      setState(() => isLoading = false);
+      return;
+    }
+
+    try {
+      print('💎 Fetching from Supabase: $userId');
+      
+      // Fetch profile from Supabase
+      final profileResponse = await Supabase.instance.client
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+      
+      if (profileResponse == null) {
+        print('❌ Profile not found in Supabase for: $userId');
+        _showErrorSnackBar('Profile not found');
+        setState(() => isLoading = false);
+        return;
+      }
+      
+      print('✅ Profile found: ${profileResponse['name'] ?? profileResponse['email']}');
+      
+      // Fetch posts from Supabase (no join needed - we already have profile data)
+      final postsResponse = await Supabase.instance.client
+          .from('posts')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+      
+      final rawPosts = List<Map<String, dynamic>>.from(postsResponse);
+      print('📝 Found ${rawPosts.length} posts');
+      
+      // Get follower/following counts
+      final followersData = await Supabase.instance.client
+          .from('follows')
+          .select()
+          .eq('following_id', userId);
+      
+      final followingData = await Supabase.instance.client
+          .from('follows')
+          .select()
+          .eq('follower_id', userId);
+      
+      final followersCount = followersData.length;
+      final followingCount = followingData.length;
+      
+      // Check follow status for the current viewer
+      final currentViewerId = Supabase.instance.client.auth.currentUser?.id;
+      if (currentViewerId != null && currentViewerId != userId) {
+        _checkFollowStatus(currentViewerId, userId);
+      }
+      
+      setState(() {
+        profile = {
+          'id': profileResponse['id'],
+          'name': profileResponse['name'] ?? profileResponse['email'] ?? 'User',
+          'email': profileResponse['email'],
+          'role': profileResponse['role'] ?? 'Member',
+          'bio': profileResponse['description'] ?? '',
+          'description': profileResponse['description'] ?? '',
+          'skills': profileResponse['skills'] is List 
+              ? (profileResponse['skills'] as List).join(', ')
+              : profileResponse['skills']?.toString() ?? '',
+          'avatar_url': profileResponse['avatar_url'],
+          'website': profileResponse['website'],
+          'location': profileResponse['office_location'],
+          'pitch_video_url': profileResponse['pitch_video_url'],
+          'company_name': profileResponse['company_name'],
+          'followers_count': followersCount,
+          'following_count': followingCount,
+        };
+        
+        posts = rawPosts;
+        userPostsCount = rawPosts.length;
+        userFollowersCount = followersCount;
+        userFollowingCount = followingCount;
+        
+        _updateControllers();
+        isLoading = false;
+      });
+      
+      print('✅ Profile loaded successfully from Supabase');
+      
+    } catch (e) {
+      print('❌ Error fetching profile: $e');
+      _showErrorSnackBar('Error loading profile: $e');
+      setState(() => isLoading = false);
+    }
+  }
+
+  
+  Future<void> _fetchFromPhpBackend(String userId) async {
     final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=$userId');
     try {
       final response = await http.get(uri);
@@ -1192,6 +1353,34 @@ Future<void> _uploadAvatar() async {
                     ],
                   ),
                 ),
+              ] else ...[
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      final userId = profile?['id'] ?? _resolvedUserId ?? Supabase.instance.client.auth.currentUser?.id;
+                      print('🔍 Navigating to Discover Users with ID: $userId');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => DiscoverUsersScreen(
+                            currentUserId: userId,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.search, size: 20),
+                    label: const Text('Discover People'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: const BorderSide(color: Colors.white54),
+                    ),
+                  ),
+                ),
               ],
 
               const SizedBox(height: 24),
@@ -1204,11 +1393,19 @@ Future<void> _uploadAvatar() async {
                     Expanded(child: _buildEnhancedStat("Posts", userPostsCount, Icons.article, null)),
                     const SizedBox(width: 12),
                     Expanded(child: _buildEnhancedStat("Followers", userFollowersCount, Icons.people, () {
+                      final targetId = profile?['id'] ?? Supabase.instance.client.auth.currentUser?.id ?? '';
+                      bool isUuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false).hasMatch(targetId);
+                      
+                      if (!isUuid) {
+                        _showErrorSnackBar('This user does not have a follow system profile yet');
+                        return;
+                      }
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => FollowersScreen(
-                            userId: widget.userId ?? '',
+                            userId: targetId,
                             userName: profile?['name'] ?? 'User',
                           ),
                         ),
@@ -1216,11 +1413,19 @@ Future<void> _uploadAvatar() async {
                     })),
                     const SizedBox(width: 12),
                     Expanded(child: _buildEnhancedStat("Following", userFollowingCount, Icons.person_add, () {
+                      final targetId = profile?['id'] ?? Supabase.instance.client.auth.currentUser?.id ?? '';
+                      bool isUuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false).hasMatch(targetId);
+
+                      if (!isUuid) {
+                        _showErrorSnackBar('This user does not have a follow system profile yet');
+                        return;
+                      }
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => FollowingScreen(
-                            userId: widget.userId ?? '',
+                            userId: targetId,
                             userName: profile?['name'] ?? 'User',
                           ),
                         ),
@@ -2089,67 +2294,72 @@ Future<void> _uploadAvatar() async {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Row(
+      // appBar: AppBar(
+      //   automaticallyImplyLeading: false,
+      //   backgroundColor: Colors.transparent,
+      //   elevation: 0,
+      //   title: Row(
+      //     children: [
+      //       Image.asset('assets/img/Icon.png', height: 32, width: 32),
+      //       const SizedBox(width: 8),
+      //       const Text(
+      //         'N.E.X.T',
+      //         style: TextStyle(
+      //           fontSize: 20,
+      //           fontWeight: FontWeight.bold,
+      //           color: Colors.blue,
+      //         ),
+      //       ),
+      //     ],
+      //   ),
+      // ),
+
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+        child: Column(
           children: [
-            Image.asset('assets/img/Icon.png', height: 32, width: 32),
-            const SizedBox(width: 8),
-            const Text(
-              'N.E.X.T',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.blue,
+
+            // 👇 Settings icon at top right (scrollable)
+            Padding(
+              padding: const EdgeInsets.only(top: 16, right: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.settings,
+                        color: Colors.grey[800], size: 28),
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => Container(
+                          height: MediaQuery.of(context).size.height * 0.92,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(24)),
+                          ),
+                          child: const SettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
+
+            _buildProfileHeader(),
+            _buildInfoSection(),
+            _buildPitchDeckSection(),
+            _buildPitchVideoSection(),
+            _buildPostsSection(),
+            const SizedBox(height: 20),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.settings, color: Colors.grey[800], size: 28),
-            tooltip: 'Settings',
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => Container(
-                  height: MediaQuery.of(context).size.height * 0.92,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                  ),
-                  child: const SettingsScreen(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
 
-      body: Stack(
-        children: [
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      _buildProfileHeader(),
-                      _buildInfoSection(),
-                      _buildPitchDeckSection(),
-                      _buildPitchVideoSection(),
-                      _buildPostsSection(),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
-          // Add settings button in the profile header
-
-        ],
-      ),
 
     );
   }
