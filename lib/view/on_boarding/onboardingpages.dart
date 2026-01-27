@@ -21,7 +21,6 @@ class _OnboardingPagesState extends State<OnboardingPages> {
       features: [
         'Connect with innovative companies',
         'Find your dream team',
-        'Grow your career',
       ],
     ),
     _OnboardingData(
@@ -44,17 +43,6 @@ class _OnboardingPagesState extends State<OnboardingPages> {
         'Direct messaging',
         'Team collaboration',
         'Meeting scheduling',
-      ],
-    ),
-    _OnboardingData(
-      icon: Icons.rocket_launch_rounded,
-      title: 'Grow Your Career',
-      description: 'Join the next big thing and accelerate your professional journey.',
-      color: Colors.green,
-      features: [
-        'Career insights',
-        'Skill development',
-        'Professional networking',
       ],
     ),
     _OnboardingData(
@@ -325,3 +313,4 @@ class _OnboardingData {
     this.isLastPage = false,
   });
 }
+

@@ -30,8 +30,6 @@ class _CompanyScreenState extends State<CompanyScreen>
   late AnimationController _controller;
   late AnimationController _fabController;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _fabAnimation;
-  bool _isFabOpen = false;
 
   @override
   void initState() {
@@ -45,7 +43,6 @@ class _CompanyScreenState extends State<CompanyScreen>
       duration: const Duration(milliseconds: 300),
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
-    _fabAnimation = CurvedAnimation(parent: _fabController, curve: Curves.elasticOut);
     _controller.forward();
   }
 
@@ -108,17 +105,7 @@ class _CompanyScreenState extends State<CompanyScreen>
     return false;
   }
 
-  void _toggleFab() {
-    HapticFeedback.mediumImpact();
-    setState(() {
-      _isFabOpen = !_isFabOpen;
-    });
-    if (_isFabOpen) {
-      _fabController.forward();
-    } else {
-      _fabController.reverse();
-    }
-  }
+  // NOTE: FAB open/close logic was removed (FAB UI is currently disabled).
 
   Widget _buildScreenWidget(int index) {
     switch (index) {
@@ -244,7 +231,6 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
   bool _isLoadingPosts = false;
   List<Map<String, dynamic>> _startups = [];
   bool _isLoadingStartups = false;
-  List<Map<String, dynamic>> _trendingStartups = [];
   List<Map<String, dynamic>> _recentActivities = [];
 
   String userName = '';
@@ -305,24 +291,7 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
 
   Future<void> _loadTrendingStartups() async {
     // Mock trending data - replace with actual API call
-    setState(() {
-      _trendingStartups = [
-        {
-          'name': 'TechFlow AI',
-          'growth': '+156%',
-          'sector': 'AI/ML',
-          'funding': '2.3M',
-          'logo': 'https://via.placeholder.com/100',
-        },
-        {
-          'name': 'GreenTech Solutions',
-          'growth': '+89%',
-          'sector': 'CleanTech',
-          'funding': '1.8M',
-          'logo': 'https://via.placeholder.com/100',
-        },
-      ];
-    });
+    setState(() {});
   }
 
   Future<void> _loadRecentActivities() async {
@@ -738,20 +707,30 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
   }
 
   Widget _buildQuickInsightsGrid() {
+    // Only show the two key insights as a horizontal row:
+    // - Active Startups
+    // - Connections
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 1.8,
+      child: Row(
         children: [
-          _buildInsightCard('Active Startups', '${_startups.length}', Icons.business, Colors.blue),
-          _buildInsightCard('Total Posts', '${_posts.length}', Icons.article, Colors.green),
-          _buildInsightCard('Connections', '47', Icons.people, Colors.orange),
-          _buildInsightCard('This Month', '+23%', Icons.trending_up, Colors.purple),
+          Expanded(
+            child: _buildInsightCard(
+              'Active Startups',
+              '${_startups.length}',
+              Icons.business,
+              Colors.blue,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _buildInsightCard(
+              'Connections',
+              '47',
+              Icons.people,
+              Colors.orange,
+            ),
+          ),
         ],
       ),
     );

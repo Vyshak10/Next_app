@@ -6,6 +6,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // Import MessagesScreen
 import 'chat_screen.dart'; // Import ChatScreen
 import 'package:url_launcher/url_launcher.dart';
+import '../../view/legal/mou_screen.dart';
 
 class CompanyDetailScreen extends StatefulWidget {
   final Map<String, dynamic> companyData;
@@ -692,13 +693,27 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            onPressed: () async {
-              await launchUPIPayment(
-                context: context,
-                upiId: widget.companyData['upi_id'] ?? 'yourupi@okicici', // Replace with actual UPI ID or add to your data
-                name: widget.companyData['name'] ?? 'Company',
-                amount: '100', // You can get this from user input or dialog
-                transactionNote: 'Support for ${widget.companyData['name']}',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MOUScreen(
+                    startupName: widget.companyData['name'] ?? 'Company',
+                    onAgree: () async {
+                      // Small delay to allow the MOUScreen to close smoothly before launching UPI
+                      await Future.delayed(const Duration(milliseconds: 300));
+                      if (mounted) {
+                        await launchUPIPayment(
+                          context: context,
+                          upiId: widget.companyData['upi_id'] ?? 'yourupi@okicici',
+                          name: widget.companyData['name'] ?? 'Company',
+                          amount: '100', // You can get this from user input or dialog
+                          transactionNote: 'Support for ${widget.companyData['name']}',
+                        );
+                      }
+                    },
+                  ),
+                ),
               );
             },
           ),
