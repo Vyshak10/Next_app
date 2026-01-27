@@ -76,6 +76,7 @@ class _StartupState extends State<Startup> with SingleTickerProviderStateMixin {
           onProfileTap: () => _onItemTapped(3),
           userId: userId, // Pass userId to HomeScreen
           verticalList: true, // Show vertical list for startups
+          isStartupUser: true, // Explicitly identify as startup
         );
       case 1:
         return ListView.builder(

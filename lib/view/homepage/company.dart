@@ -13,7 +13,7 @@ import '../../view/meetings/meeting_screen.dart';
 import '../../common_widget/company_post.dart' as company_post;
 import '../analytics/pairing_screen.dart';
 import 'search_screen.dart';
-import '../../services/post_service.dart';
+import '../../view/subscription/subscription_screen.dart';
 
 class CompanyScreen extends StatefulWidget {
   const CompanyScreen({super.key});
@@ -22,7 +22,7 @@ class CompanyScreen extends StatefulWidget {
   State<CompanyScreen> createState() => _CompanyScreenState();
 }
 
-class _CompanyScreenState extends State<CompanyScreen> 
+class _CompanyScreenState extends State<CompanyScreen>
     with TickerProviderStateMixin {
   int _selectedIndex = 0;
   final String userId = '6852';
@@ -42,7 +42,14 @@ class _CompanyScreenState extends State<CompanyScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    );
+    _fabAnimation = CurvedAnimation(
+      parent: _fabController,
+      curve: Curves.elasticOut,
+    );
     _controller.forward();
   }
 
@@ -50,7 +57,9 @@ class _CompanyScreenState extends State<CompanyScreen>
     HapticFeedback.lightImpact();
     if (index == 3) {
       // Analytics tab tapped
-      bool isPaired = await _checkIfCompanyPaired(userId); // Implement this check
+      bool isPaired = await _checkIfCompanyPaired(
+        userId,
+      ); // Implement this check
       if (isPaired) {
         setState(() {
           _selectedIndex = index;
@@ -63,23 +72,24 @@ class _CompanyScreenState extends State<CompanyScreen>
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          builder: (context) => Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: SizedBox(
-              height: 480,
-              child: PairingScreen(
-                companyId: int.parse(userId),
-                onGoToAnalytics: () {
-                  Navigator.pop(context); // Close the sheet
-                  setState(() {
-                    _selectedIndex = 3;
-                  });
-                },
+          builder:
+              (context) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: SizedBox(
+                  height: 480,
+                  child: PairingScreen(
+                    companyId: int.parse(userId),
+                    onGoToAnalytics: () {
+                      Navigator.pop(context); // Close the sheet
+                      setState(() {
+                        _selectedIndex = 3;
+                      });
+                    },
+                  ),
+                ),
               ),
-            ),
-          ),
         );
         return;
       }
@@ -114,7 +124,9 @@ class _CompanyScreenState extends State<CompanyScreen>
       case 1:
         return const MessagesPage();
       case 2:
-        return company_profile.CompanyProfileScreen(onBackTap: () => _onItemTapped(0));
+        return company_profile.CompanyProfileScreen(
+          onBackTap: () => _onItemTapped(0),
+        );
       case 3:
         return AnalyticsDashboardScreen(userId: userId);
       default:
@@ -172,10 +184,20 @@ class _CompanyScreenState extends State<CompanyScreen>
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Expanded(child: _buildEnhancedNavItem(Icons.home_rounded, '', 0)),
-              Expanded(child: _buildEnhancedNavItem(Icons.chat_bubble_rounded, '', 1)),
+              Expanded(
+                child: _buildEnhancedNavItem(Icons.chat_bubble_rounded, '', 1),
+              ),
               Flexible(flex: 1, child: SizedBox()), // Flexible space for FAB
-              Expanded(child: _buildEnhancedNavItem(Icons.analytics_rounded, '', 3)),
-              Expanded(child: _buildEnhancedNavItem(Icons.account_circle_rounded, '', 2)),
+              Expanded(
+                child: _buildEnhancedNavItem(Icons.analytics_rounded, '', 3),
+              ),
+              Expanded(
+                child: _buildEnhancedNavItem(
+                  Icons.account_circle_rounded,
+                  '',
+                  2,
+                ),
+              ),
             ],
           ),
         ),
@@ -199,7 +221,10 @@ class _CompanyScreenState extends State<CompanyScreen>
                 duration: const Duration(milliseconds: 300),
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: isSelected ? Colors.blueAccent.withOpacity(0.15) : Colors.transparent,
+                  color:
+                      isSelected
+                          ? Colors.blueAccent.withOpacity(0.15)
+                          : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -225,8 +250,10 @@ class CompanyHomeScreen extends StatefulWidget {
   State<CompanyHomeScreen> createState() => _CompanyHomeScreenState();
 }
 
-class _CompanyHomeScreenState extends State<CompanyHomeScreen> 
-    with TickerProviderStateMixin, AnimatedGreetingGradientMixin<CompanyHomeScreen> {
+class _CompanyHomeScreenState extends State<CompanyHomeScreen>
+    with
+        TickerProviderStateMixin,
+        AnimatedGreetingGradientMixin<CompanyHomeScreen> {
   List<Map<String, dynamic>> _posts = [];
   bool _isLoadingPosts = false;
   List<Map<String, dynamic>> _startups = [];
@@ -249,7 +276,7 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
     _pulseAnimation = Tween<double>(begin: 0.97, end: 1.03).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOutCubic),
     );
-    
+
     gradientAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -257,17 +284,21 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
     gradientBeginAnimation = Tween<AlignmentGeometry>(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-    ).animate(CurvedAnimation(
-      parent: gradientAnimationController,
-      curve: Curves.easeInOutCubic,
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: gradientAnimationController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
     gradientEndAnimation = Tween<AlignmentGeometry>(
       begin: Alignment.bottomRight,
       end: Alignment.topLeft,
-    ).animate(CurvedAnimation(
-      parent: gradientAnimationController,
-      curve: Curves.easeInOutCubic,
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: gradientAnimationController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
     gradientAnimationController.forward();
     _loadData();
   }
@@ -332,7 +363,9 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
       final token = await storage.read(key: 'auth_token');
       if (token == null) return;
       final response = await http.get(
-        Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=${widget.userId}'),
+        Uri.parse(
+          'https://indianrupeeservices.in/NEXT/backend/get_profile.php?id=${widget.userId}',
+        ),
         headers: {
           'Authorization': 'Bearer $token',
           'Accept': 'application/json',
@@ -358,34 +391,53 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
   Future<void> _loadPosts() async {
     setState(() => _isLoadingPosts = true);
     try {
-      // Import the PostService
-      final postService = PostService();
-      final posts = await postService.getPosts();
-      
-      print('📊 Loaded ${posts.length} posts from Supabase');
-      
-      // Normalize the data structure
-      final normalizedPosts = posts.map((post) {
-        return {
-          'id': post['id'],
-          'user_id': post['user_id'],
-          'user_type': post['profiles']?['user_type'] ?? 'startup',
-          'author_name': post['profiles']?['name'] ?? 'Unknown',
-          'avatar_url': post['profiles']?['avatar_url'] ?? '',
-          'title': post['title'] ?? '',
-          'description': post['description'] ?? '',
-          'image_urls': List<String>.from(post['image_urls'] ?? []),
-          'tags': List<String>.from(post['tags'] ?? []),
-          'created_at': post['created_at'],
-          'isLiked': false,
-          'likeCount': 0,
-          'comments': [],
-        };
-      }).toList();
-      
-      setState(() {
-        _posts = normalizedPosts;
-      });
+      final response = await http.get(
+        Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_posts.php'),
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        if (data['success'] == true && data['posts'] != null) {
+          List<Map<String, dynamic>> posts = List<Map<String, dynamic>>.from(
+            data['posts'],
+          );
+          // Normalize image_urls and tags for each post
+          posts =
+              posts.map((post) {
+                post['image_urls'] = List<String>.from(
+                  post['image_urls'] ?? [],
+                );
+                post['tags'] = List<String>.from(post['tags'] ?? []);
+                return post;
+              }).toList();
+          if (posts.isEmpty && _startups.isNotEmpty) {
+            // Add dummy posts from startups
+            posts =
+                _startups
+                    .take(3)
+                    .map(
+                      (startup) => {
+                        'id': UniqueKey().toString(),
+                        'user_type': 'startup',
+                        'author_name': startup['name'],
+                        'avatar_url': startup['logo'],
+                        'title': 'Welcome from ${startup['name']}',
+                        'description':
+                            'This is a featured post from ${startup['name']}.',
+                        'image_urls': [],
+                        'tags': ['startup'],
+                        'isLiked': false,
+                        'likeCount': 0,
+                        'comments': [],
+                        'created_at': DateTime.now().toIso8601String(),
+                      },
+                    )
+                    .toList();
+          }
+          setState(() {
+            _posts = posts;
+          });
+        }
+      }
     } catch (e) {
       print('❌ Error loading posts: $e');
       // Fallback to empty list
@@ -402,7 +454,9 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
     try {
       final storage = const FlutterSecureStorage();
       final token = await storage.read(key: 'auth_token');
-      final uri = Uri.parse('https://indianrupeeservices.in/NEXT/backend/get_startups.php');
+      final uri = Uri.parse(
+        'https://indianrupeeservices.in/NEXT/backend/get_startups.php',
+      );
       final headers = <String, String>{
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -410,9 +464,12 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
       if (token != null) {
         headers['Authorization'] = 'Bearer $token';
       }
-      final response = await http.get(uri, headers: headers).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 15));
       if (response.statusCode == 200) {
-        final data = json.decode(response.body.trim()) as Map<String, dynamic>? ?? {};
+        final data =
+            json.decode(response.body.trim()) as Map<String, dynamic>? ?? {};
         List<dynamic> startups = [];
         if (data['startups'] != null && data['startups'] is List) {
           startups = data['startups'];
@@ -420,14 +477,15 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           startups = data['data'];
         }
         setState(() {
-          _startups = startups.map<Map<String, dynamic>>((s) {
-            final m = Map<String, dynamic>.from(s);
-            m['logo'] = m['avatar_url'] ?? m['logo'] ?? '';
-            m['name'] = m['name'] ?? 'Unknown Startup';
-            m['sector'] = m['sector'] ?? '';
-            m['tagline'] = m['tagline'] ?? m['bio'] ?? '';
-            return m;
-          }).toList();
+          _startups =
+              startups.map<Map<String, dynamic>>((s) {
+                final m = Map<String, dynamic>.from(s);
+                m['logo'] = m['avatar_url'] ?? m['logo'] ?? '';
+                m['name'] = m['name'] ?? 'Unknown Startup';
+                m['sector'] = m['sector'] ?? '';
+                m['tagline'] = m['tagline'] ?? m['bio'] ?? '';
+                return m;
+              }).toList();
         });
       }
     } catch (e) {
@@ -501,75 +559,43 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
       pinned: true,
       backgroundColor: Colors.white,
       elevation: 0,
-      flexibleSpace: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+      title: SafeArea(
+        child: GestureDetector(
+          onTap: () {
+            // Refresh the CompanyHomeScreen by reloading data
+            final state =
+                context.findAncestorStateOfType<_CompanyHomeScreenState>();
+            state?._loadData();
+          },
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              GestureDetector(
-                onTap: () {
-                  // Refresh the CompanyHomeScreen by reloading data
-                  final state = context.findAncestorStateOfType<_CompanyHomeScreenState>();
-                  state?._loadData();
-                },
-                child: Row(
-                  children: [
-                    Image.asset('assets/img/Icon.png', height: 36),
-                    const SizedBox(width: 12),
-                    Text(
-                      'N.E.X.T.',
-                      style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 28,
-                        letterSpacing: 4,
-                      ),
-                    ),
-                  ],
+              Image.asset('assets/img/Icon.png', height: 36),
+              const SizedBox(width: 12),
+              Text(
+                'N.E.X.T.',
+                style: TextStyle(
+                  color: Colors.blueAccent,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 28,
+                  letterSpacing: 4,
                 ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.search, color: Colors.blueAccent, size: 26),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const SearchScreen()),
-                      );
-                    },
-                  ),
-                  const SizedBox(width: 4),
-                  _buildNotificationBell(),
-                ],
               ),
             ],
           ),
         ),
       ),
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(
-          color: Colors.grey[200],
-          height: 1,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotificationBell() {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const MeetingScreen()),
-        );
-      },
-      child: Stack(
-        children: [
-          Container(
+      actions: [
+        // Upgrade Action (Icon)
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(right: 4, top: 8, bottom: 8),
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -582,21 +608,91 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                 ),
               ],
             ),
-            child: const Icon(Icons.notifications_outlined, color: Colors.blueAccent),
+            child: const Icon(Icons.workspace_premium, color: Colors.amber, size: 24),
           ),
-          Positioned(
-            right: 8,
-            top: 8,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Colors.red,
+        ),
+        _buildSearchIcon(),
+        _buildNotificationBell(),
+        const SizedBox(width: 8),
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(color: Colors.grey[200], height: 1),
+      ),
+    );
+  }
+
+  Widget _buildSearchIcon() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SearchScreen()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 4, top: 8, bottom: 8),
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.search, color: Colors.blueAccent),
+      ),
+    );
+  }
+
+  Widget _buildNotificationBell() {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MeetingScreen()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(left: 4, top: 8, bottom: 8, right: 8),
+        child: Stack(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.notifications_outlined,
+                color: Colors.blueAccent,
               ),
             ),
-          ),
-        ],
+            Positioned(
+              right: 8,
+              top: 8,
+              child: Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -613,11 +709,15 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 28, 20, 20),
         child: AnimatedBuilder(
-          animation: Listenable.merge([gradientAnimationController, _pulseController]),
+          animation: Listenable.merge([
+            gradientAnimationController,
+            _pulseController,
+          ]),
           builder: (context, child) {
-            final String? cacheBustedAvatarUrl = (avatarUrl != null && avatarUrl!.isNotEmpty)
-                ? '${avatarUrl!}?t=${DateTime.now().millisecondsSinceEpoch}'
-                : null;
+            final String? cacheBustedAvatarUrl =
+                (avatarUrl != null && avatarUrl!.isNotEmpty)
+                    ? '${avatarUrl!}?t=${DateTime.now().millisecondsSinceEpoch}'
+                    : null;
             return Opacity(
               opacity: ((0.97 + 0.03 * _pulseAnimation.value).clamp(0.0, 1.0)),
               child: Transform.scale(
@@ -649,12 +749,21 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                         child: CircleAvatar(
                           radius: 35,
                           backgroundColor: Colors.white,
-                          backgroundImage: (cacheBustedAvatarUrl != null)
-                              ? NetworkImage(cacheBustedAvatarUrl)
-                              : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
-                          child: (cacheBustedAvatarUrl == null)
-                              ? Icon(Icons.person, size: 35, color: Colors.grey[400])
-                              : null,
+                          backgroundImage:
+                              (cacheBustedAvatarUrl != null)
+                                  ? NetworkImage(cacheBustedAvatarUrl)
+                                  : const AssetImage(
+                                        'assets/img/default_avatar.png',
+                                      )
+                                      as ImageProvider,
+                          child:
+                              (cacheBustedAvatarUrl == null)
+                                  ? Icon(
+                                    Icons.person,
+                                    size: 35,
+                                    color: Colors.grey[400],
+                                  )
+                                  : null,
                         ),
                       ),
                       const SizedBox(width: 20),
@@ -714,29 +823,36 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: Row(
         children: [
-          Expanded(
-            child: _buildInsightCard(
-              'Active Startups',
-              '${_startups.length}',
-              Icons.business,
-              Colors.blue,
-            ),
+          _buildInsightCard(
+            'Active Startups',
+            '${_startups.length}',
+            Icons.business,
+            Colors.blue,
           ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _buildInsightCard(
-              'Connections',
-              '47',
-              Icons.people,
-              Colors.orange,
-            ),
+          _buildInsightCard(
+            'Total Posts',
+            '${_posts.length}',
+            Icons.article,
+            Colors.green,
+          ),
+          _buildInsightCard('Connections', '47', Icons.people, Colors.orange),
+          _buildInsightCard(
+            'This Month',
+            '+23%',
+            Icons.trending_up,
+            Colors.purple,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInsightCard(String title, String value, IconData icon, Color color) {
+  Widget _buildInsightCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -793,9 +909,23 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
   }
 
   Widget _buildTrendingSection() {
-    final trendingStartups = (companySector != null && _startups.any((s) => (s['sector'] ?? '').toLowerCase() == companySector!.toLowerCase()))
-      ? _startups.where((s) => (s['sector'] ?? '').toLowerCase() == companySector!.toLowerCase()).toList()
-      : (_startups..shuffle()).take(3).toList(); // fallback: random startups
+    final trendingStartups =
+        (companySector != null &&
+                _startups.any(
+                  (s) =>
+                      (s['sector'] ?? '').toLowerCase() ==
+                      companySector!.toLowerCase(),
+                ))
+            ? _startups
+                .where(
+                  (s) =>
+                      (s['sector'] ?? '').toLowerCase() ==
+                      companySector!.toLowerCase(),
+                )
+                .toList()
+            : (_startups..shuffle())
+                .take(3)
+                .toList(); // fallback: random startups
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -810,14 +940,18 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                   gradient: LinearGradient(colors: [Colors.red, Colors.orange]),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(Icons.local_fire_department, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.local_fire_department,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
                 'Trending Startups',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -843,10 +977,11 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => CompanyDetailScreen(
-                              companyData: s,
-                              userId: widget.userId,
-                            ),
+                            builder:
+                                (context) => CompanyDetailScreen(
+                                  companyData: s,
+                                  userId: widget.userId,
+                                ),
                           ),
                         );
                       },
@@ -875,9 +1010,13 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                             children: [
                               Center(
                                 child: CircleAvatar(
-                                  backgroundImage: (s['logo'] != null && s['logo'] != '')
-                                      ? NetworkImage(s['logo'])
-                                      : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
+                                  backgroundImage:
+                                      (s['logo'] != null && s['logo'] != '')
+                                          ? NetworkImage(s['logo'])
+                                          : const AssetImage(
+                                                'assets/img/default_avatar.png',
+                                              )
+                                              as ImageProvider,
                                   radius: 18,
                                   backgroundColor: Colors.white,
                                 ),
@@ -892,7 +1031,10 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                                 overflow: TextOverflow.ellipsis,
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 1,
+                                ),
                                 decoration: BoxDecoration(
                                   color: Colors.blueAccent.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(8),
@@ -932,16 +1074,20 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => CompanyDetailScreen(
-                                          companyData: s,
-                                          userId: widget.userId,
-                                        ),
+                                        builder:
+                                            (context) => CompanyDetailScreen(
+                                              companyData: s,
+                                              userId: widget.userId,
+                                            ),
                                       ),
                                     );
                                   },
                                   child: const Text(
                                     'View',
-                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 9),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 9,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -987,7 +1133,11 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                     color: Colors.blueAccent.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(7),
                   ),
-                  child: const Icon(Icons.history, color: Colors.blueAccent, size: 18),
+                  child: const Icon(
+                    Icons.history,
+                    color: Colors.blueAccent,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -1004,7 +1154,9 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AnalyticsDashboardScreen(userId: widget.userId),
+                        builder:
+                            (context) =>
+                                AnalyticsDashboardScreen(userId: widget.userId),
                       ),
                     );
                   },
@@ -1013,50 +1165,60 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
               ],
             ),
             const SizedBox(height: 10),
-            ..._recentActivities.map((activity) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(7),
-                    decoration: BoxDecoration(
-                      color: _getActivityColor(activity['type']).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(7),
+            ..._recentActivities.map(
+              (activity) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: _getActivityColor(
+                          activity['type'],
+                        ).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: Icon(
+                        activity['icon'],
+                        color: _getActivityColor(activity['type']),
+                        size: 14,
+                      ),
                     ),
-                    child: Icon(
-                      activity['icon'],
-                      color: _getActivityColor(activity['type']),
-                      size: 14,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            activity['company'],
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            activity['type'] == 'investment'
+                                ? 'Investment: \$${activity['amount']}'
+                                : 'Meeting ${activity['status']}',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 10,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          activity['company'],
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          activity['type'] == 'investment' 
-                            ? 'Investment: \$${activity['amount']}'
-                            : 'Meeting ${activity['status']}',
-                          style: TextStyle(color: Colors.grey[600], fontSize: 10),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                    Text(
+                      activity['time'],
+                      style: TextStyle(color: Colors.grey[500], fontSize: 9),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    activity['time'],
-                    style: TextStyle(color: Colors.grey[500], fontSize: 9),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            )),
+            ),
           ],
         ),
       ),
@@ -1085,18 +1247,24 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
               Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: [Colors.purple, Colors.blue]),
+                  gradient: LinearGradient(
+                    colors: [Colors.purple, Colors.blue],
+                  ),
                   borderRadius: BorderRadius.circular(7),
                 ),
-                child: const Icon(Icons.rocket_launch, color: Colors.white, size: 18),
+                child: const Icon(
+                  Icons.rocket_launch,
+                  color: Colors.white,
+                  size: 18,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Featured Startups',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -1110,23 +1278,23 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           _isLoadingStartups
               ? _buildStartupsShimmer()
               : SizedBox(
-                  height: 250,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _startups.length,
-                    itemBuilder: (context, index) {
-                      final startup = _startups[index];
-                      return Container(
-                        width: 170,
-                        margin: const EdgeInsets.only(right: 10),
-                        child: StartupCard(
-                          startup: startup,
-                          onTap: () => _navigateToStartupDetail(startup),
-                        ),
-                      );
-                    },
-                  ),
+                height: 250,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _startups.length,
+                  itemBuilder: (context, index) {
+                    final startup = _startups[index];
+                    return Container(
+                      width: 170,
+                      margin: const EdgeInsets.only(right: 10),
+                      child: StartupCard(
+                        startup: startup,
+                        onTap: () => _navigateToStartupDetail(startup),
+                      ),
+                    );
+                  },
                 ),
+              ),
         ],
       ),
     );
@@ -1177,9 +1345,9 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
               const SizedBox(width: 10),
               Text(
                 'Latest Posts',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -1187,21 +1355,21 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           _isLoadingPosts
               ? _buildPostsShimmer()
               : ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _posts.length,
-                  itemBuilder: (context, index) {
-                    final post = _posts[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 15),
-                      child: company_post.PostCard(
-                        post: post,
-                        onLikePressed: () => _toggleLike(index),
-                        onCommentPressed: () => _showCommentsBottomSheet(post),
-                      ),
-                    );
-                  },
-                ),
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _posts.length,
+                itemBuilder: (context, index) {
+                  final post = _posts[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 15),
+                    child: company_post.PostCard(
+                      post: post,
+                      onLikePressed: () => _toggleLike(index),
+                      onCommentPressed: () => _showCommentsBottomSheet(post),
+                    ),
+                  );
+                },
+              ),
         ],
       ),
     );
@@ -1247,15 +1415,16 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => company_post.CommentsBottomSheet(
-        postId: post['id'].toString(),
-        comments: post['comments'] ?? [],
-        onCommentAdded: (newComment) {
-          setState(() {
-            post['comments'] = [...(post['comments'] ?? []), newComment];
-          });
-        },
-      ),
+      builder:
+          (context) => company_post.CommentsBottomSheet(
+            postId: post['id'].toString(),
+            comments: post['comments'] ?? [],
+            onCommentAdded: (newComment) {
+              setState(() {
+                post['comments'] = [...(post['comments'] ?? []), newComment];
+              });
+            },
+          ),
     );
   }
 
@@ -1263,7 +1432,11 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CompanyDetailScreen(companyData: startup, userId: widget.userId),
+        builder:
+            (context) => CompanyDetailScreen(
+              companyData: startup,
+              userId: widget.userId,
+            ),
       ),
     );
   }
@@ -1280,11 +1453,7 @@ class StartupCard extends StatelessWidget {
   final Map<String, dynamic> startup;
   final VoidCallback onTap;
 
-  const StartupCard({
-    super.key,
-    required this.startup,
-    required this.onTap,
-  });
+  const StartupCard({super.key, required this.startup, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1314,15 +1483,19 @@ class StartupCard extends StatelessWidget {
                     Colors.purpleAccent.withOpacity(0.8),
                   ],
                 ),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(20),
+                ),
               ),
               child: Center(
                 child: CircleAvatar(
                   radius: 30,
                   backgroundColor: Colors.white,
-                  backgroundImage: startup['logo'].isNotEmpty
-                      ? NetworkImage(startup['logo'])
-                      : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
+                  backgroundImage:
+                      startup['logo'].isNotEmpty
+                          ? NetworkImage(startup['logo'])
+                          : const AssetImage('assets/img/default_avatar.png')
+                              as ImageProvider,
                 ),
               ),
             ),
@@ -1344,7 +1517,10 @@ class StartupCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     if (startup['sector']?.isNotEmpty == true)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blueAccent.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
@@ -1362,10 +1538,7 @@ class StartupCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         startup['tagline'] ?? 'Innovative startup solution',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1438,9 +1611,11 @@ class PostCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundImage: post['author_avatar'] != null
-                      ? NetworkImage(post['author_avatar'])
-                      : const AssetImage('assets/img/default_avatar.png') as ImageProvider,
+                  backgroundImage:
+                      post['author_avatar'] != null
+                          ? NetworkImage(post['author_avatar'])
+                          : const AssetImage('assets/img/default_avatar.png')
+                              as ImageProvider,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1456,10 +1631,7 @@ class PostCard extends StatelessWidget {
                       ),
                       Text(
                         post['created_at'] ?? 'Recently',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ],
                   ),
@@ -1496,9 +1668,15 @@ class PostCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                _buildPostAction(Icons.favorite_border, '${post['likes'] ?? 0}'),
+                _buildPostAction(
+                  Icons.favorite_border,
+                  '${post['likes'] ?? 0}',
+                ),
                 const SizedBox(width: 20),
-                _buildPostAction(Icons.chat_bubble_outline, '${post['comments'] ?? 0}'),
+                _buildPostAction(
+                  Icons.chat_bubble_outline,
+                  '${post['comments'] ?? 0}',
+                ),
                 const SizedBox(width: 20),
                 _buildPostAction(Icons.share_outlined, 'Share'),
                 const Spacer(),
@@ -1517,13 +1695,7 @@ class PostCard extends StatelessWidget {
         Icon(icon, size: 20, color: Colors.grey[600]),
         if (label.isNotEmpty) ...[
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-            ),
-          ),
+          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
         ],
       ],
     );
@@ -1570,9 +1742,7 @@ class CreatePostModal extends StatelessWidget {
             ),
           ),
           const Expanded(
-            child: Center(
-              child: Text('Post creation interface would go here'),
-            ),
+            child: Center(child: Text('Post creation interface would go here')),
           ),
         ],
       ),
@@ -1642,9 +1812,7 @@ class DiscoverModal extends StatelessWidget {
             ),
           ),
           const Expanded(
-            child: Center(
-              child: Text('Discovery interface would go here'),
-            ),
+            child: Center(child: Text('Discovery interface would go here')),
           ),
         ],
       ),
@@ -1691,9 +1859,7 @@ class MarketTrendsModal extends StatelessWidget {
             ),
           ),
           const Expanded(
-            child: Center(
-              child: Text('Market trends interface would go here'),
-            ),
+            child: Center(child: Text('Market trends interface would go here')),
           ),
         ],
       ),
@@ -1701,7 +1867,10 @@ class MarketTrendsModal extends StatelessWidget {
   }
 }
 
-LinearGradient getGreetingGradient(AlignmentGeometry begin, AlignmentGeometry end) {
+LinearGradient getGreetingGradient(
+  AlignmentGeometry begin,
+  AlignmentGeometry end,
+) {
   final hour = DateTime.now().hour;
   if (hour >= 5 && hour < 12) {
     // Morning: very light to light blue

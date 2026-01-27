@@ -33,8 +33,9 @@ class CompanyCard extends StatelessWidget {
                 width: 60,
                 height: 60,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                const Icon(Icons.broken_image, size: 60),
+                errorBuilder:
+                    (context, error, stackTrace) =>
+                        const Icon(Icons.broken_image, size: 60),
               ),
             ),
             const SizedBox(width: 16),
@@ -59,10 +60,7 @@ class CompanyCard extends StatelessWidget {
                   // Sector
                   Text(
                     sector,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
                   ),
@@ -72,17 +70,16 @@ class CompanyCard extends StatelessWidget {
                   Wrap(
                     spacing: 8,
                     runSpacing: 4,
-                    children: tags.map((tag) {
-                      return Chip(
-                        label: Text(
-                          tag,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        backgroundColor: Colors.blue.shade50,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      );
-                    }).toList(),
-                  )
+                    children:
+                        tags.map((tag) {
+                          return Chip(
+                            label: Text(tag, overflow: TextOverflow.ellipsis),
+                            backgroundColor: Colors.blue.shade50,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                          );
+                        }).toList(),
+                  ),
                 ],
               ),
             ),
