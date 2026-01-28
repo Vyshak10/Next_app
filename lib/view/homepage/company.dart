@@ -30,6 +30,7 @@ class _CompanyScreenState extends State<CompanyScreen>
   late AnimationController _controller;
   late AnimationController _fabController;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _fabAnimation;
 
   @override
   void initState() {
@@ -591,7 +592,9 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
+              MaterialPageRoute(
+                builder: (context) => const SubscriptionScreen(),
+              ),
             );
           },
           child: Container(
@@ -608,7 +611,11 @@ class _CompanyHomeScreenState extends State<CompanyHomeScreen>
                 ),
               ],
             ),
-            child: const Icon(Icons.workspace_premium, color: Colors.amber, size: 24),
+            child: const Icon(
+              Icons.workspace_premium,
+              color: Colors.amber,
+              size: 24,
+            ),
           ),
         ),
         _buildSearchIcon(),
